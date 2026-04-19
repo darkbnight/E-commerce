@@ -1,0 +1,102 @@
+{
+  "source": "https://ozon.menglar.com/api/exchange-rate/v1/get/rate?siteId=0",
+  "generatedAt": "2026-04-15T09:07:18.664Z",
+  "items": [
+    {
+      "currency_code": "AED",
+      "rate": 0.538
+    },
+    {
+      "currency_code": "AMD",
+      "rate": 54.91
+    },
+    {
+      "currency_code": "BRL",
+      "rate": 0.731
+    },
+    {
+      "currency_code": "BYN",
+      "rate": 0.415
+    },
+    {
+      "currency_code": "CLP",
+      "rate": 130.86
+    },
+    {
+      "currency_code": "CNY",
+      "rate": 1
+    },
+    {
+      "currency_code": "COP",
+      "rate": 526.7
+    },
+    {
+      "currency_code": "EGP",
+      "rate": 7.69
+    },
+    {
+      "currency_code": "EUR",
+      "rate": 0.124
+    },
+    {
+      "currency_code": "GBP",
+      "rate": 0.108
+    },
+    {
+      "currency_code": "IDR",
+      "rate": 2506.27
+    },
+    {
+      "currency_code": "INR",
+      "rate": 13.65
+    },
+    {
+      "currency_code": "KZT",
+      "rate": 69.66
+    },
+    {
+      "currency_code": "MXN",
+      "rate": 2.53
+    },
+    {
+      "currency_code": "MYR",
+      "rate": 0.58
+    },
+    {
+      "currency_code": "PHP",
+      "rate": 8.76
+    },
+    {
+      "currency_code": "PLN",
+      "rate": 0.527
+    },
+    {
+      "currency_code": "RUB",
+      "rate": 11.15
+    },
+    {
+      "currency_code": "SAR",
+      "rate": 0.549
+    },
+    {
+      "currency_code": "SGD",
+      "rate": 0.186
+    },
+    {
+      "currency_code": "THB",
+      "rate": 4.68
+    },
+    {
+      "currency_code": "TWD",
+      "rate": 4.64
+    },
+    {
+      "currency_code": "USD",
+      "rate": 0.146
+    },
+    {
+      "currency_code": "VND",
+      "rate": 3861
+    }
+  ]
+}
