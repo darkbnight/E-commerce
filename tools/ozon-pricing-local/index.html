@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ozon 本地快速定价</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1>Ozon 本地快速定价</h1>
+          <p>旧版字段，本地计算。物流和类目佣金来自本地快照，可手动覆盖。</p>
+        </div>
+        <div class="rates" id="ratesSummary">加载数据中...</div>
+      </header>
+
+      <section class="workspace">
+        <form class="panel form-panel" id="pricingForm">
+          <div class="panel-head">
+            <h2>基础设置</h2>
+            <button type="button" class="ghost" id="resetBtn">重置</button>
+          </div>
+
+          <label class="field span-2">
+            <span>所属行业</span>
+            <select id="categoryId"></select>
+          </label>
+
+          <label class="field">
+            <span>采购成本</span>
+            <div class="input-unit">
+              <input id="purchaseCost" type="number" min="0" step="0.01" value="1" />
+              <b>¥</b>
+            </div>
+          </label>
+
+          <label class="field">
+            <span>包裹重量</span>
+            <div class="input-unit">
+              <input id="weight" type="number" min="0" step="1" value="80" />
+              <b>g</b>
+            </div>
+          </label>
+
+          <label class="field">
+            <span>毛利</span>
+            <div class="input-unit split">
+              <select id="profitType">
+                <option value="rate">毛利率</option>
+                <option value="amount">毛利额</option>
+              </select>
+              <input id="profitVal" type="number" min="0" step="0.01" value="20" />
+              <b id="profitUnit">%</b>
+            </div>
+          </label>
+
+          <label class="field">
+            <span>前台折扣</span>
+            <div class="input-unit">
+              <input id="discount" type="number" min="0" max="100" step="0.01" value="50" />
+              <b>%</b>
+            </div>
+          </label>
+
+          <label class="field span-2">
+            <span>境外物流方式</span>
+            <select id="logisticId"></select>
+          </label>
+
+          <div class="compare-entry span-2">
+            <button type="button" class="ghost" id="showLogisticsCompare">查看 CEL 物流费用对比</button>
+          </div>
+
+          <label class="field">
+            <span>交货类型</span>
+            <select id="deliveryType">
+              <option value="1">到取货点</option>
+              <option value="2">快递上门</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>境内段运费</span>
+            <div class="input-unit">
+              <input id="chinaFee" type="number" min="0" step="0.01" value="0" />
+              <b>¥</b>
+            </div>
+          </label>
+
+          <label class="field">
+            <span>广告费率</span>
+            <div class="input-unit">
+              <input id="adsRate" type="number" min="0" max="99" step="0.01" value="0" />
+              <b>%</b>
+            </div>
+          </label>
+
+          <label class="field">
+            <span>提现费率</span>
+            <div class="input-unit">
+              <input id="cashRate" type="number" min="0" max="99" step="0.01" value="1" />
+              <b>%</b>
+            </div>
+          </label>
+
+          <label class="field">
+            <span>退款/货损率</span>
+            <div class="input-unit">
+              <input id="refundRate" type="number" min="0" max="99" step="0.01" value="2" />
+              <b>%</b>
+            </div>
+          </label>
+
+          <label class="field">
+            <span>其他费用</span>
+            <div class="input-unit">
+              <input id="otherFee" type="number" min="0" step="0.01" value="0" />
+              <b>¥</b>
+            </div>
+          </label>
+
+          <fieldset class="volume span-2">
+            <legend>产品外箱体积</legend>
+            <label>
+              <span>长</span>
+              <input id="volumeL" type="number" min="0" step="0.1" value="21" />
+            </label>
+            <label>
+              <span>宽</span>
+              <input id="volumeW" type="number" min="0" step="0.1" value="20" />
+            </label>
+            <label>
+              <span>高</span>
+              <input id="volumeH" type="number" min="0" step="0.1" value="1.4" />
+            </label>
+          </fieldset>
+
+          <label class="field">
+            <span>手动物流费</span>
+            <div class="input-unit">
+              <input id="manualLogisticsFee" type="number" min="0" step="0.01" placeholder="不填则自动估算" />
+              <b>¥</b>
+            </div>
+          </label>
+
+          <label class="field">
+            <span>手动佣金率</span>
+            <div class="input-unit">
+              <input id="manualCategoryRate" type="number" min="0" max="99" step="0.01" placeholder="不填则用类目" />
+              <b>%</b>
+            </div>
+          </label>
+
+          <div class="actions span-2">
+            <button type="submit" class="primary">计算</button>
+          </div>
+        </form>
+
+        <section class="panel result-panel">
+          <div class="panel-head">
+            <h2>计算结果</h2>
+            <span id="dataStamp"></span>
+          </div>
+
+          <div class="price-hero">
+            <div>
+              <span>商品原价（折前价）</span>
+              <strong id="originalUsd">$0.00</strong>
+              <small id="originalRub">₽0.00</small>
+            </div>
+            <div>
+              <span>商品售价（折后价）</span>
+              <strong id="saleUsd">$0.00</strong>
+              <small id="saleRub">₽0.00</small>
+            </div>
+          </div>
+
+          <div class="summary-grid">
+            <div>
+              <span>预计毛利</span>
+              <b id="profitRmb">¥0.00</b>
+            </div>
+            <div>
+              <span>毛利率</span>
+              <b id="profitRate">0.00%</b>
+            </div>
+            <div>
+              <span>计费重量</span>
+              <b id="chargeWeight">0g</b>
+            </div>
+            <div>
+              <span>物流占比</span>
+              <b id="logisticsShare">0.00%</b>
+            </div>
+          </div>
+
+          <h3>收入</h3>
+          <table>
+            <tbody>
+              <tr>
+                <th>商品原价（折前价）</th>
+                <td id="rowOriginal">¥0.00</td>
+              </tr>
+              <tr>
+                <th>商品售价（折后价）</th>
+                <td id="rowSale">¥0.00</td>
+              </tr>
+              <tr>
+                <th>毛利</th>
+                <td id="rowProfit">¥0.00</td>
+              </tr>
+              <tr>
+                <th>毛利率</th>
+                <td id="rowProfitRate">0.00%</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h3>成本</h3>
+          <table>
+            <tbody>
+              <tr>
+                <th>采购成本</th>
+                <td id="costPurchase">¥0.00</td>
+              </tr>
+              <tr>
+                <th>境内段运费</th>
+                <td id="costChina">¥0.00</td>
+              </tr>
+              <tr>
+                <th>跨境物流费</th>
+                <td>
+                  <span id="costLogistics">¥0.00</span>
+                  <small id="logisticsNote"></small>
+                </td>
+              </tr>
+              <tr>
+                <th>平台佣金</th>
+                <td>
+                  <span id="costCommission">¥0.00</span>
+                  <small id="commissionNote"></small>
+                </td>
+              </tr>
+              <tr>
+                <th>广告费用</th>
+                <td id="costAds">¥0.00</td>
+              </tr>
+              <tr>
+                <th>提现手续费</th>
+                <td id="costCash">¥0.00</td>
+              </tr>
+              <tr>
+                <th>退货损失</th>
+                <td id="costRefund">¥0.00</td>
+              </tr>
+              <tr>
+                <th>其他费用</th>
+                <td id="costOther">¥0.00</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p class="hint" id="warningText"></p>
+        </section>
+      </section>
+    </main>
+
+    <div class="modal" id="logisticsModal" hidden>
+      <div class="modal-backdrop" data-close-modal></div>
+      <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="logisticsTitle">
+        <header class="modal-head">
+          <h2 id="logisticsTitle">ozon合作物流渠道的物流费用</h2>
+          <button type="button" class="icon-btn" data-close-modal aria-label="关闭">×</button>
+        </header>
+        <div class="modal-table-head">
+          <span>物流商</span>
+          <span>跨境物流费用</span>
+        </div>
+        <div class="logistics-list" id="logisticsCompareList"></div>
+      </section>
+    </div>
+
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>
