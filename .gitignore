@@ -1,0 +1,8 @@
+node_modules/
+data/
+.playwright-mcp/
+.cache/*
+!.cache/README.md
+db/*.sqlite
+frontend/**/dist/
+docs/测试文档/**/UI/
