@@ -1,0 +1,23 @@
+export function formatNumber(value, digits = 0) {
+  if (value == null || value === '') return '-';
+  const number = Number(value);
+  if (!Number.isFinite(number)) return '-';
+  return number.toLocaleString('zh-CN', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+}
+
+export function formatMoney(value) {
+  if (value == null || value === '') return '-';
+  return `¥ ${formatNumber(value, 2)}`;
+}
+
+export function formatPercent(value) {
+  if (value == null || value === '') return '-';
+  return `${formatNumber(value, 2)}%`;
+}
+
+export function formatText(value) {
+  return value == null || value === '' ? '-' : String(value);
+}

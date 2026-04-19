@@ -1,0 +1,26 @@
+{
+  "name": "menglar-crawler-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "mvp:probe": "node scripts/menglar-mvp.mjs",
+    "mvp:db:inspect": "node scripts/inspect-menglar-db.mjs",
+    "viewer:start": "node backend/menglar-workbench-api/server.mjs",
+    "workbench:api": "node backend/menglar-workbench-api/server.mjs",
+    "workbench:web": "vite --config frontend/menglar-workbench/vite.config.mjs",
+    "workbench:web:build": "vite build --config frontend/menglar-workbench/vite.config.mjs"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.5",
+    "motion": "^12.23.24",
+    "playwright": "^1.54.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.9.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.4",
+    "vite": "^8.0.0"
+  }
+}
