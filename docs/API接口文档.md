@@ -24,12 +24,12 @@
 
 ### GET /api/products
 #### 说明
-读取最新成功任务或指定任务下的标准化商品数据，支持基础筛选与分页。
+读取最新有标准化商品数据的成功任务，或读取指定任务下的标准化商品数据，支持基础筛选与分页。
 
 #### 请求参数
 | 参数 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `jobId` | number | 否 | 指定任务ID，默认最新成功任务 |
+| `jobId` | number | 否 | 指定任务ID，默认最新有标准化商品数据的成功任务 |
 | `page` | number | 否 | 页码，默认 `1` |
 | `pageSize` | number | 否 | 每页条数，默认 `20`，最大 `100` |
 | `keyword` | string | 否 | 关键词，匹配商品ID / 品牌 / 类目 |
@@ -124,6 +124,7 @@
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
 | `methods` | array | 可用物流方法列表 |
+| `methods[].variants` | array | 官方计算器展示的服务变体，例如 `Courier`、`PUDO`；没有校准时为空数组或不存在 |
 
 ### GET /api/shipping/rule-info
 #### 说明
@@ -169,6 +170,8 @@
 | `totalLogisticsCost` | number | 最终物流成本 |
 | `currency` | string | 费用币种 |
 | `ruleMeta` | object | 命中的规则摘要 |
+| `ruleMeta.variants` | array | 命中规则的官方计算器变体信息 |
+| `ruleMeta.constraintPolicies` | object | 限制字段策略，`hard` 表示本地硬拦截，`reference` 表示仅参考展示 |
 | `calculationMeta` | object | 输入、限制校验、汇率命中等计算元信息 |
 
 ### POST /api/shipping/calculate-batch
@@ -213,6 +216,7 @@
 | `items[].service.displayName` | string | 官方服务名称 |
 | `items[].service.officialSubtitle` | string | 官方服务副标题 |
 | `items[].service.deliveryDays` | object | 时效范围 |
+| `items[].service.variants` | array | 官方计算器服务变体，包含 `officialName`、`deliveryTarget`、`deliveryDays`、`batteryPolicy`、`badges` |
 | `items[].result.totalLogisticsCost` | number | 当前输入下的物流费用 |
 | `unavailableItems` | array | 因限制条件不可用的服务 |
 | `total` | number | 可用服务数量 |
