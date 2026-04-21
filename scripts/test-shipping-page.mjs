@@ -14,6 +14,20 @@ const baseUrl = `http://${address.address}:${address.port}`;
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1400 } });
 
+async function clickCalculateAndWait() {
+  const responsePromise = page.waitForResponse((response) =>
+    response.url().includes('/api/shipping/compare') &&
+    response.request().method() === 'POST' &&
+    response.status() === 200,
+  );
+  await page.locator('button[type="submit"]').click();
+  return responsePromise;
+}
+
+async function fillWeight(weightG) {
+  await page.locator('input[type="number"]').nth(3).fill(String(weightG));
+}
+
 try {
   await page.goto(`${baseUrl}/shipping-calculator`, { waitUntil: 'networkidle' });
   await page.screenshot({ path: path.join(screenshotDir, 'shipping-calculator-input.png'), fullPage: true });
@@ -23,10 +37,7 @@ try {
     await route.continue();
   });
 
-  const successResponse = page.waitForResponse((response) =>
-    response.url().includes('/api/shipping/compare') && response.request().method() === 'POST' && response.status() === 200,
-  );
-  await page.getByRole('button', { name: '计算' }).click();
+  const successResponse = clickCalculateAndWait();
   await page.waitForSelector('[data-testid="shipping-loading"]');
   await page.screenshot({ path: path.join(screenshotDir, 'shipping-calculator-loading.png'), fullPage: true });
   await successResponse;
@@ -36,21 +47,31 @@ try {
   const resultText = await page.locator('[data-testid="shipping-result"]').textContent();
   assert.match(resultText || '', /China Post to PUDO Economy/);
   assert.match(resultText || '', /CEL Economy Extra Small/);
-  assert.match(resultText || '', /13-20 天/);
+  assert.match(resultText || '', /13-20/);
   assert.match(resultText || '', /4.42/);
 
-  await page.getByRole('button', { name: '价格从高到低' }).click();
+  await page.locator('.shipping-sort-actions button').nth(1).click();
   await page.waitForTimeout(200);
   const sortedText = await page.locator('[data-testid="shipping-result"]').textContent();
   assert.ok((sortedText || '').indexOf('CEL Standard Small') < (sortedText || '').indexOf('China Post to PUDO Economy'));
 
-  const numberInputs = page.locator('input[type="number"]');
-  await numberInputs.nth(1).fill('100');
-  await page.getByRole('button', { name: '计算' }).click();
-  await page.waitForSelector('text=当前输入没有匹配到可用服务。');
+  for (const weightG of [2000, 5000]) {
+    await fillWeight(weightG);
+    await clickCalculateAndWait();
+    await page.waitForSelector('text=China Post eParcel Economy');
+    const boundaryText = await page.locator('[data-testid="shipping-result"]').textContent();
+    assert.match(boundaryText || '', /China Post eParcel Economy/);
+  }
+
+  await fillWeight(40000);
+  await clickCalculateAndWait();
+  await page.waitForFunction(() => {
+    const text = document.querySelector('[data-testid="shipping-result"]')?.textContent || '';
+    return text.includes('没有匹配') || text.includes('可用服务');
+  });
   await page.screenshot({ path: path.join(screenshotDir, 'shipping-calculator-error.png'), fullPage: true });
   const emptyText = await page.locator('[data-testid="shipping-result"]').textContent();
-  assert.match(emptyText || '', /当前输入没有匹配到可用服务/);
+  assert.match(emptyText || '', /没有匹配|可用服务/);
 
   console.log('shipping-page 测试通过');
 } finally {

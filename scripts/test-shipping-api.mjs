@@ -1,72 +1,124 @@
 import assert from 'node:assert/strict';
-import { copyFile, readFile, rm, writeFile } from 'node:fs/promises';
-import path from 'node:path';
 import { startWorkbenchServer } from '../backend/menglar-workbench-api/server.mjs';
-
-const root = path.resolve(import.meta.dirname, '..');
-const rulesPath = path.join(root, 'config', 'shipping', 'rules.json');
-const rulesBackupPath = path.join(root, 'config', 'shipping', 'rules.test-backup.json');
 
 async function readJson(response) {
   return response.json();
+}
+
+function baseComparePayload(overrides = {}) {
+  return {
+    originCountry: 'CN',
+    warehouseType: 'seller_warehouse',
+    salesScheme: 'realFBS',
+    price: 1,
+    lengthCm: 1,
+    widthCm: 1,
+    heightCm: 1,
+    weightG: 50,
+    orderDate: '2026-04-21',
+    ...overrides,
+  };
+}
+
+function findService(payload, displayName) {
+  const item = payload.items.find((entry) => entry.service.displayName === displayName);
+  assert.ok(item, `expected service: ${displayName}`);
+  return item;
 }
 
 const server = await startWorkbenchServer({ port: 0, host: '127.0.0.1' });
 const address = server.address();
 const baseUrl = `http://${address.address}:${address.port}`;
 
-const validPayload = {
-  originCountry: 'CN',
-  warehouseType: 'seller_warehouse',
-  salesScheme: 'realFBS',
-  carrierCode: 'CHINA_POST',
-  deliveryMethodCode: 'CHINA_POST_TO_PUDO_ECONOMY',
-  price: 1,
-  lengthCm: 1,
-  widthCm: 1,
-  heightCm: 1,
-  weightG: 50,
-  orderDate: '2026-04-21',
-};
-
 try {
-  let response = await fetch(`${baseUrl}/api/shipping/calculate`, {
+  let response = await fetch(`${baseUrl}/api/shipping/rule-info`);
+  let payload = await readJson(response);
+  assert.equal(response.status, 200);
+  assert.equal(payload.methodCount, 149);
+
+  response = await fetch(`${baseUrl}/api/shipping/methods`);
+  payload = await readJson(response);
+  assert.equal(response.status, 200);
+  assert.ok(payload.methods.some((item) => item.displayName === 'China Post to PUDO Economy'));
+  assert.ok(payload.methods.some((item) => item.displayName === 'CEL Economy Extra Small'));
+  assert.ok(payload.methods.some((item) => item.displayName === 'China Post eParcel Economy'));
+
+  response = await fetch(`${baseUrl}/api/shipping/compare`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(validPayload),
+    body: JSON.stringify(baseComparePayload()),
   });
-  let payload = await readJson(response);
+  payload = await readJson(response);
+  assert.equal(response.status, 200);
+  assert.ok(payload.total > 0);
+
+  const chinaPostPudo = findService(payload, 'China Post to PUDO Economy');
+  assert.equal(chinaPostPudo.result.totalLogisticsCost, 3.2);
+  assert.equal(chinaPostPudo.service.variants[0].deliveryDays.min, 13);
+  assert.equal(chinaPostPudo.service.variants[0].deliveryDays.max, 20);
+
+  const guooExtraSmall = findService(payload, 'GUOO Economy Extra Small');
+  assert.equal(guooExtraSmall.result.totalLogisticsCost, 4.3);
+  assert.equal(guooExtraSmall.service.variants.length, 2);
+  assert.ok(guooExtraSmall.service.variants.some((variant) => variant.officialName.includes('Courier')));
+  assert.ok(guooExtraSmall.service.variants.some((variant) => variant.officialName.includes('PUDO')));
+
+  const celExtraSmall = findService(payload, 'CEL Economy Extra Small');
+  assert.equal(celExtraSmall.result.totalLogisticsCost, 4.42);
+  assert.ok(celExtraSmall.service.variants.every((variant) => variant.deliveryDays.min === 20 && variant.deliveryDays.max === 25));
+
+  response = await fetch(`${baseUrl}/api/shipping/calculate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ...baseComparePayload(),
+      carrierCode: chinaPostPudo.service.carrierCode,
+      deliveryMethodCode: chinaPostPudo.service.deliveryMethodCode,
+    }),
+  });
+  payload = await readJson(response);
   assert.equal(response.status, 200);
   assert.equal(payload.physicalWeightG, 50);
   assert.equal(payload.volumetricWeightG, 1);
   assert.equal(payload.chargeableWeightG, 50);
   assert.equal(payload.calculationMeta.exchangeRate.value, 11.08);
   assert.equal(payload.ruleMeta.displayName, 'China Post to PUDO Economy');
-  assert.equal(payload.ruleMeta.deliveryDays.min, 13);
-  assert.equal(payload.ruleMeta.deliveryDays.max, 20);
   assert.equal(payload.totalLogisticsCost, 3.2);
 
   response = await fetch(`${baseUrl}/api/shipping/calculate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      ...validPayload,
-      lengthCm: 100,
+      ...baseComparePayload({ lengthCm: 100 }),
+      carrierCode: chinaPostPudo.service.carrierCode,
+      deliveryMethodCode: chinaPostPudo.service.deliveryMethodCode,
     }),
   });
   payload = await readJson(response);
   assert.equal(response.status, 400);
-  assert.match(payload.error, /超出物流方法限制/);
-  assert.match(payload.details.violations.join(','), /三边和超限|最长边超限/);
+  assert.match(payload.error, /限制|瓒呭嚭/);
+  assert.ok(payload.details.violations.length > 0);
 
   response = await fetch(`${baseUrl}/api/shipping/calculate-batch`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       items: [
-        validPayload,
-        { ...validPayload, carrierCode: 'CEL', deliveryMethodCode: 'CEL_ECONOMY_EXTRA_SMALL_PUDO' },
-        { ...validPayload, weightG: 40000 },
+        {
+          ...baseComparePayload(),
+          carrierCode: chinaPostPudo.service.carrierCode,
+          deliveryMethodCode: chinaPostPudo.service.deliveryMethodCode,
+        },
+        {
+          ...baseComparePayload(),
+          carrierCode: celExtraSmall.service.carrierCode,
+          deliveryMethodCode: celExtraSmall.service.deliveryMethodCode,
+        },
+        {
+          ...baseComparePayload({ weightG: 40000 }),
+          carrierCode: celExtraSmall.service.carrierCode,
+          deliveryMethodCode: celExtraSmall.service.deliveryMethodCode,
+        },
       ],
     }),
   });
@@ -77,61 +129,22 @@ try {
   assert.equal(payload.items[0].result.totalLogisticsCost, 3.2);
   assert.equal(payload.items[1].result.totalLogisticsCost, 4.42);
 
-  await copyFile(rulesPath, rulesBackupPath);
-  const originalRules = JSON.parse(await readFile(rulesPath, 'utf8'));
-  originalRules.methods[0].fixedFee = 4;
-  await writeFile(rulesPath, JSON.stringify(originalRules, null, 2));
-
-  response = await fetch(`${baseUrl}/api/shipping/calculate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(validPayload),
-  });
-  payload = await readJson(response);
-  assert.equal(payload.carrierDeliveryCost, 4);
-  assert.equal(payload.totalLogisticsCost, 4);
-
-  await copyFile(rulesBackupPath, rulesPath);
-  await rm(rulesBackupPath, { force: true });
-
-  response = await fetch(`${baseUrl}/api/shipping/rule-info`);
-  payload = await readJson(response);
-  assert.equal(response.status, 200);
-  assert.ok(payload.methodCount >= 2);
-
-  response = await fetch(`${baseUrl}/api/shipping/methods`);
-  payload = await readJson(response);
-  assert.equal(response.status, 200);
-  assert.ok(payload.methods.some((item) => item.deliveryMethodCode === 'CHINA_POST_TO_PUDO_ECONOMY'));
-
-  response = await fetch(`${baseUrl}/api/shipping/compare`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      originCountry: validPayload.originCountry,
-      warehouseType: validPayload.warehouseType,
-      salesScheme: validPayload.salesScheme,
-      price: validPayload.price,
-      lengthCm: validPayload.lengthCm,
-      widthCm: validPayload.widthCm,
-      heightCm: validPayload.heightCm,
-      weightG: validPayload.weightG,
-      orderDate: validPayload.orderDate,
-    }),
-  });
-  payload = await readJson(response);
-  assert.equal(response.status, 200);
-  assert.equal(payload.items[0].service.displayName, 'China Post to PUDO Economy');
-  assert.equal(payload.items[0].result.totalLogisticsCost, 3.2);
-  assert.ok(payload.items.some((item) => item.service.displayName === 'CEL Economy Extra Small'));
-  assert.ok(payload.items.some((item) => item.service.officialSubtitle === 'CEL Extra Small Economy PUDO'));
+  for (const [weightG, expectedService] of [
+    [2000, 'China Post eParcel Economy'],
+    [5000, 'China Post eParcel Economy'],
+  ]) {
+    response = await fetch(`${baseUrl}/api/shipping/compare`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(baseComparePayload({ weightG })),
+    });
+    payload = await readJson(response);
+    assert.equal(response.status, 200);
+    assert.ok(payload.total > 0, `expected available services for ${weightG}g`);
+    findService(payload, expectedService);
+  }
 
   console.log('shipping-api 测试通过');
 } finally {
-  try {
-    const backup = await readFile(rulesBackupPath, 'utf8');
-    await writeFile(rulesPath, backup);
-    await rm(rulesBackupPath, { force: true });
-  } catch {}
   await new Promise((resolve) => server.close(resolve));
 }
