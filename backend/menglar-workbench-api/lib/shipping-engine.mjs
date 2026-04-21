@@ -104,18 +104,25 @@ function findComparableMethods(methods, input) {
 
 function validateConstraints(method, input) {
   const constraints = method.constraints || {};
+  const policies = method.constraintPolicies || {};
   const violations = [];
   const dimensionSumCm = input.lengthCm + input.widthCm + input.heightCm;
   const longestSideCm = Math.max(input.lengthCm, input.widthCm, input.heightCm);
 
-  if (constraints.maxWeightG != null && input.weightG > Number(constraints.maxWeightG)) {
+  if (constraints.maxWeightG != null && policies.maxWeightG !== 'reference' && input.weightG > Number(constraints.maxWeightG)) {
     violations.push(`重量超限，最大 ${constraints.maxWeightG}g`);
   }
-  if (constraints.maxDimensionSumCm != null && dimensionSumCm > Number(constraints.maxDimensionSumCm)) {
+  if (constraints.maxDimensionSumCm != null && policies.maxDimensionSumCm !== 'reference' && dimensionSumCm > Number(constraints.maxDimensionSumCm)) {
     violations.push(`三边和超限，最大 ${constraints.maxDimensionSumCm}cm`);
   }
-  if (constraints.maxSideCm != null && longestSideCm > Number(constraints.maxSideCm)) {
+  if (constraints.maxSideCm != null && policies.maxSideCm !== 'reference' && longestSideCm > Number(constraints.maxSideCm)) {
     violations.push(`最长边超限，最大 ${constraints.maxSideCm}cm`);
+  }
+  if (constraints.minPriceCny != null && policies.minPriceCny !== 'reference' && input.price < Number(constraints.minPriceCny)) {
+    violations.push(`商品价格低于限制，最小 ${constraints.minPriceCny} CNY`);
+  }
+  if (constraints.maxPriceCny != null && policies.maxPriceCny !== 'reference' && input.price > Number(constraints.maxPriceCny)) {
+    violations.push(`商品价格超过限制，最大 ${constraints.maxPriceCny} CNY`);
   }
   if (constraints.maxLengthCm != null && input.lengthCm > Number(constraints.maxLengthCm)) {
     violations.push(`长度超限，最大 ${constraints.maxLengthCm}cm`);
@@ -193,6 +200,10 @@ function calculateExtraFee(price, carrierDeliveryCost, extraFeeConfig) {
   return roundMoney(price * value);
 }
 
+function normalizeVariants(method) {
+  return Array.isArray(method.variants) ? method.variants : [];
+}
+
 export function listShippingMethods() {
   const rules = getRules();
   return rules.methods.map((method) => ({
@@ -204,6 +215,7 @@ export function listShippingMethods() {
     salesScheme: method.salesScheme,
     currency: method.currency,
     deliveryDays: method.deliveryDays || null,
+    variants: normalizeVariants(method),
     constraints: method.constraints || {},
     notes: method.notes || '',
   }));
@@ -287,7 +299,9 @@ export function calculateShipping(input) {
       incrementFee: Number(method.incrementFee || 0),
       officialSubtitle: method.officialSubtitle || '',
       deliveryDays: method.deliveryDays || null,
+      variants: normalizeVariants(method),
       constraints: method.constraints || {},
+      constraintPolicies: method.constraintPolicies || {},
       notes: method.notes || '',
       sourceUpdatedAt: rules.meta?.updatedAt || null,
     },
@@ -329,6 +343,7 @@ export function compareShipping(input) {
           displayName: method.displayName,
           officialSubtitle: method.officialSubtitle || '',
           deliveryDays: method.deliveryDays || null,
+          variants: normalizeVariants(method),
           deliveryTarget: method.deliveryTarget || '',
           batteryPolicy: method.constraints?.batteryPolicy || '',
           tags: method.tags || [],
@@ -344,6 +359,7 @@ export function compareShipping(input) {
           displayName: method.displayName,
           officialSubtitle: method.officialSubtitle || '',
           deliveryDays: method.deliveryDays || null,
+          variants: normalizeVariants(method),
           deliveryTarget: method.deliveryTarget || '',
           batteryPolicy: method.constraints?.batteryPolicy || '',
           tags: method.tags || [],

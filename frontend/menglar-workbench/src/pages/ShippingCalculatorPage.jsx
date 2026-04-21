@@ -208,11 +208,35 @@ function ShippingServiceCard({ item, index }) {
         </div>
       </div>
 
+      {item.service.variants?.length ? (
+        <div className="shipping-service-variants">
+          {item.service.variants.map((variant) => (
+            <div className="shipping-service-variant" key={variant.variantCode}>
+              <strong>{variant.officialName}</strong>
+              <span>{formatVariantDays(variant.deliveryDays)}</span>
+              <span>{formatVariantBattery(variant.batteryPolicy)}</span>
+              {variant.badges?.includes('fastest') ? <em>最快</em> : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       <div className="shipping-service-meta">
         <span>⏱ 从 {deliveryDays}</span>
       </div>
     </motion.article>
   );
+}
+
+function formatVariantDays(deliveryDays) {
+  if (!deliveryDays) return '时效 -';
+  return `时效 ${deliveryDays.min}-${deliveryDays.max} 天`;
+}
+
+function formatVariantBattery(policy) {
+  if (policy === 'allowed') return '可运输电池';
+  if (policy === 'forbidden') return '不可运输电池';
+  return '电池限制未知';
 }
 
 function toPayload(form) {

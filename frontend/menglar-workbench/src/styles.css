@@ -1206,6 +1206,42 @@ select {
   font-weight: 800;
 }
 
+.shipping-service-variants {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.shipping-service-variant {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.76);
+  color: #071526;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.shipping-service-variant strong {
+  font-size: 13px;
+}
+
+.shipping-service-variant span {
+  color: #536276;
+}
+
+.shipping-service-variant em {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #0b63f6;
+  font-style: normal;
+  font-weight: 950;
+}
+
 .wb-feedback {
   padding: 14px 16px;
   border-radius: 16px;
