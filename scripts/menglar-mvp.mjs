@@ -10,6 +10,7 @@ const DATA_DIR = path.join(ROOT, 'data', 'menglar-mvp');
 const DB_DIR = path.join(ROOT, 'db');
 const DB_PATH = path.join(DB_DIR, 'menglar-mvp.sqlite');
 const REPORT_PATH = path.join(DATA_DIR, 'last-run.json');
+const CAPTURED_JSON_PATH = path.join(DATA_DIR, 'captured-json-full.json');
 const SCREENSHOT_PATH = path.join(DATA_DIR, 'dashboard.png');
 const STABLE_PROFILE_COPY = path.join(ROOT, '.cache', 'ziniao-profile-copy-stable');
 
@@ -32,6 +33,7 @@ const TARGET_URL =
 const MENGLAR_ORIGIN = 'https://ozon.menglar.com';
 const USER_DATA_DEFAULT_DIR = path.join(SOURCE_PROFILE, 'Default');
 const HOT_PAGE_API_PATH = '/api/ozon-report-service/v1/itemRanking/hotPage';
+const INDUSTRY_GENERAL_PATH = '/workbench/industry/general';
 const PROFILE_COPY_RELATIVE_PATHS = [
   'Local State',
   path.join('Default', 'Preferences'),
@@ -45,6 +47,22 @@ const PROFILE_COPY_RELATIVE_PATHS = [
   path.join('Default', 'Extensions'),
   path.join('Default', 'Extension State'),
 ];
+
+function getTargetPageMeta(targetUrl) {
+  if (targetUrl.includes(INDUSTRY_GENERAL_PATH)) {
+    return {
+      pageName: '萌拉行业数据',
+      pageType: 'industry_general',
+      paginationMode: 'api_capture',
+    };
+  }
+
+  return {
+    pageName: '萌拉热销产品',
+    pageType: 'hot_products',
+    paginationMode: 'paged',
+  };
+}
 
 const EXCLUDE_DIRS = new Set([
   'Cache',
@@ -402,6 +420,7 @@ async function resetProfileCopy() {
 
 function insertJob(db) {
   const ts = nowIso();
+  const pageMeta = getTargetPageMeta(TARGET_URL);
   const stmt = db.prepare(`
     INSERT INTO source_jobs (
       page_name, page_url, page_type, pagination_mode,
@@ -409,10 +428,10 @@ function insertJob(db) {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const result = stmt.run(
-    '萌拉热销产品',
+    pageMeta.pageName,
     TARGET_URL,
-    'hot_products',
-    'paged',
+    pageMeta.pageType,
+    pageMeta.paginationMode,
     'running',
     ts,
     ts,
@@ -672,7 +691,9 @@ async function main() {
       if (!url.includes('menglar.com') || !url.includes('/api/')) return;
       report.apiRequestHeaders.push({
         url,
+        method: request.method(),
         headers: request.headers(),
+        postData: request.postData(),
       });
     });
     context.on('response', async (response) => {
@@ -746,8 +767,10 @@ async function main() {
     }));
     report.apiRequestHeaders = report.apiRequestHeaders.slice(0, 20).map((item) => ({
       url: item.url,
+      method: item.method,
+      postData: item.postData,
       headerKeys: Object.keys(item.headers).sort(),
-      authorization: item.headers.authorization ?? null,
+      authorization: item.headers.authorization ? '[redacted]' : null,
       token: item.headers.token ?? null,
     }));
 
@@ -838,6 +861,10 @@ async function main() {
 
     report.finishedAt = nowIso();
     await writeFile(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+    const businessCapturedJson = capturedJson.filter((item) =>
+      item.url.includes('/api/ozon-report-service/v1/bigDisc/')
+    );
+    await writeFile(CAPTURED_JSON_PATH, `${JSON.stringify(businessCapturedJson, null, 2)}\n`, 'utf8');
     console.log(JSON.stringify(report, null, 2));
   } catch (error) {
     updateJob(db, jobId, {
