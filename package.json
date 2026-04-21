@@ -6,10 +6,18 @@
   "scripts": {
     "mvp:probe": "node scripts/menglar-mvp.mjs",
     "mvp:db:inspect": "node scripts/inspect-menglar-db.mjs",
+    "shipping:validate": "node scripts/validate-shipping-config.mjs",
+    "shipping:api:test": "node scripts/test-shipping-api.mjs",
+    "shipping:page:test": "node scripts/test-shipping-page.mjs",
+    "dev": "node scripts/dev.mjs",
     "viewer:start": "node backend/menglar-workbench-api/server.mjs",
     "workbench:api": "node backend/menglar-workbench-api/server.mjs",
     "workbench:web": "vite --config frontend/menglar-workbench/vite.config.mjs",
-    "workbench:web:build": "vite build --config frontend/menglar-workbench/vite.config.mjs"
+    "workbench:web:build": "vite build --config frontend/menglar-workbench/vite.config.mjs",
+    "ozon:tool": "node scripts/ozon-batch-tool.mjs",
+    "ozon:tool:test": "node scripts/test-ozon-batch-tool.mjs",
+    "ozon:api:test": "node scripts/test-ozon-workbench-api.mjs",
+    "ozon:page:test": "node scripts/test-ozon-upload-page.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.5",

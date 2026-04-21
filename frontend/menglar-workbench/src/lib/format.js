@@ -13,6 +13,17 @@ export function formatMoney(value) {
   return `¥ ${formatNumber(value, 2)}`;
 }
 
+export function formatCurrency(value, currency = 'CNY') {
+  if (value == null || value === '') return '-';
+  const symbolMap = {
+    CNY: '¥',
+    RUB: '₽',
+    USD: '$',
+  };
+  const symbol = symbolMap[currency] || currency;
+  return `${symbol} ${formatNumber(value, 2)}`;
+}
+
 export function formatPercent(value) {
   if (value == null || value === '') return '-';
   return `${formatNumber(value, 2)}%`;

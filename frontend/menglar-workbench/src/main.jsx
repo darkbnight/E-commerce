@@ -5,6 +5,9 @@ import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { AppShell } from './shell/AppShell';
 import { TasksPage } from './pages/TasksPage';
 import { ResultsPage } from './pages/ResultsPage';
+import { OzonUploadPage } from './pages/OzonUploadPage';
+import { ShippingCalculatorPage } from './pages/ShippingCalculatorPage';
+import { ShippingRuleInfoPage } from './pages/ShippingRuleInfoPage';
 import './styles.css';
 
 const queryClient = new QueryClient();
@@ -17,6 +20,9 @@ const router = createBrowserRouter([
       { index: true, element: <Navigate to="/tasks" replace /> },
       { path: '/tasks', element: <TasksPage /> },
       { path: '/results', element: <ResultsPage /> },
+      { path: '/shipping-calculator', element: <ShippingCalculatorPage /> },
+      { path: '/shipping-calculator/rules', element: <ShippingRuleInfoPage /> },
+      { path: '/ozon-upload', element: <OzonUploadPage /> },
     ],
   },
 ]);

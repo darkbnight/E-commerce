@@ -3,6 +3,22 @@ import { createReadStream, existsSync } from 'node:fs';
 import { mkdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { pathToFileURL } from 'node:url';
+import {
+  buildTemplate,
+  loadItemsPayload,
+  OzonSellerClient,
+  validatePriceItems,
+  validateProductItems,
+  validateStockItems,
+} from '../../scripts/lib/ozon-seller-client.mjs';
+import {
+  calculateShipping,
+  calculateShippingBatch,
+  compareShipping,
+  getShippingRuleInfo,
+  listShippingMethods,
+} from './lib/shipping-engine.mjs';
 
 const ROOT = import.meta.dirname;
 const PORT = Number(process.env.PORT || 4186);
@@ -23,6 +39,13 @@ function sendJson(res, statusCode, payload) {
     'cache-control': 'no-store',
   });
   res.end(`${JSON.stringify(payload, null, 2)}\n`);
+}
+
+function sendError(res, statusCode, message, details = null) {
+  sendJson(res, statusCode, {
+    error: message,
+    details,
+  });
 }
 
 function safePath(urlPath) {
@@ -46,6 +69,42 @@ function withDb(run) {
 function parseInteger(value, fallback) {
   const parsed = Number.parseInt(value ?? '', 10);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+async function readJsonBody(req) {
+  const chunks = [];
+  for await (const chunk of req) {
+    chunks.push(chunk);
+  }
+
+  const raw = Buffer.concat(chunks).toString('utf8').trim();
+  if (!raw) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error('请求体不是合法 JSON');
+  }
+}
+
+function getOzonValidation(mode, items) {
+  if (mode === 'prices') {
+    return validatePriceItems(items);
+  }
+  if (mode === 'stocks') {
+    return validateStockItems(items);
+  }
+  return validateProductItems(items);
+}
+
+function createOzonClient(body) {
+  return new OzonSellerClient({
+    clientId: body.clientId,
+    apiKey: body.apiKey,
+    baseUrl: body.baseUrl,
+  });
 }
 
 function getLatestJobId(db) {
@@ -247,53 +306,288 @@ function handleApiProducts(req, res) {
   sendJson(res, 200, payload);
 }
 
-const server = createServer(async (req, res) => {
-  if ((req.url || '').startsWith('/api/jobs')) {
-    handleApiJobs(res);
-    return;
-  }
+function handleApiOzonTemplate(req, res) {
+  const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
+  const kind = url.searchParams.get('kind') || 'products';
+  sendJson(res, 200, buildTemplate(kind));
+}
 
-  if ((req.url || '').startsWith('/api/products')) {
-    handleApiProducts(req, res);
-    return;
-  }
+function handleApiShippingMethods(res) {
+  sendJson(res, 200, {
+    methods: listShippingMethods(),
+  });
+}
 
-  const filePath = safePath(req.url || '/');
-  if (!filePath) {
-    res.writeHead(403);
-    res.end('Forbidden');
-    return;
-  }
+function handleApiShippingRuleInfo(res) {
+  sendJson(res, 200, getShippingRuleInfo());
+}
 
+async function handleApiShippingCalculate(req, res) {
   try {
-    let targetPath = filePath;
-    let fileInfo;
-    try {
-      fileInfo = await stat(targetPath);
-    } catch {
-      targetPath = path.join(WORKBENCH_DIST, 'index.html');
-      fileInfo = await stat(targetPath);
-    }
+    const body = await readJsonBody(req);
+    const result = calculateShipping(body);
+    sendJson(res, 200, result);
+  } catch (error) {
+    sendError(res, error.status || 500, error.message, error.details || null);
+  }
+}
 
-    if (!fileInfo.isFile()) {
-      res.writeHead(404);
-      res.end('Not found');
+async function handleApiShippingCalculateBatch(req, res) {
+  try {
+    const body = await readJsonBody(req);
+    const result = calculateShippingBatch(body.items);
+    sendJson(res, 200, result);
+  } catch (error) {
+    sendError(res, error.status || 500, error.message, error.details || null);
+  }
+}
+
+async function handleApiShippingCompare(req, res) {
+  try {
+    const body = await readJsonBody(req);
+    const result = compareShipping(body);
+    sendJson(res, 200, result);
+  } catch (error) {
+    sendError(res, error.status || 500, error.message, error.details || null);
+  }
+}
+
+async function handleApiOzonValidate(req, res) {
+  try {
+    const body = await readJsonBody(req);
+    const mode = body.mode || 'products';
+    const items = loadItemsPayload(body.payload);
+    const result = getOzonValidation(mode, items);
+
+    sendJson(res, 200, {
+      mode,
+      itemCount: items.length,
+      ...result,
+    });
+  } catch (error) {
+    sendError(res, 400, error.message);
+  }
+}
+
+async function handleApiOzonExecute(req, res) {
+  try {
+    const body = await readJsonBody(req);
+    const action = body.action || 'upload';
+    const payload = body.payload || {};
+    const items = loadItemsPayload(payload);
+    const validationMode = action === 'prices' ? 'prices' : action === 'stocks' ? 'stocks' : 'products';
+    const validation = getOzonValidation(validationMode, items);
+
+    if (!validation.ok) {
+      sendError(res, 400, '数据校验未通过', validation);
       return;
     }
 
-    res.writeHead(200, {
-      'content-type': TYPES[path.extname(targetPath)] || 'application/octet-stream',
-      'cache-control': 'no-store',
+    if (body.dryRun) {
+      sendJson(res, 200, {
+        action,
+        dryRun: true,
+        itemCount: items.length,
+        warnings: validation.warnings || [],
+        result: action === 'upload'
+          ? { batchCount: Math.ceil(items.length / 100), totalItems: items.length }
+          : { totalItems: items.length },
+      });
+      return;
+    }
+
+    const client = createOzonClient(body);
+    let result;
+    if (action === 'prices') {
+      result = await client.importPrices(items);
+    } else if (action === 'stocks') {
+      result = await client.updateStocks(items);
+    } else {
+      result = await client.uploadProducts(items);
+    }
+
+    sendJson(res, 200, {
+      action,
+      dryRun: false,
+      itemCount: items.length,
+      warnings: validation.warnings || [],
+      result,
     });
-    createReadStream(targetPath).pipe(res);
-  } catch {
-    res.writeHead(404);
-    res.end('Not found');
+  } catch (error) {
+    sendError(res, error.status || 500, error.message, error.body || null);
   }
-});
+}
 
-await mkdir(WORKBENCH_DIST, { recursive: true }).catch(() => {});
+async function handleApiOzonImportInfo(req, res) {
+  try {
+    const body = await readJsonBody(req);
+    const taskId = parseInteger(body.taskId, null);
+    if (!taskId) {
+      sendError(res, 400, 'taskId 必须是正整数');
+      return;
+    }
 
-server.listen(PORT, '127.0.0.1', () => {
+    const client = createOzonClient(body);
+    const result = await client.getImportInfo(taskId);
+    sendJson(res, 200, result);
+  } catch (error) {
+    sendError(res, error.status || 500, error.message, error.body || null);
+  }
+}
+
+async function handleApiOzonCategoryAttributes(req, res) {
+  try {
+    const body = await readJsonBody(req);
+    const categoryId = parseInteger(body.categoryId, null);
+    if (!categoryId) {
+      sendError(res, 400, 'categoryId 必须是正整数');
+      return;
+    }
+
+    const client = createOzonClient(body);
+    const result = await client.getCategoryAttributes({ categoryIds: [categoryId] });
+    sendJson(res, 200, result);
+  } catch (error) {
+    sendError(res, error.status || 500, error.message, error.body || null);
+  }
+}
+
+async function handleApiOzonAttributeValues(req, res) {
+  try {
+    const body = await readJsonBody(req);
+    const categoryId = parseInteger(body.categoryId, null);
+    const attributeId = parseInteger(body.attributeId, null);
+    if (!categoryId || !attributeId) {
+      sendError(res, 400, 'categoryId 和 attributeId 必须是正整数');
+      return;
+    }
+
+    const client = createOzonClient(body);
+    const result = await client.getCategoryAttributeValues({ categoryId, attributeId });
+    sendJson(res, 200, result);
+  } catch (error) {
+    sendError(res, error.status || 500, error.message, error.body || null);
+  }
+}
+
+export function createWorkbenchServer() {
+  return createServer(async (req, res) => {
+    if ((req.url || '').startsWith('/api/jobs')) {
+      handleApiJobs(res);
+      return;
+    }
+
+    if ((req.url || '').startsWith('/api/products')) {
+      handleApiProducts(req, res);
+      return;
+    }
+
+    if ((req.url || '').startsWith('/api/ozon/template')) {
+      handleApiOzonTemplate(req, res);
+      return;
+    }
+
+    if ((req.url || '').startsWith('/api/shipping/methods')) {
+      handleApiShippingMethods(res);
+      return;
+    }
+
+    if ((req.url || '').startsWith('/api/shipping/rule-info')) {
+      handleApiShippingRuleInfo(res);
+      return;
+    }
+
+    if ((req.url || '').startsWith('/api/shipping/calculate-batch')) {
+      await handleApiShippingCalculateBatch(req, res);
+      return;
+    }
+
+    if ((req.url || '').startsWith('/api/shipping/compare')) {
+      await handleApiShippingCompare(req, res);
+      return;
+    }
+
+    if ((req.url || '').startsWith('/api/shipping/calculate')) {
+      await handleApiShippingCalculate(req, res);
+      return;
+    }
+
+    if ((req.url || '').startsWith('/api/ozon/validate')) {
+      await handleApiOzonValidate(req, res);
+      return;
+    }
+
+    if ((req.url || '').startsWith('/api/ozon/execute')) {
+      await handleApiOzonExecute(req, res);
+      return;
+    }
+
+    if ((req.url || '').startsWith('/api/ozon/import-info')) {
+      await handleApiOzonImportInfo(req, res);
+      return;
+    }
+
+    if ((req.url || '').startsWith('/api/ozon/category-attributes')) {
+      await handleApiOzonCategoryAttributes(req, res);
+      return;
+    }
+
+    if ((req.url || '').startsWith('/api/ozon/attribute-values')) {
+      await handleApiOzonAttributeValues(req, res);
+      return;
+    }
+
+    const filePath = safePath(req.url || '/');
+    if (!filePath) {
+      res.writeHead(403);
+      res.end('Forbidden');
+      return;
+    }
+
+    try {
+      let targetPath = filePath;
+      let fileInfo;
+      try {
+        fileInfo = await stat(targetPath);
+      } catch {
+        targetPath = path.join(WORKBENCH_DIST, 'index.html');
+        fileInfo = await stat(targetPath);
+      }
+
+      if (!fileInfo.isFile()) {
+        res.writeHead(404);
+        res.end('Not found');
+        return;
+      }
+
+      res.writeHead(200, {
+        'content-type': TYPES[path.extname(targetPath)] || 'application/octet-stream',
+        'cache-control': 'no-store',
+      });
+      createReadStream(targetPath).pipe(res);
+    } catch {
+      res.writeHead(404);
+      res.end('Not found');
+    }
+  });
+}
+
+export async function startWorkbenchServer({ port = PORT, host = '127.0.0.1' } = {}) {
+  await mkdir(WORKBENCH_DIST, { recursive: true }).catch(() => {});
+  const server = createWorkbenchServer();
+  await new Promise((resolve) => {
+    server.listen(port, host, resolve);
+  });
+  return server;
+}
+
+const isMainModule =
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isMainModule) {
+  const server = await startWorkbenchServer();
   console.log(`Menglar workbench api: http://127.0.0.1:${PORT}/`);
-});
+  process.on('SIGINT', () => server.close());
+  process.on('SIGTERM', () => server.close());
+}
