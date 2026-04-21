@@ -7,6 +7,8 @@
     "mvp:probe": "node scripts/menglar-mvp.mjs",
     "mvp:db:inspect": "node scripts/inspect-menglar-db.mjs",
     "shipping:validate": "node scripts/validate-shipping-config.mjs",
+    "shipping:validate:generated": "node scripts/validate-shipping-config.mjs config/shipping/rules.generated.json",
+    "shipping:import": "node scripts/import-shipping-rules.mjs",
     "shipping:api:test": "node scripts/test-shipping-api.mjs",
     "shipping:page:test": "node scripts/test-shipping-page.mjs",
     "dev": "node scripts/dev.mjs",
@@ -21,6 +23,8 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.5",
+    "fast-xml-parser": "^5.7.1",
+    "fflate": "^0.8.2",
     "motion": "^12.23.24",
     "playwright": "^1.54.1",
     "react": "^19.2.0",

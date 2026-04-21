@@ -1,5 +1,8 @@
 node_modules/
-data/
+data/*
+!data/shipping-sources/
+data/shipping-sources/*
+!data/shipping-sources/README.md
 .playwright-mcp/
 .cache/*
 !.cache/README.md
