@@ -102,6 +102,17 @@ function findComparableMethods(methods, input) {
   );
 }
 
+function isSameSampleInput(sampleInput = {}, input = {}) {
+  return ['lengthCm', 'widthCm', 'heightCm', 'weightG', 'price'].every((field) =>
+    Number(sampleInput[field]) === Number(input[field])
+  );
+}
+
+function isExcludedByCalculatorSample(method, input) {
+  return Array.isArray(method.calculatorExcludedSamples) &&
+    method.calculatorExcludedSamples.some((sample) => isSameSampleInput(sample.input, input));
+}
+
 function validateConstraints(method, input) {
   const constraints = method.constraints || {};
   const policies = method.constraintPolicies || {};
@@ -216,6 +227,9 @@ export function listShippingMethods() {
     currency: method.currency,
     deliveryDays: method.deliveryDays || null,
     variants: normalizeVariants(method),
+    sourceConfidence: method.sourceConfidence || 'xlsx_only',
+    calculatorPriceSamples: method.calculatorPriceSamples || [],
+    calculatorExcludedSamples: method.calculatorExcludedSamples || [],
     constraints: method.constraints || {},
     notes: method.notes || '',
   }));
@@ -300,6 +314,9 @@ export function calculateShipping(input) {
       officialSubtitle: method.officialSubtitle || '',
       deliveryDays: method.deliveryDays || null,
       variants: normalizeVariants(method),
+      sourceConfidence: method.sourceConfidence || 'xlsx_only',
+      calculatorPriceSamples: method.calculatorPriceSamples || [],
+      calculatorExcludedSamples: method.calculatorExcludedSamples || [],
       constraints: method.constraints || {},
       constraintPolicies: method.constraintPolicies || {},
       notes: method.notes || '',
@@ -324,11 +341,35 @@ export function compareShipping(input) {
     heightCm: parsePositiveNumber(input.heightCm, 'heightCm'),
     weightG: parsePositiveNumber(input.weightG, 'weightG'),
     orderDate: parseOrderDate(input.orderDate),
+    includeXlsxCandidates: Boolean(input.includeXlsxCandidates),
   };
 
   const rules = getRules();
   const methods = findComparableMethods(rules.methods, normalizedInput);
   const items = methods.map((method) => {
+    if (!normalizedInput.includeXlsxCandidates && isExcludedByCalculatorSample(method, normalizedInput)) {
+      return {
+        ok: false,
+        service: {
+          carrierCode: method.carrierCode,
+          deliveryMethodCode: method.deliveryMethodCode,
+          displayName: method.displayName,
+          officialSubtitle: method.officialSubtitle || '',
+          deliveryDays: method.deliveryDays || null,
+          variants: normalizeVariants(method),
+          deliveryTarget: method.deliveryTarget || '',
+          batteryPolicy: method.constraints?.batteryPolicy || '',
+          tags: method.tags || [],
+          sourceConfidence: method.sourceConfidence || 'xlsx_only',
+        },
+        error: '官方计算器样本中未展示该服务',
+        details: {
+          sourceConfidence: method.sourceConfidence || 'xlsx_only',
+          calculatorExcludedSamples: method.calculatorExcludedSamples || [],
+        },
+      };
+    }
+
     try {
       const result = calculateShipping({
         ...normalizedInput,
@@ -347,6 +388,8 @@ export function compareShipping(input) {
           deliveryTarget: method.deliveryTarget || '',
           batteryPolicy: method.constraints?.batteryPolicy || '',
           tags: method.tags || [],
+          sourceConfidence: method.sourceConfidence || 'xlsx_only',
+          calculatorPriceSamples: method.calculatorPriceSamples || [],
         },
         result,
       };
@@ -363,6 +406,8 @@ export function compareShipping(input) {
           deliveryTarget: method.deliveryTarget || '',
           batteryPolicy: method.constraints?.batteryPolicy || '',
           tags: method.tags || [],
+          sourceConfidence: method.sourceConfidence || 'xlsx_only',
+          calculatorPriceSamples: method.calculatorPriceSamples || [],
         },
         error: error.message,
         details: error.details || null,
