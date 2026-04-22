@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 const navItems = [
   { to: '/tasks', label: '采集任务' },
   { to: '/results', label: '结果展示' },
+  { to: '/product-data-prep', label: '商品数据整理' },
   { to: '/shipping-calculator', label: '物流计算器' },
   { to: '/ozon-upload', label: 'Ozon上货工具' },
 ];
