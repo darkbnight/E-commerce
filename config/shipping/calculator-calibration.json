@@ -6,7 +6,7 @@
     "originCity": "Shenzhen",
     "destinationCountry": "Russia",
     "currency": "CNY",
-    "notes": "This file stores official-calculator display calibration. XLSX remains the source for formulas; calculator samples are used for variants, delivery time, badges and observed boundaries."
+    "notes": "This file stores official calculator calibration for visible services, delivery time, badges, and sample-level exclusions. XLSX is still used for candidate rates, but services excluded by a matched calculator sample must not affect default sorting."
   },
   "samples": [
     {
@@ -18,6 +18,9 @@
         "weightG": 50,
         "price": 1
       },
+      "excludedDeliveryMethodCodes": [
+        "GUOO_GUOO_EXPRESS_EXTRA_SMALL"
+      ],
       "services": [
         {
           "deliveryMethodCode": "CHINA_POST_CHINA_POST_TO_PUDO_ECONOMY_GROUND_DELIVERY",
@@ -30,9 +33,36 @@
               "officialName": "China Post to PUDO Economy",
               "deliveryTarget": "pickup_point",
               "deliveryDays": { "min": 13, "max": 20 },
-              "deliveryTimeText": "从 13-20 天",
-              "pickupText": "您所在城市的揽收点",
-              "chargeWeightText": "物理重量",
+              "deliveryTimeText": "from 13-20 days",
+              "pickupText": "pickup point in your city",
+              "chargeWeightText": "physical weight",
+              "batteryPolicy": "allowed"
+            }
+          ]
+        },
+        {
+          "deliveryMethodCode": "ATC_ATC_ECONOMY_EXTRA_SMALL",
+          "officialDisplayName": "ATC Economy Extra Small",
+          "calculatorPrice": 3.8,
+          "variants": [
+            {
+              "variantCode": "COURIER",
+              "officialName": "ATC Economy Extra Small to Ozon courier delivery",
+              "deliveryTarget": "courier",
+              "deliveryDays": { "min": 15, "max": 20 },
+              "deliveryTimeText": "from 15-20 days",
+              "pickupText": "pickup point in your city",
+              "chargeWeightText": "physical weight",
+              "batteryPolicy": "forbidden"
+            },
+            {
+              "variantCode": "PUDO",
+              "officialName": "ATC Economy Extra Small to Ozon pick-up point",
+              "deliveryTarget": "pickup_point",
+              "deliveryDays": { "min": 15, "max": 20 },
+              "deliveryTimeText": "from 15-20 days",
+              "pickupText": "pickup point in your city",
+              "chargeWeightText": "physical weight",
               "batteryPolicy": "allowed"
             }
           ]
@@ -47,9 +77,9 @@
               "officialName": "GUOO Economy Extra Small Courier",
               "deliveryTarget": "courier",
               "deliveryDays": { "min": 5, "max": 10 },
-              "deliveryTimeText": "从 5-10 天",
-              "pickupText": "您所在城市的揽收点",
-              "chargeWeightText": "物理重量",
+              "deliveryTimeText": "from 5-10 days",
+              "pickupText": "pickup point in your city",
+              "chargeWeightText": "physical weight",
               "batteryPolicy": "forbidden",
               "badges": ["fastest"]
             },
@@ -58,9 +88,9 @@
               "officialName": "GUOO Economy Extra Small PUDO",
               "deliveryTarget": "pickup_point",
               "deliveryDays": { "min": 15, "max": 20 },
-              "deliveryTimeText": "从 15-20 天",
-              "pickupText": "您所在城市的揽收点",
-              "chargeWeightText": "物理重量",
+              "deliveryTimeText": "from 15-20 days",
+              "pickupText": "pickup point in your city",
+              "chargeWeightText": "physical weight",
               "batteryPolicy": "allowed"
             }
           ]
@@ -75,9 +105,9 @@
               "officialName": "CEL Extra Small Economy Courier",
               "deliveryTarget": "courier",
               "deliveryDays": { "min": 20, "max": 25 },
-              "deliveryTimeText": "从 20-25 天",
-              "pickupText": "您所在城市的揽收点",
-              "chargeWeightText": "物理重量",
+              "deliveryTimeText": "from 20-25 days",
+              "pickupText": "pickup point in your city",
+              "chargeWeightText": "physical weight",
               "batteryPolicy": "allowed"
             },
             {
@@ -85,10 +115,202 @@
               "officialName": "CEL Extra Small Economy PUDO",
               "deliveryTarget": "pickup_point",
               "deliveryDays": { "min": 20, "max": 25 },
-              "deliveryTimeText": "从 20-25 天",
-              "pickupText": "您所在城市的揽收点",
-              "chargeWeightText": "物理重量",
+              "deliveryTimeText": "from 20-25 days",
+              "pickupText": "pickup point in your city",
+              "chargeWeightText": "physical weight",
               "batteryPolicy": "allowed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sampleId": "cn_sz_ru_1x1x1_500g_cny1",
+      "input": {
+        "lengthCm": 1,
+        "widthCm": 1,
+        "heightCm": 1,
+        "weightG": 500,
+        "price": 1
+      },
+      "excludedDeliveryMethodCodes": [
+        "GUOO_GUOO_EXPRESS_EXTRA_SMALL"
+      ],
+      "services": [
+        {
+          "deliveryMethodCode": "ATC_ATC_ECONOMY_EXTRA_SMALL",
+          "officialDisplayName": "ATC Economy Extra Small",
+          "calculatorPrice": 14.6,
+          "badges": ["cheapest"],
+          "variants": [
+            {
+              "variantCode": "COURIER",
+              "officialName": "ATC Economy Extra Small to Ozon courier delivery",
+              "deliveryTarget": "courier",
+              "deliveryDays": { "min": 15, "max": 20 },
+              "deliveryTimeText": "from 15-20 days",
+              "pickupText": "pickup point in your city",
+              "chargeWeightText": "physical weight",
+              "batteryPolicy": "forbidden"
+            },
+            {
+              "variantCode": "PUDO",
+              "officialName": "ATC Economy Extra Small to Ozon pick-up point",
+              "deliveryTarget": "pickup_point",
+              "deliveryDays": { "min": 15, "max": 20 },
+              "deliveryTimeText": "from 15-20 days",
+              "pickupText": "pickup point in your city",
+              "chargeWeightText": "physical weight",
+              "batteryPolicy": "allowed"
+            }
+          ]
+        },
+        {
+          "deliveryMethodCode": "CHINA_POST_CHINA_POST_TO_PUDO_ECONOMY_GROUND_DELIVERY",
+          "officialDisplayName": "China Post to PUDO Economy",
+          "calculatorPrice": 14.9,
+          "variants": [
+            {
+              "variantCode": "PUDO",
+              "officialName": "China Post to PUDO Economy",
+              "deliveryTarget": "pickup_point",
+              "deliveryDays": { "min": 13, "max": 20 },
+              "deliveryTimeText": "from 13-20 days",
+              "pickupText": "pickup point in your city",
+              "chargeWeightText": "physical weight",
+              "batteryPolicy": "allowed"
+            }
+          ]
+        },
+        {
+          "deliveryMethodCode": "GUOO_GUOO_ECONOMY_EXTRA_SMALL",
+          "officialDisplayName": "GUOO Economy Extra Small",
+          "calculatorPrice": 16,
+          "variants": [
+            {
+              "variantCode": "COURIER",
+              "officialName": "GUOO Economy Extra Small Courier",
+              "deliveryTarget": "courier",
+              "deliveryDays": { "min": 5, "max": 10 },
+              "deliveryTimeText": "from 5-10 days",
+              "pickupText": "pickup point in your city",
+              "chargeWeightText": "physical weight",
+              "batteryPolicy": "forbidden",
+              "badges": ["fastest"]
+            },
+            {
+              "variantCode": "PUDO",
+              "officialName": "GUOO Economy Extra Small PUDO",
+              "deliveryTarget": "pickup_point",
+              "deliveryDays": { "min": 15, "max": 20 },
+              "deliveryTimeText": "from 15-20 days",
+              "pickupText": "pickup point in your city",
+              "chargeWeightText": "physical weight",
+              "batteryPolicy": "allowed"
+            }
+          ]
+        },
+        {
+          "deliveryMethodCode": "CEL_CEL_ECONOMY_EXTRA_SMALL",
+          "officialDisplayName": "CEL Economy Extra Small",
+          "calculatorPrice": 16.12,
+          "variants": [
+            {
+              "variantCode": "COURIER",
+              "officialName": "CEL Extra Small Economy Courier",
+              "deliveryTarget": "courier",
+              "deliveryDays": { "min": 20, "max": 25 },
+              "deliveryTimeText": "from 20-25 days",
+              "pickupText": "pickup point in your city",
+              "chargeWeightText": "physical weight",
+              "batteryPolicy": "allowed"
+            },
+            {
+              "variantCode": "PUDO",
+              "officialName": "CEL Extra Small Economy PUDO",
+              "deliveryTarget": "pickup_point",
+              "deliveryDays": { "min": 20, "max": 25 },
+              "deliveryTimeText": "from 20-25 days",
+              "pickupText": "pickup point in your city",
+              "chargeWeightText": "physical weight",
+              "batteryPolicy": "allowed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sampleId": "cn_sz_ru_1x1x1_5000g_cny1",
+      "input": {
+        "lengthCm": 1,
+        "widthCm": 1,
+        "heightCm": 1,
+        "weightG": 5000,
+        "price": 1
+      },
+      "excludedDeliveryMethodCodes": [
+        "CHINA_POST_CHINA_POST_EPARCEL_ECONOMY"
+      ],
+      "services": [
+        {
+          "deliveryMethodCode": "GBS_GBS_ECONOMY_BUDGET",
+          "officialDisplayName": "GBS Economy Budget",
+          "calculatorPrice": 107.4,
+          "badges": ["cheapest"],
+          "variants": [
+            {
+              "variantCode": "PUDO",
+              "officialName": "B2C express full to pick-up points / PUDO",
+              "deliveryTarget": "pickup_point",
+              "deliveryDays": { "min": 20, "max": 25 },
+              "deliveryTimeText": "from 20-25 days",
+              "pickupText": "pickup point in your city",
+              "chargeWeightText": "physical weight",
+              "batteryPolicy": "allowed"
+            }
+          ]
+        },
+        {
+          "deliveryMethodCode": "ATC_ATC_ECONOMY_BUDGET",
+          "officialDisplayName": "ATC Economy Budget",
+          "calculatorPrice": 108,
+          "variants": [
+            {
+              "variantCode": "PUDO",
+              "officialName": "ATC Economy Budget to Ozon pick-up point",
+              "deliveryTarget": "pickup_point",
+              "deliveryDays": { "min": 20, "max": 25 },
+              "deliveryTimeText": "from 20-25 days",
+              "pickupText": "pickup point in your city",
+              "chargeWeightText": "physical weight",
+              "batteryPolicy": "allowed"
+            },
+            {
+              "variantCode": "COURIER",
+              "officialName": "ATC Economy Budget to Ozon courier delivery",
+              "deliveryTarget": "courier",
+              "deliveryDays": { "min": 20, "max": 25 },
+              "deliveryTimeText": "from 20-25 days",
+              "pickupText": "pickup point in your city",
+              "chargeWeightText": "physical weight",
+              "batteryPolicy": "forbidden"
+            }
+          ]
+        },
+        {
+          "deliveryMethodCode": "RETS_RETS_ECONOMY_BUDGET",
+          "officialDisplayName": "RETS Economy Budget",
+          "calculatorPrice": 112.32,
+          "variants": [
+            {
+              "variantCode": "COURIER",
+              "officialName": "RETS Economy Budget Courier",
+              "deliveryTarget": "courier",
+              "deliveryDays": { "min": 9, "max": 14 },
+              "deliveryTimeText": "from 9-14 days",
+              "pickupText": "pickup point in your city",
+              "chargeWeightText": "physical weight",
+              "batteryPolicy": "forbidden"
             }
           ]
         }
@@ -101,6 +323,7 @@
       "input": { "lengthCm": 1, "widthCm": 1, "heightCm": 1, "weightG": 500, "price": 1 },
       "observed": {
         "extraSmallAvailable": true,
+        "atcEconomyExtraSmallPrice": 14.6,
         "chinaPostPudoEconomyPrice": 14.9,
         "guooEconomyExtraSmallPrice": 16,
         "celEconomyExtraSmallPrice": 16.12
@@ -135,9 +358,10 @@
       "sampleId": "weight_5000g_cny1",
       "input": { "lengthCm": 1, "widthCm": 1, "heightCm": 1, "weightG": 5000, "price": 1 },
       "observed": {
-        "premiumSmallAvailable": true,
-        "bigAvailable": true,
-        "examples": ["CEL Standard Big", "CEL Standard Premium Small"]
+        "budgetAvailable": true,
+        "chinaPostEparcelExcluded": true,
+        "gbsEconomyBudgetPrice": 107.4,
+        "atcEconomyBudgetPrice": 108
       }
     }
   ],

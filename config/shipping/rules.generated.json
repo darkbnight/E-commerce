@@ -1,6 +1,6 @@
 {
   "meta": {
-    "updatedAt": "2026-04-21T09:19:32.116Z",
+    "updatedAt": "2026-04-21T13:56:38.208Z",
     "source": "Ozon official XLSX files",
     "sourceFiles": [
       "data/shipping-sources/China_scoring_ENG_CN_7_04_26.xlsx",
@@ -8,7 +8,7 @@
     ],
     "calculatorCalibration": {
       "file": "config/shipping/calculator-calibration.json",
-      "sampleCount": 1,
+      "sampleCount": 3,
       "boundarySampleCount": 5,
       "weightBands": [
         {
@@ -57,6 +57,7 @@
       },
       "observed": {
         "extraSmallAvailable": true,
+        "atcEconomyExtraSmallPrice": 14.6,
         "chinaPostPudoEconomyPrice": 14.9,
         "guooEconomyExtraSmallPrice": 16,
         "celEconomyExtraSmallPrice": 16.12
@@ -127,12 +128,10 @@
         "price": 1
       },
       "observed": {
-        "premiumSmallAvailable": true,
-        "bigAvailable": true,
-        "examples": [
-          "CEL Standard Big",
-          "CEL Standard Premium Small"
-        ]
+        "budgetAvailable": true,
+        "chinaPostEparcelExcluded": true,
+        "gbsEconomyBudgetPrice": 107.4,
+        "atcEconomyBudgetPrice": 108
       }
     }
   ],
@@ -194,7 +193,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥37.44 + ￥0.01768/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ABT",
@@ -253,7 +254,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥23.92 + ￥0.01768/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ABT",
@@ -312,7 +315,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥3.12 + ￥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ABT",
@@ -371,7 +376,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥64.48 + ￥0.02392/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ABT",
@@ -430,7 +437,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥22.88 + ￥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ABT",
@@ -489,7 +498,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥16.64 + ￥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ABT",
@@ -548,7 +559,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥37.44 + ￥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ABT",
@@ -607,7 +620,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥23.92 + ￥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ABT",
@@ -666,7 +681,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥3.12 + ￥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ABT",
@@ -725,7 +742,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥64.48 + ￥0.02912/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ABT",
@@ -784,7 +803,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥22.88 + ￥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ABT",
@@ -843,7 +864,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥16.64 + ￥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ATC",
@@ -902,7 +925,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥36 + ¥0.017/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ATC",
@@ -932,8 +957,8 @@
         "value": 0
       },
       "deliveryDays": {
-        "min": 17,
-        "max": 29
+        "min": 20,
+        "max": 25
       },
       "constraints": {
         "maxDimensionSumCm": 150,
@@ -959,9 +984,69 @@
         "kind": "xlsx",
         "file": "China_scoring_ENG_CN_7_04_26.xlsx",
         "sheet": "CHINA rFBS",
-        "rate": "¥23 + ¥0.017/1 g"
+        "rate": "¥23 + ¥0.017/1 g",
+        "calculatorCalibration": {
+          "file": "calculator-calibration.json",
+          "sampleIds": [
+            "cn_sz_ru_1x1x1_5000g_cny1"
+          ]
+        }
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "officialDisplayName": "ATC Economy Budget",
+      "sourceConfidence": "official_calculator_verified",
+      "calculatorPriceSamples": [
+        {
+          "sampleId": "cn_sz_ru_1x1x1_5000g_cny1",
+          "input": {
+            "lengthCm": 1,
+            "widthCm": 1,
+            "heightCm": 1,
+            "weightG": 5000,
+            "price": 1
+          },
+          "price": 108
+        }
+      ],
+      "calculatorExcludedSamples": [],
+      "variants": [
+        {
+          "variantCode": "PUDO",
+          "officialName": "ATC Economy Budget to Ozon pick-up point",
+          "deliveryTarget": "pickup_point",
+          "deliveryDays": {
+            "min": 20,
+            "max": 25
+          },
+          "deliveryTimeText": "from 20-25 days",
+          "pickupText": "pickup point in your city",
+          "chargeWeightText": "physical weight",
+          "batteryPolicy": "allowed",
+          "badges": [],
+          "source": {
+            "kind": "official_calculator",
+            "sampleId": "cn_sz_ru_1x1x1_5000g_cny1"
+          }
+        },
+        {
+          "variantCode": "COURIER",
+          "officialName": "ATC Economy Budget to Ozon courier delivery",
+          "deliveryTarget": "courier",
+          "deliveryDays": {
+            "min": 20,
+            "max": 25
+          },
+          "deliveryTimeText": "from 20-25 days",
+          "pickupText": "pickup point in your city",
+          "chargeWeightText": "physical weight",
+          "batteryPolicy": "forbidden",
+          "badges": [],
+          "source": {
+            "kind": "official_calculator",
+            "sampleId": "cn_sz_ru_1x1x1_5000g_cny1"
+          }
+        }
+      ]
     },
     {
       "carrierCode": "ATC",
@@ -991,8 +1076,8 @@
         "value": 0
       },
       "deliveryDays": {
-        "min": 17,
-        "max": 29
+        "min": 15,
+        "max": 20
       },
       "constraints": {
         "maxDimensionSumCm": 90,
@@ -1018,9 +1103,81 @@
         "kind": "xlsx",
         "file": "China_scoring_ENG_CN_7_04_26.xlsx",
         "sheet": "CHINA rFBS",
-        "rate": "¥2.6 + ¥0.024/1 g"
+        "rate": "¥2.6 + ¥0.024/1 g",
+        "calculatorCalibration": {
+          "file": "calculator-calibration.json",
+          "sampleIds": [
+            "cn_sz_ru_1x1x1_50g_cny1",
+            "cn_sz_ru_1x1x1_500g_cny1"
+          ]
+        }
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "officialDisplayName": "ATC Economy Extra Small",
+      "sourceConfidence": "official_calculator_verified",
+      "calculatorPriceSamples": [
+        {
+          "sampleId": "cn_sz_ru_1x1x1_50g_cny1",
+          "input": {
+            "lengthCm": 1,
+            "widthCm": 1,
+            "heightCm": 1,
+            "weightG": 50,
+            "price": 1
+          },
+          "price": 3.8
+        },
+        {
+          "sampleId": "cn_sz_ru_1x1x1_500g_cny1",
+          "input": {
+            "lengthCm": 1,
+            "widthCm": 1,
+            "heightCm": 1,
+            "weightG": 500,
+            "price": 1
+          },
+          "price": 14.6
+        }
+      ],
+      "calculatorExcludedSamples": [],
+      "variants": [
+        {
+          "variantCode": "COURIER",
+          "officialName": "ATC Economy Extra Small to Ozon courier delivery",
+          "deliveryTarget": "courier",
+          "deliveryDays": {
+            "min": 15,
+            "max": 20
+          },
+          "deliveryTimeText": "from 15-20 days",
+          "pickupText": "pickup point in your city",
+          "chargeWeightText": "physical weight",
+          "batteryPolicy": "forbidden",
+          "badges": [],
+          "source": {
+            "kind": "official_calculator",
+            "sampleId": "cn_sz_ru_1x1x1_50g_cny1"
+          }
+        },
+        {
+          "variantCode": "PUDO",
+          "officialName": "ATC Economy Extra Small to Ozon pick-up point",
+          "deliveryTarget": "pickup_point",
+          "deliveryDays": {
+            "min": 15,
+            "max": 20
+          },
+          "deliveryTimeText": "from 15-20 days",
+          "pickupText": "pickup point in your city",
+          "chargeWeightText": "physical weight",
+          "batteryPolicy": "allowed",
+          "badges": [],
+          "source": {
+            "kind": "official_calculator",
+            "sampleId": "cn_sz_ru_1x1x1_50g_cny1"
+          }
+        }
+      ]
     },
     {
       "carrierCode": "ATC",
@@ -1079,7 +1236,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥62 + ¥0.022/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ATC",
@@ -1138,7 +1297,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥21.5 + ¥0.024/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ATC",
@@ -1197,7 +1358,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥16 + ¥0.0238/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ATC",
@@ -1256,7 +1419,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥3 + ¥0,045/1g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ATC",
@@ -1315,7 +1480,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥22 + ¥0,045/1g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ATC",
@@ -1374,7 +1541,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥16 + ¥0,045/1g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ATC",
@@ -1433,7 +1602,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥36 + ¥0.025/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ATC",
@@ -1492,7 +1663,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥23 + ¥0.025/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ATC",
@@ -1551,7 +1724,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥2.6 + ¥0.035/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ATC",
@@ -1610,7 +1785,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥62 + ¥0.027/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ATC",
@@ -1669,7 +1846,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥21 + ¥0.034/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ATC",
@@ -1728,7 +1907,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥16 + ¥0.033/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "CEL",
@@ -1787,7 +1968,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥37.44 + ￥0.01768/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "CEL",
@@ -1846,7 +2029,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥23.92 + ￥0.01768/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "CEL",
@@ -1876,8 +2061,8 @@
         "value": 0
       },
       "deliveryDays": {
-        "min": 17,
-        "max": 29
+        "min": 20,
+        "max": 25
       },
       "constraints": {
         "maxDimensionSumCm": 90,
@@ -1907,12 +2092,14 @@
         "calculatorCalibration": {
           "file": "calculator-calibration.json",
           "sampleIds": [
-            "cn_sz_ru_1x1x1_50g_cny1"
+            "cn_sz_ru_1x1x1_50g_cny1",
+            "cn_sz_ru_1x1x1_500g_cny1"
           ]
         }
       },
       "notes": "Imported from Ozon official China rFBS XLSX.",
       "officialDisplayName": "CEL Economy Extra Small",
+      "sourceConfidence": "official_calculator_verified",
       "calculatorPriceSamples": [
         {
           "sampleId": "cn_sz_ru_1x1x1_50g_cny1",
@@ -1924,8 +2111,20 @@
             "price": 1
           },
           "price": 4.42
+        },
+        {
+          "sampleId": "cn_sz_ru_1x1x1_500g_cny1",
+          "input": {
+            "lengthCm": 1,
+            "widthCm": 1,
+            "heightCm": 1,
+            "weightG": 500,
+            "price": 1
+          },
+          "price": 16.12
         }
       ],
+      "calculatorExcludedSamples": [],
       "variants": [
         {
           "variantCode": "COURIER",
@@ -1935,9 +2134,9 @@
             "min": 20,
             "max": 25
           },
-          "deliveryTimeText": "从 20-25 天",
-          "pickupText": "您所在城市的揽收点",
-          "chargeWeightText": "物理重量",
+          "deliveryTimeText": "from 20-25 days",
+          "pickupText": "pickup point in your city",
+          "chargeWeightText": "physical weight",
           "batteryPolicy": "allowed",
           "badges": [],
           "source": {
@@ -1953,9 +2152,9 @@
             "min": 20,
             "max": 25
           },
-          "deliveryTimeText": "从 20-25 天",
-          "pickupText": "您所在城市的揽收点",
-          "chargeWeightText": "物理重量",
+          "deliveryTimeText": "from 20-25 days",
+          "pickupText": "pickup point in your city",
+          "chargeWeightText": "physical weight",
           "batteryPolicy": "allowed",
           "badges": [],
           "source": {
@@ -2022,7 +2221,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥64.48 + ￥0.02392/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "CEL",
@@ -2081,7 +2282,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥22.88 + ￥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "CEL",
@@ -2140,7 +2343,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥16.64 + ￥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "CEL",
@@ -2199,7 +2404,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥23.92 + ￥0.03432/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "CEL",
@@ -2258,7 +2465,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥3.12 + ￥0.0468/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "CEL",
@@ -2317,7 +2526,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥22.88 + ￥0.0468/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "CEL",
@@ -2376,7 +2587,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥16.64 + ￥0.0468/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "CEL",
@@ -2435,7 +2648,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥37.44 + ￥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "CEL",
@@ -2494,7 +2709,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥23.92 + ￥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "CEL",
@@ -2553,7 +2770,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥3.12 + ￥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "CEL",
@@ -2612,7 +2831,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥64.48 + ￥0.02912/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "CEL",
@@ -2671,7 +2892,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥22.88 + ￥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "CEL",
@@ -2730,7 +2953,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥16.64 + ￥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "CHINA_POST",
@@ -2782,7 +3007,9 @@
         "sheet": "China to Russia by CP",
         "rate": "pick-up point  \n¥102.00+¥2.55 /50 г"
       },
-      "notes": "Imported from Ozon official China Post XLSX."
+      "notes": "Imported from Ozon official China Post XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "CHINA_POST",
@@ -2836,7 +3063,9 @@
         "sheet": "China to Russia by CP",
         "rate": "pick-up point  \n¥15.00+¥0.065 /1 г"
       },
-      "notes": "Imported from Ozon official China Post XLSX."
+      "notes": "Imported from Ozon official China Post XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "CHINA_POST",
@@ -2890,7 +3119,9 @@
         "sheet": "China to Russia by CP",
         "rate": "pick-up point  \n¥15.00+¥0.03475 /1 г"
       },
-      "notes": "Imported from Ozon official China Post XLSX."
+      "notes": "Imported from Ozon official China Post XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "CHINA_POST",
@@ -2944,7 +3175,9 @@
         "sheet": "China to Russia by CP",
         "rate": "pick-up point  \n¥15.00+¥0.095/1 г"
       },
-      "notes": "Imported from Ozon official China Post XLSX."
+      "notes": "Imported from Ozon official China Post XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "CHINA_POST",
@@ -2998,7 +3231,20 @@
         "sheet": "China to Russia by CP",
         "rate": "pick-up point  \n¥52.50+¥0.15 /500 г"
       },
-      "notes": "Imported from Ozon official China Post XLSX."
+      "notes": "Imported from Ozon official China Post XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": [
+        {
+          "sampleId": "cn_sz_ru_1x1x1_5000g_cny1",
+          "input": {
+            "lengthCm": 1,
+            "widthCm": 1,
+            "heightCm": 1,
+            "weightG": 5000,
+            "price": 1
+          }
+        }
+      ]
     },
     {
       "carrierCode": "CHINA_POST",
@@ -3025,8 +3271,8 @@
         "value": 0
       },
       "deliveryDays": {
-        "min": 20,
-        "max": 25
+        "min": 13,
+        "max": 20
       },
       "constraints": {
         "maxDimensionSumCm": 90,
@@ -3058,12 +3304,14 @@
         "calculatorCalibration": {
           "file": "calculator-calibration.json",
           "sampleIds": [
-            "cn_sz_ru_1x1x1_50g_cny1"
+            "cn_sz_ru_1x1x1_50g_cny1",
+            "cn_sz_ru_1x1x1_500g_cny1"
           ]
         }
       },
       "notes": "Imported from Ozon official China Post XLSX.",
       "officialDisplayName": "China Post to PUDO Economy",
+      "sourceConfidence": "official_calculator_verified",
       "calculatorPriceSamples": [
         {
           "sampleId": "cn_sz_ru_1x1x1_50g_cny1",
@@ -3075,8 +3323,20 @@
             "price": 1
           },
           "price": 3.2
+        },
+        {
+          "sampleId": "cn_sz_ru_1x1x1_500g_cny1",
+          "input": {
+            "lengthCm": 1,
+            "widthCm": 1,
+            "heightCm": 1,
+            "weightG": 500,
+            "price": 1
+          },
+          "price": 14.9
         }
       ],
+      "calculatorExcludedSamples": [],
       "variants": [
         {
           "variantCode": "PUDO",
@@ -3086,9 +3346,9 @@
             "min": 13,
             "max": 20
           },
-          "deliveryTimeText": "从 13-20 天",
-          "pickupText": "您所在城市的揽收点",
-          "chargeWeightText": "物理重量",
+          "deliveryTimeText": "from 13-20 days",
+          "pickupText": "pickup point in your city",
+          "chargeWeightText": "physical weight",
           "batteryPolicy": "allowed",
           "badges": [],
           "source": {
@@ -3152,7 +3412,9 @@
         "sheet": "China to Russia by CP",
         "rate": "pick-up point \n¥1.90+¥0.067/1 г"
       },
-      "notes": "Imported from Ozon official China Post XLSX."
+      "notes": "Imported from Ozon official China Post XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "GBS",
@@ -3182,8 +3444,8 @@
         "value": 0
       },
       "deliveryDays": {
-        "min": 17,
-        "max": 29
+        "min": 20,
+        "max": 25
       },
       "constraints": {
         "maxDimensionSumCm": 150,
@@ -3204,14 +3466,58 @@
         "minPriceCny": "hard",
         "maxPriceCny": "hard"
       },
-      "tags": [],
+      "tags": [
+        "cheapest"
+      ],
       "officialSource": {
         "kind": "xlsx",
         "file": "China_scoring_ENG_CN_7_04_26.xlsx",
         "sheet": "CHINA rFBS",
-        "rate": "¥22.4 + ¥0.017/1 g"
+        "rate": "¥22.4 + ¥0.017/1 g",
+        "calculatorCalibration": {
+          "file": "calculator-calibration.json",
+          "sampleIds": [
+            "cn_sz_ru_1x1x1_5000g_cny1"
+          ]
+        }
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "officialDisplayName": "GBS Economy Budget",
+      "sourceConfidence": "official_calculator_verified",
+      "calculatorPriceSamples": [
+        {
+          "sampleId": "cn_sz_ru_1x1x1_5000g_cny1",
+          "input": {
+            "lengthCm": 1,
+            "widthCm": 1,
+            "heightCm": 1,
+            "weightG": 5000,
+            "price": 1
+          },
+          "price": 107.4
+        }
+      ],
+      "calculatorExcludedSamples": [],
+      "variants": [
+        {
+          "variantCode": "PUDO",
+          "officialName": "B2C express full to pick-up points / PUDO",
+          "deliveryTarget": "pickup_point",
+          "deliveryDays": {
+            "min": 20,
+            "max": 25
+          },
+          "deliveryTimeText": "from 20-25 days",
+          "pickupText": "pickup point in your city",
+          "chargeWeightText": "physical weight",
+          "batteryPolicy": "allowed",
+          "badges": [],
+          "source": {
+            "kind": "official_calculator",
+            "sampleId": "cn_sz_ru_1x1x1_5000g_cny1"
+          }
+        }
+      ]
     },
     {
       "carrierCode": "GBS",
@@ -3270,7 +3576,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥21 + ¥0.02375/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "GBS",
@@ -3329,7 +3637,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥15.2 + ¥0.02375/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "GBS",
@@ -3388,7 +3698,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥21.85 + ¥0.033/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "GBS",
@@ -3447,7 +3759,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥22 + ¥0.04275/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "GBS",
@@ -3506,7 +3820,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥16 + ¥0.04275/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "GBS",
@@ -3565,7 +3881,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥21.85 + ¥0.025/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "GBS",
@@ -3624,7 +3942,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥21 + ¥0.034/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "GBS",
@@ -3683,7 +4003,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥15.2 + ¥0.034/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "GUOO",
@@ -3742,7 +4064,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥37.44 + ¥0.01768/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "GUOO",
@@ -3801,7 +4125,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥23.92 + ¥0.01768/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "GUOO",
@@ -3831,8 +4157,8 @@
         "value": 0
       },
       "deliveryDays": {
-        "min": 17,
-        "max": 29
+        "min": 5,
+        "max": 10
       },
       "constraints": {
         "maxDimensionSumCm": 90,
@@ -3864,12 +4190,14 @@
         "calculatorCalibration": {
           "file": "calculator-calibration.json",
           "sampleIds": [
-            "cn_sz_ru_1x1x1_50g_cny1"
+            "cn_sz_ru_1x1x1_50g_cny1",
+            "cn_sz_ru_1x1x1_500g_cny1"
           ]
         }
       },
       "notes": "Imported from Ozon official China rFBS XLSX.",
       "officialDisplayName": "GUOO Economy Extra Small",
+      "sourceConfidence": "official_calculator_verified",
       "calculatorPriceSamples": [
         {
           "sampleId": "cn_sz_ru_1x1x1_50g_cny1",
@@ -3881,8 +4209,20 @@
             "price": 1
           },
           "price": 4.3
+        },
+        {
+          "sampleId": "cn_sz_ru_1x1x1_500g_cny1",
+          "input": {
+            "lengthCm": 1,
+            "widthCm": 1,
+            "heightCm": 1,
+            "weightG": 500,
+            "price": 1
+          },
+          "price": 16
         }
       ],
+      "calculatorExcludedSamples": [],
       "variants": [
         {
           "variantCode": "COURIER",
@@ -3892,9 +4232,9 @@
             "min": 5,
             "max": 10
           },
-          "deliveryTimeText": "从 5-10 天",
-          "pickupText": "您所在城市的揽收点",
-          "chargeWeightText": "物理重量",
+          "deliveryTimeText": "from 5-10 days",
+          "pickupText": "pickup point in your city",
+          "chargeWeightText": "physical weight",
           "batteryPolicy": "forbidden",
           "badges": [
             "fastest"
@@ -3912,9 +4252,9 @@
             "min": 15,
             "max": 20
           },
-          "deliveryTimeText": "从 15-20 天",
-          "pickupText": "您所在城市的揽收点",
-          "chargeWeightText": "物理重量",
+          "deliveryTimeText": "from 15-20 days",
+          "pickupText": "pickup point in your city",
+          "chargeWeightText": "physical weight",
           "batteryPolicy": "allowed",
           "badges": [],
           "source": {
@@ -3981,7 +4321,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥64.48 + ¥0.02392/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "GUOO",
@@ -4040,7 +4382,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥22.88 + ¥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "GUOO",
@@ -4099,7 +4443,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥16.64 + ¥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "GUOO",
@@ -4158,7 +4504,30 @@
         "sheet": "CHINA rFBS",
         "rate": "¥3.12 + ¥.0.0468/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": [
+        {
+          "sampleId": "cn_sz_ru_1x1x1_50g_cny1",
+          "input": {
+            "lengthCm": 1,
+            "widthCm": 1,
+            "heightCm": 1,
+            "weightG": 50,
+            "price": 1
+          }
+        },
+        {
+          "sampleId": "cn_sz_ru_1x1x1_500g_cny1",
+          "input": {
+            "lengthCm": 1,
+            "widthCm": 1,
+            "heightCm": 1,
+            "weightG": 500,
+            "price": 1
+          }
+        }
+      ]
     },
     {
       "carrierCode": "GUOO",
@@ -4217,7 +4586,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥22.88 + ¥0.0468/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "GUOO",
@@ -4276,7 +4647,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥16.64 + ¥0.0468/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "GUOO",
@@ -4335,7 +4708,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥37.44 + ¥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "GUOO",
@@ -4394,7 +4769,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥23.92 + ¥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "GUOO",
@@ -4453,7 +4830,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥3.12 + ¥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "GUOO",
@@ -4512,7 +4891,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥64.48 + ¥0.02912/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "GUOO",
@@ -4571,7 +4952,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥22.88 + ¥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "GUOO",
@@ -4630,7 +5013,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥16.64 + ¥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "OYX",
@@ -4689,7 +5074,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥37.44 + ￥0.01768/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "OYX",
@@ -4748,7 +5135,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥23.92 + ￥0.01768/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "OYX",
@@ -4807,7 +5196,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥3.12 + ￥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "OYX",
@@ -4866,7 +5257,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥64.48 + ￥0.02392/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "OYX",
@@ -4925,7 +5318,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥22.88 + ￥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "OYX",
@@ -4984,7 +5379,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥16.64 + ￥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "OYX",
@@ -5043,7 +5440,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥37.44 + ￥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "OYX",
@@ -5102,7 +5501,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥23.92 + ￥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "OYX",
@@ -5161,7 +5562,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥3.12 + ￥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "OYX",
@@ -5220,7 +5623,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥64.48 + ￥0.02912/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "OYX",
@@ -5279,7 +5684,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥22.88 + ￥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "OYX",
@@ -5338,7 +5745,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥16.64 + ￥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "RETS",
@@ -5368,8 +5777,8 @@
         "value": 0
       },
       "deliveryDays": {
-        "min": 17,
-        "max": 29
+        "min": 9,
+        "max": 14
       },
       "constraints": {
         "maxDimensionSumCm": 150,
@@ -5395,9 +5804,51 @@
         "kind": "xlsx",
         "file": "China_scoring_ENG_CN_7_04_26.xlsx",
         "sheet": "CHINA rFBS",
-        "rate": "¥23.92 + ¥0.01768/1 g"
+        "rate": "¥23.92 + ¥0.01768/1 g",
+        "calculatorCalibration": {
+          "file": "calculator-calibration.json",
+          "sampleIds": [
+            "cn_sz_ru_1x1x1_5000g_cny1"
+          ]
+        }
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "officialDisplayName": "RETS Economy Budget",
+      "sourceConfidence": "official_calculator_verified",
+      "calculatorPriceSamples": [
+        {
+          "sampleId": "cn_sz_ru_1x1x1_5000g_cny1",
+          "input": {
+            "lengthCm": 1,
+            "widthCm": 1,
+            "heightCm": 1,
+            "weightG": 5000,
+            "price": 1
+          },
+          "price": 112.32
+        }
+      ],
+      "calculatorExcludedSamples": [],
+      "variants": [
+        {
+          "variantCode": "COURIER",
+          "officialName": "RETS Economy Budget Courier",
+          "deliveryTarget": "courier",
+          "deliveryDays": {
+            "min": 9,
+            "max": 14
+          },
+          "deliveryTimeText": "from 9-14 days",
+          "pickupText": "pickup point in your city",
+          "chargeWeightText": "physical weight",
+          "batteryPolicy": "forbidden",
+          "badges": [],
+          "source": {
+            "kind": "official_calculator",
+            "sampleId": "cn_sz_ru_1x1x1_5000g_cny1"
+          }
+        }
+      ]
     },
     {
       "carrierCode": "RETS",
@@ -5456,7 +5907,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥3.12 + ¥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "RETS",
@@ -5515,7 +5968,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥64.48 + ¥0.02392/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "RETS",
@@ -5574,7 +6029,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥22.88 + ¥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "RETS",
@@ -5633,7 +6090,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥16.64 + ¥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "RETS",
@@ -5692,7 +6151,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥3.12 + ¥0.0468/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "RETS",
@@ -5751,7 +6212,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥22.88 + ¥0.0468/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "RETS",
@@ -5810,7 +6273,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥16.64 + ¥0.0468/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "RETS",
@@ -5869,7 +6334,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥37.44 + ¥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "RETS",
@@ -5928,7 +6395,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥23.92 + ¥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "RETS",
@@ -5987,7 +6456,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥3.12 + ¥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "RETS",
@@ -6046,7 +6517,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥22.88 + ¥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "RETS",
@@ -6105,7 +6578,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥16.64 + ¥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "TANAIS",
@@ -6164,7 +6639,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥37.4 + ¥0.0176/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "TANAIS",
@@ -6223,7 +6700,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥23.9 + ¥0.0176/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "TANAIS",
@@ -6282,7 +6761,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥3.1 + ¥0.0259/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "TANAIS",
@@ -6341,7 +6822,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥16.6 + ¥0.0259/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "TANAIS",
@@ -6400,7 +6883,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥37.4 + ¥0.0259/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "TANAIS",
@@ -6459,7 +6944,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥23.9 + ¥0.0259/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "TANAIS",
@@ -6518,7 +7005,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥3.1+ ¥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "TANAIS",
@@ -6577,7 +7066,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥16.6 + ¥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "URAL",
@@ -6636,7 +7127,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥3.12 + ¥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "URAL",
@@ -6695,7 +7188,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥22.88 + ¥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "URAL",
@@ -6754,7 +7249,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥16.64 + ¥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "URAL",
@@ -6813,7 +7310,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥37.44 + ¥0.03432/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "URAL",
@@ -6872,7 +7371,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥23.92 + ¥0.03432/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "URAL",
@@ -6931,7 +7432,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥3.12 + ¥0.0468/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "URAL",
@@ -6990,7 +7493,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥64.48 + ¥0.03432/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "URAL",
@@ -7049,7 +7554,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥22.88 + ¥0.0468/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "URAL",
@@ -7108,7 +7615,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥16.64 + ¥0.0468/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "URAL",
@@ -7167,7 +7676,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥37.44 + ¥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "URAL",
@@ -7226,7 +7737,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥23.92 + ¥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "URAL",
@@ -7285,7 +7798,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥2.92 + ¥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "URAL",
@@ -7344,7 +7859,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥64.48 + ¥0.02912/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "URAL",
@@ -7403,7 +7920,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥22.88 + ¥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "URAL",
@@ -7462,7 +7981,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥16.64 + ¥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "XINGYUAN",
@@ -7521,7 +8042,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥37.44 + ￥0.01768/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "XINGYUAN",
@@ -7580,7 +8103,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥23.92 + ￥0.01768/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "XINGYUAN",
@@ -7639,7 +8164,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥3.12 + ￥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "XINGYUAN",
@@ -7698,7 +8225,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥64.48 + ￥0.02392/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "XINGYUAN",
@@ -7757,7 +8286,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥22.88 + ￥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "XINGYUAN",
@@ -7816,7 +8347,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥16.64 + ￥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "XINGYUAN",
@@ -7875,7 +8408,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥37.44 + ￥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "XINGYUAN",
@@ -7934,7 +8469,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥23.92 + ￥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "XINGYUAN",
@@ -7993,7 +8530,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥3.12 + ￥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "XINGYUAN",
@@ -8052,7 +8591,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥64.48 + ￥0.02912/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "XINGYUAN",
@@ -8111,7 +8652,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥22.88 + ￥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "XINGYUAN",
@@ -8170,7 +8713,9 @@
         "sheet": "CHINA rFBS",
         "rate": "￥16.64 + ￥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ZTO",
@@ -8229,7 +8774,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥23.92 + ¥0.01768/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ZTO",
@@ -8288,7 +8835,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥3.12 + ¥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ZTO",
@@ -8347,7 +8896,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥64.48 + ¥0.02392/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ZTO",
@@ -8406,7 +8957,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥22.88 + ¥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ZTO",
@@ -8465,7 +9018,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥16.64 + ¥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ZTO",
@@ -8524,7 +9079,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥23.92 + ¥0.03432/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ZTO",
@@ -8583,7 +9140,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥3.12 + ¥0.0468/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ZTO",
@@ -8642,7 +9201,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥22.88 + ¥0.0468/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ZTO",
@@ -8701,7 +9262,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥16.64 + ¥0.0468/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ZTO",
@@ -8760,7 +9323,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥37.44 + ¥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ZTO",
@@ -8819,7 +9384,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥23.92 + ¥0.026/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ZTO",
@@ -8878,7 +9445,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥3.12 + ¥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ZTO",
@@ -8937,7 +9506,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥64.48 + ¥0.02912/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ZTO",
@@ -8996,7 +9567,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥22.88 + ¥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     },
     {
       "carrierCode": "ZTO",
@@ -9055,7 +9628,9 @@
         "sheet": "CHINA rFBS",
         "rate": "¥16.64 + ¥0.0364/1 g"
       },
-      "notes": "Imported from Ozon official China rFBS XLSX."
+      "notes": "Imported from Ozon official China rFBS XLSX.",
+      "sourceConfidence": "xlsx_only",
+      "calculatorExcludedSamples": []
     }
   ]
 }

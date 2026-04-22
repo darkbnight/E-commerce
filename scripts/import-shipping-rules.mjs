@@ -440,7 +440,17 @@ function applyCalculatorCalibration(rules, calibration) {
   if (!calibration) return rules;
 
   const serviceSamples = new Map();
+  const excludedSamples = new Map();
   for (const sample of normalizeArray(calibration.samples)) {
+    for (const deliveryMethodCode of normalizeArray(sample.excludedDeliveryMethodCodes)) {
+      const existing = excludedSamples.get(deliveryMethodCode) || [];
+      existing.push({
+        sampleId: sample.sampleId,
+        input: sample.input,
+      });
+      excludedSamples.set(deliveryMethodCode, existing);
+    }
+
     for (const service of normalizeArray(sample.services)) {
       const existing = serviceSamples.get(service.deliveryMethodCode) || [];
       existing.push({
@@ -454,7 +464,14 @@ function applyCalculatorCalibration(rules, calibration) {
 
   return rules.map((rule) => {
     const samples = serviceSamples.get(rule.deliveryMethodCode);
-    if (!samples?.length) return rule;
+    const exclusions = excludedSamples.get(rule.deliveryMethodCode) || [];
+    if (!samples?.length) {
+      return {
+        ...rule,
+        sourceConfidence: 'xlsx_only',
+        calculatorExcludedSamples: exclusions,
+      };
+    }
 
     const primarySample = samples[0];
     const variants = normalizeArray(primarySample.variants).map((variant) => ({
@@ -473,6 +490,7 @@ function applyCalculatorCalibration(rules, calibration) {
       },
     }));
 
+    const primaryDeliveryDays = variants.find((variant) => variant.deliveryDays)?.deliveryDays || rule.deliveryDays || null;
     const calculatorTags = new Set([
       ...normalizeArray(rule.tags),
       ...normalizeArray(primarySample.badges),
@@ -482,11 +500,15 @@ function applyCalculatorCalibration(rules, calibration) {
     return {
       ...rule,
       officialDisplayName: primarySample.officialDisplayName || rule.displayName,
+      displayName: primarySample.officialDisplayName || rule.displayName,
+      deliveryDays: primaryDeliveryDays,
+      sourceConfidence: 'official_calculator_verified',
       calculatorPriceSamples: samples.map((sample) => ({
         sampleId: sample.sampleId,
         input: sample.input,
         price: sample.calculatorPrice,
       })),
+      calculatorExcludedSamples: exclusions,
       variants,
       tags: [...calculatorTags],
       officialSource: {
