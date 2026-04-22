@@ -20,6 +20,10 @@
 | `raw_count` | number | 原始记录数 |
 | `normalized_count` | number | 标准化记录数 |
 | `warning_count` | number | 警告数 |
+| `request_count` | number | 采集请求数。行业任务表示请求的类目数，商品任务表示捕获的业务接口响应数 |
+| `success_count` | number | 成功请求数 |
+| `record_count` | number | 采集结果记录数。行业任务表示类目记录数，商品任务表示标准化入库商品数 |
+| `error_type` | string\|null | 标准错误类型，如 `login_required`、`guest_blocked`、`profile_locked`、`browser_blocked`、`api_auth_missing`、`db_error` |
 | `error_message` | string\|null | 错误信息 |
 
 ### GET /api/products
@@ -48,6 +52,36 @@
 | `summary` | object\|null | 当前任务汇总指标 |
 | `items` | array | 当前页商品列表 |
 | `total` | number | 匹配总数 |
+| `actualProductCount` | number | 当前任务实际关联的标准化商品总数，不受筛选条件影响 |
+
+### GET /api/result-jobs
+#### 说明
+返回结果工作台可选择的数据批次。默认只返回成功且实际商品数大于 0 的批次，用于避免行业数据或空商品批次抢占结果页。
+
+#### 请求参数
+| 参数 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `includeEmpty` | boolean | 否 | 是否包含实际商品数为 0 的批次，默认 `false` |
+| `includeFailed` | boolean | 否 | 是否包含失败或未完成批次，默认 `false` |
+| `limit` | number | 否 | 返回条数，默认 `50`，最大 `100` |
+
+#### 返回结构
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `filters` | object | 回显后的批次筛选条件 |
+| `jobs` | array | 可选批次数组 |
+
+#### `jobs[]` 字段
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | number | 任务 ID |
+| `page_name` | string | 任务名称 |
+| `page_type` | string | 任务类型 |
+| `job_status` | string | 任务状态 |
+| `raw_count` | number | 原始记录数 |
+| `normalized_count` | number | 任务记录的标准化数量 |
+| `product_count` | number | 通过 `products_normalized.job_id` 实际关联出来的商品数量 |
+| `finished_at` | string\|null | 任务结束时间 |
 
 ## Ozon批量上货工作台
 ### GET /api/ozon/template
@@ -157,6 +191,7 @@
 | `heightCm` | number | 是 | 包裹高度（cm） |
 | `weightG` | number | 是 | 商品重量（g） |
 | `orderDate` | string | 是 | 订单日期，格式 `YYYY-MM-DD` |
+| `includeXlsxCandidates` | boolean | 否 | 是否展示被官方计算器样本排除的 XLSX 候选服务，默认 `false`。默认值用于避免未校准候选服务干扰最低价排序 |
 
 #### 返回结构
 | 字段 | 类型 | 说明 |
@@ -217,7 +252,9 @@
 | `items[].service.officialSubtitle` | string | 官方服务副标题 |
 | `items[].service.deliveryDays` | object | 时效范围 |
 | `items[].service.variants` | array | 官方计算器服务变体，包含 `officialName`、`deliveryTarget`、`deliveryDays`、`batteryPolicy`、`badges` |
+| `items[].service.sourceConfidence` | string | 规则来源可信度：`official_calculator_verified` 表示官方计算器样本已出现，`xlsx_only` 表示仅来自官方 XLSX 费率表 |
+| `items[].service.calculatorPriceSamples` | array | 官方计算器价格样本，未校准服务为空数组 |
 | `items[].result.totalLogisticsCost` | number | 当前输入下的物流费用 |
-| `unavailableItems` | array | 因限制条件不可用的服务 |
+| `unavailableItems` | array | 因限制条件不可用，或被匹配的官方计算器样本排除的服务 |
 | `total` | number | 可用服务数量 |
 | `unavailableCount` | number | 不可用服务数量 |
