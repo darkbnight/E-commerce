@@ -71,6 +71,11 @@ function parseInteger(value, fallback) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function parseBoolean(value, fallback = false) {
+  if (value == null || value === '') return fallback;
+  return ['1', 'true', 'yes', 'on'].includes(String(value).toLowerCase());
+}
+
 async function readJsonBody(req) {
   const chunks = [];
   for await (const chunk of req) {
@@ -109,10 +114,16 @@ function createOzonClient(body) {
 
 function getLatestJobId(db) {
   const row = db.prepare(`
-    SELECT id
+    SELECT source_jobs.id
     FROM source_jobs
-    WHERE job_status = 'success'
-    ORDER BY id DESC
+    WHERE source_jobs.job_status = 'success'
+      AND EXISTS (
+        SELECT 1
+        FROM products_normalized
+        WHERE products_normalized.job_id = source_jobs.id
+        LIMIT 1
+      )
+    ORDER BY source_jobs.id DESC
     LIMIT 1
   `).get();
   return row ? Number(row.id) : null;
@@ -195,6 +206,62 @@ function handleApiJobs(res) {
   sendJson(res, 200, payload);
 }
 
+function handleApiResultJobs(req, res) {
+  if (!existsSync(DB_PATH)) {
+    sendJson(res, 200, { jobs: [] });
+    return;
+  }
+
+  const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
+  const includeEmpty = parseBoolean(url.searchParams.get('includeEmpty'));
+  const includeFailed = parseBoolean(url.searchParams.get('includeFailed'));
+  const limit = Math.min(Math.max(parseInteger(url.searchParams.get('limit'), 50), 1), 100);
+
+  const payload = withDb((db) => {
+    const conditions = [];
+    if (!includeFailed) {
+      conditions.push(`job_status = 'success'`);
+    }
+    if (!includeEmpty) {
+      conditions.push(includeFailed ? `(product_count > 0 OR job_status != 'success')` : `product_count > 0`);
+    }
+
+    const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const jobs = db.prepare(`
+      SELECT *
+      FROM (
+        SELECT source_jobs.id,
+               source_jobs.page_name,
+               source_jobs.page_type,
+               source_jobs.job_status,
+               source_jobs.raw_count,
+               source_jobs.normalized_count,
+               source_jobs.finished_at,
+               COUNT(products_normalized.id) AS product_count
+        FROM source_jobs
+        LEFT JOIN products_normalized ON products_normalized.job_id = source_jobs.id
+        GROUP BY source_jobs.id
+      )
+      ${whereClause}
+      ORDER BY id DESC
+      LIMIT ?
+    `).all(limit);
+
+    return {
+      filters: {
+        includeEmpty,
+        includeFailed,
+        limit,
+      },
+      jobs,
+    };
+  });
+
+  sendJson(res, 200, payload);
+}
+
+
 function handleApiProducts(req, res) {
   if (!existsSync(DB_PATH)) {
     sendJson(res, 200, {
@@ -203,6 +270,7 @@ function handleApiProducts(req, res) {
       summary: null,
       items: [],
       total: 0,
+      actualProductCount: 0,
     });
     return;
   }
@@ -220,6 +288,7 @@ function handleApiProducts(req, res) {
         summary: null,
         items: [],
         total: 0,
+        actualProductCount: 0,
       };
     }
 
@@ -267,6 +336,12 @@ function handleApiProducts(req, res) {
       LIMIT 1
     `).get(resolvedJobId);
 
+    const actualProductCount = db.prepare(`
+      SELECT COUNT(*) AS total
+      FROM products_normalized
+      WHERE job_id = ?
+    `).get(resolvedJobId);
+
     const categoryOptions = db.prepare(`
       SELECT DISTINCT category_level_1 AS value
       FROM products_normalized
@@ -300,6 +375,7 @@ function handleApiProducts(req, res) {
       summary,
       items,
       total: Number(totalRow.total || 0),
+      actualProductCount: Number(actualProductCount.total || 0),
     };
   });
 
@@ -472,6 +548,10 @@ async function handleApiOzonAttributeValues(req, res) {
 
 export function createWorkbenchServer() {
   return createServer(async (req, res) => {
+    if ((req.url || '').startsWith('/api/result-jobs')) {
+      handleApiResultJobs(req, res);
+      return;
+    }
     if ((req.url || '').startsWith('/api/jobs')) {
       handleApiJobs(res);
       return;

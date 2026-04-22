@@ -6,6 +6,21 @@ export async function fetchJobs() {
   return response.json();
 }
 
+export async function fetchResultJobs(params = {}) {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== '' && value != null) {
+      search.set(key, String(value));
+    }
+  });
+
+  const response = await fetch(`/api/result-jobs?${search.toString()}`);
+  if (!response.ok) {
+    throw new Error(`读取结果批次失败: ${response.status}`);
+  }
+  return response.json();
+}
+
 export async function fetchProducts(params = {}) {
   const search = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
