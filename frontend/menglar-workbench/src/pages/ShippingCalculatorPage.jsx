@@ -15,6 +15,7 @@ const defaultForm = {
   heightCm: '1',
   weightG: '50',
   orderDate: '2026-04-21',
+  includeXlsxCandidates: false,
 };
 
 export function ShippingCalculatorPage() {
@@ -118,6 +119,15 @@ export function ShippingCalculatorPage() {
 
             <input type="hidden" value={form.orderDate} readOnly />
 
+            <label className="shipping-check-field">
+              <input
+                type="checkbox"
+                checked={form.includeXlsxCandidates}
+                onChange={(event) => handleChange('includeXlsxCandidates', event.target.checked)}
+              />
+              <span>显示未校准 XLSX 候选服务</span>
+            </label>
+
             <div className="shipping-actions">
               <button className="shipping-primary-button" type="submit" disabled={compareMutation.isPending}>
                 {compareMutation.isPending ? '计算中' : '计算'}
@@ -200,6 +210,9 @@ function ShippingServiceCard({ item, index }) {
             {isFast ? <span className="shipping-tag muted">最快</span> : null}
           </div>
           <p>{item.service.officialSubtitle}</p>
+          <p className="shipping-source-confidence">
+            {item.service.sourceConfidence === 'official_calculator_verified' ? '官方计算器已校准' : 'XLSX 费率候选'}
+          </p>
         </div>
 
         <div className="shipping-service-price">
@@ -250,5 +263,6 @@ function toPayload(form) {
     heightCm: Number(form.heightCm),
     weightG: Number(form.weightG),
     orderDate: form.orderDate,
+    includeXlsxCandidates: Boolean(form.includeXlsxCandidates),
   };
 }

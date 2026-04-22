@@ -26,6 +26,10 @@ function findService(payload, displayName) {
   return item;
 }
 
+function hasService(payload, displayName) {
+  return payload.items.some((entry) => entry.service.displayName === displayName);
+}
+
 const server = await startWorkbenchServer({ port: 0, host: '127.0.0.1' });
 const address = server.address();
 const baseUrl = `http://${address.address}:${address.port}`;
@@ -51,6 +55,8 @@ try {
   payload = await readJson(response);
   assert.equal(response.status, 200);
   assert.ok(payload.total > 0);
+  assert.equal(payload.items[0].service.displayName, 'China Post to PUDO Economy');
+  assert.equal(hasService(payload, 'GUOO Express Extra Small'), false);
 
   const chinaPostPudo = findService(payload, 'China Post to PUDO Economy');
   assert.equal(chinaPostPudo.result.totalLogisticsCost, 3.2);
@@ -129,9 +135,29 @@ try {
   assert.equal(payload.items[0].result.totalLogisticsCost, 3.2);
   assert.equal(payload.items[1].result.totalLogisticsCost, 4.42);
 
+  response = await fetch(`${baseUrl}/api/shipping/compare`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(baseComparePayload({ weightG: 500 })),
+  });
+  payload = await readJson(response);
+  assert.equal(response.status, 200);
+  assert.equal(payload.items[0].service.displayName, 'ATC Economy Extra Small');
+  assert.equal(payload.items[0].result.totalLogisticsCost, 14.6);
+  assert.equal(hasService(payload, 'GUOO Express Extra Small'), false);
+
+  response = await fetch(`${baseUrl}/api/shipping/compare`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(baseComparePayload({ weightG: 500, includeXlsxCandidates: true })),
+  });
+  payload = await readJson(response);
+  assert.equal(response.status, 200);
+  assert.equal(hasService(payload, 'GUOO Express Extra Small'), true);
+
   for (const [weightG, expectedService] of [
     [2000, 'China Post eParcel Economy'],
-    [5000, 'China Post eParcel Economy'],
+    [5000, 'GBS Economy Budget'],
   ]) {
     response = await fetch(`${baseUrl}/api/shipping/compare`, {
       method: 'POST',
@@ -143,6 +169,17 @@ try {
     assert.ok(payload.total > 0, `expected available services for ${weightG}g`);
     findService(payload, expectedService);
   }
+
+  response = await fetch(`${baseUrl}/api/shipping/compare`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(baseComparePayload({ weightG: 5000 })),
+  });
+  payload = await readJson(response);
+  assert.equal(response.status, 200);
+  assert.equal(payload.items[0].service.displayName, 'GBS Economy Budget');
+  assert.equal(payload.items[0].result.totalLogisticsCost, 107.4);
+  assert.equal(hasService(payload, 'China Post eParcel Economy'), false);
 
   console.log('shipping-api 测试通过');
 } finally {

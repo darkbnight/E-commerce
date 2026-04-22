@@ -55,12 +55,15 @@ try {
   const sortedText = await page.locator('[data-testid="shipping-result"]').textContent();
   assert.ok((sortedText || '').indexOf('CEL Standard Small') < (sortedText || '').indexOf('China Post to PUDO Economy'));
 
-  for (const weightG of [2000, 5000]) {
+  for (const [weightG, expectedService] of [
+    [2000, 'China Post eParcel Economy'],
+    [5000, 'GBS Economy Budget'],
+  ]) {
     await fillWeight(weightG);
     await clickCalculateAndWait();
-    await page.waitForSelector('text=China Post eParcel Economy');
+    await page.waitForSelector(`text=${expectedService}`);
     const boundaryText = await page.locator('[data-testid="shipping-result"]').textContent();
-    assert.match(boundaryText || '', /China Post eParcel Economy/);
+    assert.match(boundaryText || '', new RegExp(expectedService));
   }
 
   await fillWeight(40000);
