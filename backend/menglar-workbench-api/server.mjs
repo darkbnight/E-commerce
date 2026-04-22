@@ -66,6 +66,30 @@ function withDb(run) {
   }
 }
 
+function ensureSourceJobsMetricsColumns(db) {
+  const table = db.prepare(`
+    SELECT name
+    FROM sqlite_master
+    WHERE type = 'table' AND name = 'source_jobs'
+  `).get();
+  if (!table) return;
+
+  const columns = db.prepare('PRAGMA table_info(source_jobs)').all();
+  const names = new Set(columns.map((column) => column.name));
+  const additions = [
+    ['request_count', 'INTEGER NOT NULL DEFAULT 0'],
+    ['success_count', 'INTEGER NOT NULL DEFAULT 0'],
+    ['record_count', 'INTEGER NOT NULL DEFAULT 0'],
+    ['error_type', 'TEXT'],
+  ];
+
+  for (const [name, definition] of additions) {
+    if (!names.has(name)) {
+      db.exec(`ALTER TABLE source_jobs ADD COLUMN ${name} ${definition}`);
+    }
+  }
+}
+
 function parseInteger(value, fallback) {
   const parsed = Number.parseInt(value ?? '', 10);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -193,9 +217,24 @@ function handleApiJobs(res) {
   }
 
   const payload = withDb((db) => {
+    ensureSourceJobsMetricsColumns(db);
     const jobs = db.prepare(`
       SELECT id, page_name, page_url, page_type, pagination_mode, job_status,
-             started_at, finished_at, raw_count, normalized_count, warning_count, error_message
+             started_at, finished_at, raw_count, normalized_count, warning_count,
+             request_count, success_count, record_count,
+             COALESCE(
+               error_type,
+               CASE
+                 WHEN error_message LIKE '%游客%' THEN 'guest_blocked'
+                 WHEN error_message LIKE '%登录%' THEN 'login_required'
+                 WHEN error_message LIKE '%Profile%' OR error_message LIKE '%EBUSY%' THEN 'profile_locked'
+                 WHEN error_message LIKE '%浏览器%' OR error_message LIKE '%Chrome%' OR error_message LIKE '%EPERM%' OR error_message LIKE '%new tab%' THEN 'browser_blocked'
+                 WHEN error_message LIKE '%sqlite%' OR error_message LIKE '%database%' THEN 'db_error'
+                 WHEN error_message IS NOT NULL AND error_message != '' THEN 'unknown'
+                 ELSE NULL
+               END
+             ) AS error_type,
+             error_message
       FROM source_jobs
       ORDER BY id DESC
       LIMIT 20
@@ -260,7 +299,6 @@ function handleApiResultJobs(req, res) {
 
   sendJson(res, 200, payload);
 }
-
 
 function handleApiProducts(req, res) {
   if (!existsSync(DB_PATH)) {
@@ -552,6 +590,7 @@ export function createWorkbenchServer() {
       handleApiResultJobs(req, res);
       return;
     }
+
     if ((req.url || '').startsWith('/api/jobs')) {
       handleApiJobs(res);
       return;

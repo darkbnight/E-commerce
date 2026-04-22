@@ -10,6 +10,26 @@ const TASK_TYPE_LABELS = {
   hot_products: '热销商品',
 };
 
+const ERROR_TYPE_LABELS = {
+  login_required: '登录失效',
+  guest_blocked: '游客/权限',
+  profile_locked: 'Profile 占用',
+  browser_blocked: '浏览器异常',
+  api_auth_missing: '接口鉴权缺失',
+  db_error: '数据库异常',
+  unknown: '未知异常',
+};
+
+const ERROR_TYPE_ACTIONS = {
+  login_required: '重新登录萌拉后再采集',
+  guest_blocked: '确认账号不是游客态且有目标页面权限',
+  profile_locked: '关闭占用紫鸟 Profile 的浏览器，必要时刷新 Profile 副本',
+  browser_blocked: '检查 Chrome 路径、权限和残留浏览器进程',
+  api_auth_missing: '先打开目标页，确认业务接口正常加载',
+  db_error: '检查本地数据库路径与写入权限',
+  unknown: '查看错误详情并按日志定位',
+};
+
 const FILTERS = [
   { key: 'all', label: '全部' },
   { key: 'running', label: '运行中' },
@@ -33,6 +53,49 @@ function formatDateTime(value) {
 
 function formatTaskType(type) {
   return TASK_TYPE_LABELS[type] || formatText(type);
+}
+
+function formatErrorType(type) {
+  return ERROR_TYPE_LABELS[type] || formatText(type);
+}
+
+function getErrorAction(type) {
+  return ERROR_TYPE_ACTIONS[type] || ERROR_TYPE_ACTIONS.unknown;
+}
+
+function getJobResult(job) {
+  const requestCount = Number(job.request_count || 0);
+  const successCount = Number(job.success_count || 0);
+  const recordCount = Number(job.record_count || 0);
+
+  if (job.page_type === 'industry_general') {
+    if (requestCount === 0 && successCount === 0 && recordCount === 0) {
+      return {
+        kind: '行业',
+        primary: '历史任务',
+        secondary: '无统计口径',
+      };
+    }
+    return {
+      kind: '行业',
+      primary: `请求 ${formatNumber(requestCount)} / 成功 ${formatNumber(successCount)}`,
+      secondary: `类目记录 ${formatNumber(recordCount)}`,
+    };
+  }
+
+  if (job.page_type === 'hot_products') {
+    return {
+      kind: '商品',
+      primary: `原始 ${formatNumber(job.raw_count)} / 标准化 ${formatNumber(job.normalized_count)}`,
+      secondary: `警告 ${formatNumber(job.warning_count)}`,
+    };
+  }
+
+  return {
+    kind: '任务',
+    primary: `请求 ${formatNumber(job.request_count)} / 成功 ${formatNumber(job.success_count)}`,
+    secondary: `记录 ${formatNumber(job.record_count)}`,
+  };
 }
 
 function getDuration(startedAt, finishedAt) {
@@ -93,14 +156,6 @@ export function TasksPage() {
 
   return (
     <div className="wb-page">
-      <div className="wb-page-hero">
-        <div>
-          <p className="wb-kicker">Task Center</p>
-          <h2>采集任务页</h2>
-          <p>这个页面只处理抓取任务本身：任务状态、开始结束时间、入库数量和失败原因。</p>
-        </div>
-      </div>
-
       <div className="task-summary-grid">
         <div className="task-summary-card">
           <span>最近任务</span>
@@ -147,19 +202,31 @@ export function TasksPage() {
 
         <div className="wb-table-wrap task-table-wrap">
           <table className="wb-table task-table">
+            <colgroup>
+              <col className="task-col-id" />
+              <col className="task-col-name" />
+              <col className="task-col-status" />
+              <col className="task-col-time" />
+              <col className="task-col-result" />
+              <col className="task-col-error" />
+              <col className="task-col-action" />
+            </colgroup>
             <thead>
               <tr>
                 <th>任务ID</th>
                 <th>任务</th>
                 <th>状态</th>
                 <th>时间</th>
-                <th>入库</th>
+                <th>采集结果</th>
                 <th>错误信息</th>
                 <th>操作</th>
               </tr>
             </thead>
             <tbody>
               {filteredJobs.length ? filteredJobs.map((job) => (
+                (() => {
+                  const result = getJobResult(job);
+                  return (
                 <Fragment key={job.id}>
                   <tr>
                     <td className="mono task-id">#{job.id}</td>
@@ -167,7 +234,6 @@ export function TasksPage() {
                       <div className="cell-main">{formatText(job.page_name)}</div>
                       <div className="task-type-line">
                         <span className="wb-pill">{formatTaskType(job.page_type)}</span>
-                        <span className="cell-sub">{formatText(job.page_type)}</span>
                       </div>
                     </td>
                     <td><StatusBadge status={job.job_status} /></td>
@@ -177,11 +243,13 @@ export function TasksPage() {
                       <div className="cell-sub">耗时：{getDuration(job.started_at, job.finished_at)}</div>
                     </td>
                     <td>
-                      <div className="cell-main">{formatNumber(job.raw_count)} / {formatNumber(job.normalized_count)}</div>
-                      <div className="cell-sub">警告 {formatNumber(job.warning_count)}</div>
+                      <div className="task-result-kind">{result.kind}</div>
+                      <div className="cell-main">{result.primary}</div>
+                      <div className="cell-sub">{result.secondary}</div>
                     </td>
                     <td className={job.error_message ? 'task-error-summary is-error' : 'task-error-summary'}>
-                      {getErrorSummary(job.error_message)}
+                      {job.error_type ? <span className="task-error-type">{formatErrorType(job.error_type)}</span> : null}
+                      <span>{getErrorSummary(job.error_message)}</span>
                     </td>
                     <td>
                       <div className="task-row-actions">
@@ -215,6 +283,14 @@ export function TasksPage() {
                             <p className="mono">{formatText(job.page_url)}</p>
                           </div>
                           <div>
+                            <span>问题类型</span>
+                            <p>{formatErrorType(job.error_type)}</p>
+                          </div>
+                          <div>
+                            <span>建议处理</span>
+                            <p>{job.error_type ? getErrorAction(job.error_type) : '-'}</p>
+                          </div>
+                          <div>
                             <span>错误详情</span>
                             <pre>{formatText(job.error_message)}</pre>
                           </div>
@@ -223,6 +299,8 @@ export function TasksPage() {
                     </tr>
                   ) : null}
                 </Fragment>
+                  );
+                })()
               )) : (
                 <tr>
                   <td colSpan="7" className="wb-empty-cell">
