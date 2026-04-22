@@ -8,4 +8,5 @@ data/shipping-sources/*
 !.cache/README.md
 db/*.sqlite
 frontend/**/dist/
+todo.md
 docs/测试文档/**/UI/
