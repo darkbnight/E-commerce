@@ -1017,6 +1017,21 @@ select {
   font-weight: 800;
 }
 
+.shipping-check-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #536276;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.shipping-check-field input {
+  width: 16px;
+  height: 16px;
+  accent-color: #0b63f6;
+}
+
 .shipping-actions {
   display: flex;
   gap: 14px;
@@ -1161,6 +1176,12 @@ select {
   margin: 8px 0 0;
   color: #536276;
   font-size: 14px;
+}
+
+.shipping-service-main .shipping-source-confidence {
+  color: #0b63f6;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .shipping-service-price {
