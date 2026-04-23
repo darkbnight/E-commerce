@@ -973,6 +973,13 @@ select {
   align-items: start;
 }
 
+.product-prep-section-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 18px;
+  align-items: start;
+}
+
 .product-prep-steps {
   display: grid;
   gap: 12px;
@@ -1013,6 +1020,144 @@ select {
 .product-prep-notes {
   display: grid;
   gap: 10px;
+}
+
+.product-prep-side-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.product-prep-field-sections,
+.product-prep-field-list,
+.product-prep-gap-sections,
+.product-prep-readiness-grid,
+.product-prep-checklist {
+  display: grid;
+  gap: 12px;
+}
+
+.product-prep-field-section {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.product-prep-field-section-head strong,
+.product-prep-gap-card strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 16px;
+}
+
+.product-prep-field-section-head p,
+.product-prep-gap-card p {
+  margin: 0 0 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.product-prep-field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 250, 242, 0.84);
+}
+
+.product-prep-field-main p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.product-prep-field-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.product-prep-field-title-row code {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(22, 33, 39, 0.07);
+  color: var(--muted);
+  font-size: 12px;
+  font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+}
+
+.product-prep-field-meta {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+.product-prep-field-meta small {
+  color: var(--muted);
+  text-align: right;
+}
+
+.product-prep-state-pill {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(22, 33, 39, 0.08);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.product-prep-state-pill.is-existing {
+  color: var(--success);
+  background: rgba(4, 120, 87, 0.12);
+}
+
+.product-prep-state-pill.is-derived {
+  color: #155e75;
+  background: rgba(14, 116, 144, 0.12);
+}
+
+.product-prep-state-pill.is-manual {
+  color: var(--accent-2);
+  background: rgba(194, 65, 12, 0.12);
+}
+
+.product-prep-state-pill.is-missing {
+  color: var(--danger);
+  background: rgba(185, 28, 28, 0.12);
+}
+
+.product-prep-mini-stat,
+.product-prep-gap-card {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.product-prep-mini-stat span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.product-prep-mini-stat strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 24px;
+}
+
+.product-prep-checklist {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.7;
 }
 
 .wb-hero-card-stack {
@@ -1751,6 +1896,7 @@ select {
 
   .wb-results-layout,
   .product-prep-grid,
+  .product-prep-section-grid,
   .wb-shipping-layout,
   .wb-metrics,
   .result-metrics-bar,
@@ -1771,6 +1917,18 @@ select {
   .shipping-dimension-grid,
   .shipping-price-grid {
     grid-template-columns: 1fr;
+  }
+
+  .product-prep-field-row {
+    grid-template-columns: 1fr;
+  }
+
+  .product-prep-field-meta {
+    justify-items: start;
+  }
+
+  .product-prep-field-meta small {
+    text-align: left;
   }
 
   .wb-field-span-2 {

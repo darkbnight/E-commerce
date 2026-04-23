@@ -19,6 +19,10 @@ import {
   getShippingRuleInfo,
   listShippingMethods,
 } from './lib/shipping-engine.mjs';
+import {
+  handleProductDataPrepRoute,
+  isProductDataPrepRoute,
+} from './modules/product-data-prep/route.mjs';
 
 const ROOT = import.meta.dirname;
 const PORT = Number(process.env.PORT || 4186);
@@ -586,6 +590,11 @@ async function handleApiOzonAttributeValues(req, res) {
 
 export function createWorkbenchServer() {
   return createServer(async (req, res) => {
+    if (isProductDataPrepRoute(req)) {
+      await handleProductDataPrepRoute(req, res);
+      return;
+    }
+
     if ((req.url || '').startsWith('/api/result-jobs')) {
       handleApiResultJobs(req, res);
       return;
