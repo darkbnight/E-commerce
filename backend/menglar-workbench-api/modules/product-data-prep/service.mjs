@@ -1,5 +1,31 @@
 import { createProductDataPrepRepository } from './repository.mjs';
 
+function isBlank(value) {
+  return value == null || value === '';
+}
+
+function isHttpUrl(value) {
+  return typeof value === 'string' && /^https?:\/\//i.test(value.trim());
+}
+
+function isPlaceholderUrl(value) {
+  if (!isHttpUrl(value)) return false;
+  try {
+    const url = new URL(value);
+    return ['example.com', 'www.example.com', 'localhost', '127.0.0.1'].includes(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function compactObject(input) {
+  return Object.fromEntries(Object.entries(input).filter(([, value]) => {
+    if (value == null || value === '') return false;
+    if (Array.isArray(value) && value.length === 0) return false;
+    return true;
+  }));
+}
+
 function collectDraftIssues(draft) {
   const issues = [];
 
@@ -11,7 +37,7 @@ function collectDraftIssues(draft) {
   if (!draft.typeId) issues.push({ field: 'typeId', level: 'error', message: '缺少 Ozon type_id' });
   if (!draft.price) issues.push({ field: 'price', level: 'error', message: '缺少售价 price' });
   if (!draft.currencyCode) issues.push({ field: 'currencyCode', level: 'error', message: '缺少币种 currency_code' });
-  if (!draft.vat) issues.push({ field: 'vat', level: 'error', message: '缺少 VAT' });
+  if (isBlank(draft.vat)) issues.push({ field: 'vat', level: 'error', message: '缺少 VAT' });
   if (!draft.packageDepthMm || !draft.packageWidthMm || !draft.packageHeightMm) {
     issues.push({ field: 'packageSize', level: 'error', message: '缺少包装尺寸(mm)' });
   }
@@ -66,11 +92,11 @@ function normalizeAttributeValue(value) {
   return { value: String(value) };
 }
 
-function buildExportAttributes(attributes) {
+function buildExportAttributes(attributes = []) {
   return attributes.map((attribute) => {
     const exported = {
       id: attribute.attributeId,
-      values: attribute.values.map(normalizeAttributeValue),
+      values: (attribute.values || []).map(normalizeAttributeValue),
     };
 
     if (attribute.complexId != null) {
@@ -81,18 +107,30 @@ function buildExportAttributes(attributes) {
   });
 }
 
-function buildExportItem(draft) {
-  const images = [...draft.images]
-    .sort((a, b) => Number(a.sortOrder ?? 0) - Number(b.sortOrder ?? 0))
-    .map((image) => image.url)
-    .filter(Boolean);
+function buildPrimaryImage(images = []) {
+  const normalized = [...images]
+    .filter((image) => image?.url)
+    .sort((a, b) => Number(a.sortOrder ?? 0) - Number(b.sortOrder ?? 0));
 
-  return {
+  const explicitMain = normalized.find((image) => image.isMain);
+  return explicitMain?.url || normalized[0]?.url || undefined;
+}
+
+function buildExportItem(draft) {
+  const imageEntries = [...(draft.images || [])]
+    .sort((a, b) => Number(a.sortOrder ?? 0) - Number(b.sortOrder ?? 0))
+    .filter((image) => image?.url);
+  const images = imageEntries.map((image) => image.url);
+  const primaryImage = buildPrimaryImage(imageEntries);
+  const complexAttributes = buildExportAttributes(draft.complexAttributes);
+
+  return compactObject({
     offer_id: draft.offerId,
     name: draft.name,
     description: draft.description,
     description_category_id: draft.descriptionCategoryId,
     type_id: draft.typeId,
+    vendor: draft.vendor || undefined,
     price: draft.price,
     old_price: draft.oldPrice || undefined,
     premium_price: draft.premiumPrice || undefined,
@@ -107,7 +145,49 @@ function buildExportItem(draft) {
     weight: draft.packageWeightG,
     weight_unit: 'g',
     images,
+    primary_image: primaryImage,
     attributes: buildExportAttributes(draft.attributes),
+    complex_attributes: complexAttributes,
+  });
+}
+
+function collectExportItemIssues(item) {
+  const issues = [];
+
+  if (!item.offer_id) issues.push({ field: 'offer_id', level: 'error', message: '缺少 offer_id' });
+  if (!item.name) issues.push({ field: 'name', level: 'error', message: '缺少 name' });
+  if (!item.description_category_id) issues.push({ field: 'description_category_id', level: 'error', message: '缺少 description_category_id' });
+  if (!item.type_id) issues.push({ field: 'type_id', level: 'error', message: '缺少 type_id' });
+  if (!item.price) issues.push({ field: 'price', level: 'error', message: '缺少 price' });
+  if (!item.currency_code) issues.push({ field: 'currency_code', level: 'error', message: '缺少 currency_code' });
+  if (isBlank(item.vat)) issues.push({ field: 'vat', level: 'error', message: '缺少 vat' });
+  if (!item.depth || !item.width || !item.height) issues.push({ field: 'package_size', level: 'error', message: '缺少 depth/width/height' });
+  if (!item.weight) issues.push({ field: 'weight', level: 'error', message: '缺少 weight' });
+  if (!Array.isArray(item.images) || item.images.length === 0) {
+    issues.push({ field: 'images', level: 'error', message: '至少需要 1 张商品图片' });
+  } else if (!item.images.every(isHttpUrl)) {
+    issues.push({ field: 'images', level: 'error', message: 'images 必须是可访问的 http/https 直链' });
+  } else if (item.images.some(isPlaceholderUrl)) {
+    issues.push({ field: 'images', level: 'error', message: 'images 不能使用 example.com/localhost 这类占位地址' });
+  }
+  if (item.primary_image && !isHttpUrl(item.primary_image)) {
+    issues.push({ field: 'primary_image', level: 'error', message: 'primary_image 必须是可访问的 http/https 直链' });
+  } else if (item.primary_image && isPlaceholderUrl(item.primary_image)) {
+    issues.push({ field: 'primary_image', level: 'error', message: 'primary_image 不能使用 example.com/localhost 这类占位地址' });
+  }
+  if (!Array.isArray(item.attributes) || item.attributes.length === 0) {
+    issues.push({ field: 'attributes', level: 'error', message: '至少需要 1 个 attributes 项' });
+  }
+  if (!item.primary_image && Array.isArray(item.images) && item.images.length > 0) {
+    issues.push({ field: 'primary_image', level: 'warning', message: '未显式提供 primary_image，已尝试用首图兜底' });
+  }
+
+  return issues;
+}
+
+function buildImportRequest(items = []) {
+  return {
+    items,
   };
 }
 
@@ -115,11 +195,14 @@ export function createProductDataPrepService({ repository = createProductDataPre
   return {
     listCandidates({ searchParams }) {
       const sourceJobId = searchParams.get('sourceJobId');
-      const items = repository.listCandidates({ sourceJobId });
+      const limit = searchParams.get('limit');
+      const items = repository.listCandidates({ sourceJobId, limit });
+      const repositorySource = repository.getLastCandidateSource?.() || 'unknown';
+
       return {
         meta: {
-          source: 'module-scaffold',
-          note: '当前返回模块内 mock 候选商品，下一步可替换为真实候选池。',
+          source: repositorySource === 'sqlite-db' ? 'db/ecommerce-workbench.sqlite' : 'module-mock-fallback',
+          note: '优先读取 SQLite 的 source_jobs + product_business_snapshots；本地数据库不存在时才返回模块兜底样例。',
         },
         total: items.length,
         items,
@@ -131,8 +214,8 @@ export function createProductDataPrepService({ repository = createProductDataPre
       const items = repository.listDrafts({ draftStatus });
       return {
         meta: {
-          source: 'module-scaffold',
-          note: '当前返回模块内内存草稿，方便前期联调字段结构。',
+          source: 'module-memory-drafts',
+          note: '当前草稿仍保存在模块内存态，后续可迁移到 product_publish_drafts 表。',
         },
         total: items.length,
         items,
@@ -149,6 +232,50 @@ export function createProductDataPrepService({ repository = createProductDataPre
 
     updateDraft(draftId, patch) {
       return repository.updateDraft(draftId, patch);
+    },
+
+    listContentResults({ searchParams }) {
+      const limit = searchParams.get('limit');
+      const items = repository.listContentResults({ limit });
+      return {
+        meta: {
+          source: 'db/ecommerce-workbench.sqlite',
+          table: 'product_content_result',
+        },
+        total: items.length,
+        items,
+      };
+    },
+
+    saveContentResult(input = {}) {
+      const draft = input.draft || input;
+      const exportItem = buildExportItem(draft);
+      const issues = [
+        ...collectDraftIssues(draft),
+        ...collectExportItemIssues(exportItem),
+      ];
+      const resultStatus = issues.some((issue) => issue.level === 'error')
+        ? 'invalid'
+        : (draft.draftStatus || 'draft');
+      const item = repository.saveContentResult({
+        draft: {
+          ...draft,
+          resultStatus,
+        },
+        exportItem,
+      });
+
+      return {
+        meta: {
+          source: 'db/ecommerce-workbench.sqlite',
+          table: 'product_content_result',
+          action: 'upsert',
+        },
+        item,
+        ozonImportItem: exportItem,
+        ozonImportRequest: buildImportRequest([exportItem]),
+        issues,
+      };
     },
 
     validateDraft(draftId) {
@@ -174,7 +301,11 @@ export function createProductDataPrepService({ repository = createProductDataPre
       const skipped = [];
 
       drafts.forEach((draft) => {
-        const issues = collectDraftIssues(draft);
+        const exportItem = buildExportItem(draft);
+        const issues = [
+          ...collectDraftIssues(draft),
+          ...collectExportItemIssues(exportItem),
+        ];
         const blockingIssues = issues.filter((issue) => issue.level === 'error');
         if (blockingIssues.length) {
           skipped.push({
@@ -183,13 +314,13 @@ export function createProductDataPrepService({ repository = createProductDataPre
           });
           return;
         }
-        exportedItems.push(buildExportItem(draft));
+        exportedItems.push(exportItem);
       });
 
       return {
         meta: {
-          source: 'module-scaffold',
-          note: '导出结构已对齐本地 Ozon importer，可直接作为下一步真实导出载荷的基础。',
+          source: 'module-memory-drafts',
+          note: '导出结构已对齐本地 Ozon importer，可作为后续真实导出载荷的基础。',
         },
         itemCount: exportedItems.length,
         skippedCount: skipped.length,

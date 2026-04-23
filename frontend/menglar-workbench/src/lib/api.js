@@ -1,3 +1,5 @@
+export const OZON_DESCRIPTION_LANGUAGE = 'ZH_HANS';
+
 export async function fetchJobs() {
   const response = await fetch('/api/jobs');
   if (!response.ok) {
@@ -76,29 +78,29 @@ export async function fetchOzonImportInfo(input) {
   return readJson(response, '任务查询失败');
 }
 
-export async function fetchOzonCategoryTree(input) {
+export async function fetchOzonCategoryTree(input = {}) {
   const response = await fetch('/api/ozon/category-tree', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
+    body: JSON.stringify({ language: OZON_DESCRIPTION_LANGUAGE, ...input }),
   });
   return readJson(response, '描述类目树查询失败');
 }
 
-export async function fetchOzonCategoryAttributes(input) {
+export async function fetchOzonCategoryAttributes(input = {}) {
   const response = await fetch('/api/ozon/category-attributes', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
+    body: JSON.stringify({ language: OZON_DESCRIPTION_LANGUAGE, ...input }),
   });
   return readJson(response, '类目属性查询失败');
 }
 
-export async function fetchOzonAttributeValues(input) {
+export async function fetchOzonAttributeValues(input = {}) {
   const response = await fetch('/api/ozon/attribute-values', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
+    body: JSON.stringify({ language: OZON_DESCRIPTION_LANGUAGE, ...input }),
   });
   return readJson(response, '属性值查询失败');
 }

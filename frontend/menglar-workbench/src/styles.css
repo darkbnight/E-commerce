@@ -1300,6 +1300,220 @@ select {
   color: #047857;
 }
 
+.product-prep-attribute-panel {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.product-prep-attribute-panel.is-empty {
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(22, 33, 39, 0.06);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.product-prep-attribute-panel.is-error {
+  color: var(--danger);
+  background: rgba(185, 28, 28, 0.08);
+}
+
+.product-prep-attribute-summary,
+.product-prep-attribute-context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.product-prep-attribute-summary span,
+.product-prep-attribute-context code {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.product-prep-attribute-summary strong {
+  color: var(--ink);
+}
+
+.product-prep-attribute-list,
+.product-prep-attribute-optional {
+  display: grid;
+  gap: 8px;
+}
+
+.product-prep-attribute-list h4,
+.product-prep-attribute-optional h4 {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.product-prep-attribute-card {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid rgba(22, 33, 39, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.product-prep-attribute-card.is-required {
+  border-color: rgba(194, 65, 12, 0.22);
+  background: linear-gradient(180deg, rgba(255, 248, 243, 0.92), rgba(255, 255, 255, 0.78));
+}
+
+.product-prep-attribute-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.product-prep-attribute-card-head strong {
+  display: block;
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.product-prep-attribute-card-head span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.product-prep-attribute-card-head em {
+  align-self: flex-start;
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(22, 33, 39, 0.07);
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.product-prep-attribute-card-head em.is-required {
+  color: var(--accent-2);
+  background: rgba(194, 65, 12, 0.12);
+}
+
+.product-prep-attribute-meta,
+.product-prep-attribute-optional-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.product-prep-attribute-meta code,
+.product-prep-attribute-optional-grid code {
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: rgba(22, 33, 39, 0.06);
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.product-prep-attribute-values {
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(14, 116, 144, 0.08);
+  color: #155e75;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.product-prep-attribute-fill {
+  display: grid;
+  gap: 5px;
+}
+
+.product-prep-attribute-fill span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.product-prep-attribute-fill input,
+.product-prep-attribute-fill select,
+.product-prep-attribute-fill textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(22, 33, 39, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.product-prep-attribute-fill textarea {
+  resize: vertical;
+}
+
+.product-prep-no-brand-button {
+  width: fit-content;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.product-prep-no-brand-button:hover {
+  background: rgba(15, 118, 110, 0.2);
+}
+
+.product-prep-attribute-current {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(194, 65, 12, 0.08);
+  color: var(--accent-2);
+  font-size: 12px;
+}
+
+.product-prep-attribute-current.is-filled {
+  color: #047857;
+  background: rgba(4, 120, 87, 0.1);
+}
+
+.product-prep-attribute-current span {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.product-prep-attribute-optional-grid span {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: rgba(22, 33, 39, 0.045);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 @container (max-width: 640px) {
   .product-prep-display-table-head {
     display: none;

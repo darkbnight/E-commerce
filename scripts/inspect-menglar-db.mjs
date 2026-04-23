@@ -20,6 +20,7 @@ const jobs = db.prepare('SELECT * FROM source_jobs ORDER BY id DESC LIMIT 5').al
 const rawCount = safeCount('products_raw');
 const businessSnapshotCount = safeCount('product_business_snapshots');
 const contentAssetCount = safeCount('product_content_assets');
+const contentResultCount = safeCount('product_content_result');
 const samples = db.prepare(`
   SELECT
     platform,
@@ -41,6 +42,7 @@ console.log(JSON.stringify({
   rawCount,
   businessSnapshotCount,
   contentAssetCount,
+  contentResultCount,
   samples,
 }, null, 2));
 

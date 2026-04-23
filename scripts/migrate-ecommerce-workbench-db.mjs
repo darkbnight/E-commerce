@@ -96,6 +96,53 @@ function createTargetTables(db) {
 
     CREATE INDEX IF NOT EXISTS idx_product_content_assets_status
     ON product_content_assets(content_status);
+
+    CREATE TABLE IF NOT EXISTS product_content_result (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      result_key TEXT NOT NULL UNIQUE,
+      draft_id INTEGER,
+      source_job_id INTEGER,
+      source_snapshot_id INTEGER,
+      product_normalized_id INTEGER,
+      platform TEXT NOT NULL DEFAULT 'ozon',
+      platform_product_id TEXT,
+      offer_id TEXT,
+      name TEXT,
+      description TEXT,
+      description_category_id INTEGER,
+      type_id INTEGER,
+      vendor TEXT,
+      model_name TEXT,
+      barcode TEXT,
+      price TEXT,
+      old_price TEXT,
+      premium_price TEXT,
+      min_price TEXT,
+      currency_code TEXT,
+      vat TEXT,
+      warehouse_id TEXT,
+      stock REAL,
+      package_depth_mm REAL,
+      package_width_mm REAL,
+      package_height_mm REAL,
+      package_weight_g REAL,
+      images_json TEXT NOT NULL DEFAULT '[]',
+      attributes_json TEXT NOT NULL DEFAULT '[]',
+      ozon_import_item_json TEXT NOT NULL,
+      raw_draft_json TEXT NOT NULL,
+      result_status TEXT NOT NULL DEFAULT 'draft',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_product_content_result_source
+    ON product_content_result(source_job_id, source_snapshot_id);
+
+    CREATE INDEX IF NOT EXISTS idx_product_content_result_product
+    ON product_content_result(platform, platform_product_id);
+
+    CREATE INDEX IF NOT EXISTS idx_product_content_result_status
+    ON product_content_result(result_status);
   `);
 }
 

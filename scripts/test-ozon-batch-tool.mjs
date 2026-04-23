@@ -54,7 +54,7 @@ const server = createServer(async (req, res) => {
 
   res.setHeader('content-type', 'application/json; charset=utf-8');
 
-  if (req.url === '/v3/product/import') {
+  if (req.url === '/v2/product/import') {
     requests.uploadCalls.push(body.items.length);
     res.end(JSON.stringify({
       result: {

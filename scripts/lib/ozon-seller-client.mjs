@@ -3,6 +3,7 @@ import path from 'node:path';
 
 export const DEFAULT_BASE_URL = 'https://api-seller.ozon.ru';
 export const MAX_IMPORT_ITEMS = 100;
+export const OZON_DEFAULT_LANGUAGE = 'ZH_HANS';
 
 function isObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -392,6 +393,7 @@ export class OzonSellerClient {
     if (!response.ok) {
       const error = new Error(`Ozon API 请求失败: ${response.status} ${response.statusText}`);
       error.status = response.status;
+      error.endpoint = endpoint;
       error.body = body;
       throw error;
     }
@@ -399,11 +401,13 @@ export class OzonSellerClient {
     return body;
   }
 
-  async getCategoryTree() {
-    return this.request('/v1/description-category/tree', {});
+  async getCategoryTree({ language = OZON_DEFAULT_LANGUAGE } = {}) {
+    return this.request('/v1/description-category/tree', {
+      language,
+    });
   }
 
-  async getCategoryAttributes({ descriptionCategoryId, typeId, language = 'DEFAULT' }) {
+  async getCategoryAttributes({ descriptionCategoryId, typeId, language = OZON_DEFAULT_LANGUAGE }) {
     return this.request('/v1/description-category/attribute', {
       description_category_id: descriptionCategoryId,
       type_id: typeId,
@@ -415,7 +419,7 @@ export class OzonSellerClient {
     attributeId,
     descriptionCategoryId,
     typeId,
-    language = 'DEFAULT',
+    language = OZON_DEFAULT_LANGUAGE,
     lastValueId = 0,
     limit = 50
   }) {
@@ -429,13 +433,72 @@ export class OzonSellerClient {
     });
   }
 
+  async getProductList({
+    filter = {},
+    lastId = '',
+    limit = 1000,
+  } = {}) {
+    return this.request('/v3/product/list', {
+      filter,
+      last_id: lastId,
+      limit,
+    });
+  }
+
+  async getProductInfoList({
+    offerIds = [],
+    productIds = [],
+    skus = [],
+  } = {}) {
+    const payload = {};
+    if (offerIds.length) payload.offer_id = offerIds;
+    if (productIds.length) payload.product_id = productIds;
+    if (skus.length) payload.sku = skus;
+    return this.request('/v3/product/info/list', payload);
+  }
+
+  async getProductInfoAttributes({
+    filter = {},
+    lastId = '',
+    limit = 100,
+    sortDir = 'ASC',
+  } = {}) {
+    return this.request('/v4/product/info/attributes', {
+      filter,
+      last_id: lastId,
+      limit,
+      sort_dir: sortDir,
+    });
+  }
+
+  async getProductInfoAttributesV3({
+    filter = {},
+    lastId = '',
+    limit = 100,
+    sortDir = 'ASC',
+  } = {}) {
+    return this.request('/v3/products/info/attributes', {
+      filter,
+      last_id: lastId,
+      limit,
+      sort_dir: sortDir,
+    });
+  }
+
+  async getProductInfoDescription({ offerId = '', productId = null } = {}) {
+    const payload = {};
+    if (offerId) payload.offer_id = offerId;
+    if (productId != null) payload.product_id = productId;
+    return this.request('/v1/product/info/description', payload);
+  }
+
   async uploadProducts(items) {
     const batches = chunkItems(items, MAX_IMPORT_ITEMS);
     const results = [];
 
     for (let index = 0; index < batches.length; index += 1) {
       const batch = batches[index];
-      const response = await this.request('/v3/product/import', { items: batch });
+      const response = await this.request('/v2/product/import', { items: batch });
       results.push({
         batchIndex: index + 1,
         itemCount: batch.length,

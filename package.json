@@ -23,6 +23,7 @@
     "workbench:web:build": "vite build --config frontend/menglar-workbench/vite.config.mjs",
     "ozon:tool": "node scripts/ozon-batch-tool.mjs",
     "ozon:tool:test": "node scripts/test-ozon-batch-tool.mjs",
+    "ozon:store:export": "node scripts/export-ozon-store-products.mjs",
     "ozon:api:test": "node scripts/test-ozon-workbench-api.mjs",
     "ozon:page:test": "node scripts/test-ozon-upload-page.mjs"
   },

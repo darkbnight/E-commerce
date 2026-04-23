@@ -1,0 +1,2089 @@
+{
+  "meta": {
+    "exported_at": "2026-04-23T10:20:25.472Z",
+    "source": "Ozon Seller API",
+    "visibility": "ALL",
+    "include_description": true,
+    "total_items": 3,
+    "endpoints": [
+      "/v3/product/list",
+      "/v4/product/info/attributes",
+      "/v3/products/info/attributes",
+      "/v3/product/info/list",
+      "/v1/product/info/description"
+    ]
+  },
+  "raw_items": [
+    {
+      "key": "product:4213447835",
+      "product_id": 4213447835,
+      "offer_id": "1776582511388-3870983217298",
+      "product_list_item": {
+        "product_id": 4213447835,
+        "offer_id": "1776582511388-3870983217298",
+        "has_fbo_stocks": false,
+        "has_fbs_stocks": true,
+        "archived": false,
+        "is_discounted": false,
+        "quants": []
+      },
+      "attributes_response_item": {
+        "id": 4213447835,
+        "barcode": "OZN4005998490",
+        "name": "Тряпки для уборки, салфетки для стекол и зеркал, без разводов, 30x40 см, 2 шт",
+        "offer_id": "1776582511388-3870983217298",
+        "height": 23,
+        "depth": 192,
+        "width": 130,
+        "dimension_unit": "mm",
+        "weight": 76,
+        "weight_unit": "g",
+        "description_category_id": 17028718,
+        "type_id": 96018,
+        "primary_image": "https://cdn1.ozone.ru/s3/multimedia-1-n/9902221691.jpg",
+        "model_info": {
+          "model_id": 1468945154,
+          "count": 1
+        },
+        "images": [
+          "https://cdn1.ozone.ru/s3/multimedia-1-m/9902221726.jpg",
+          "https://cdn1.ozone.ru/s3/multimedia-1-m/9902222122.jpg",
+          "https://cdn1.ozone.ru/s3/multimedia-1-w/9902220764.jpg",
+          "https://cdn1.ozone.ru/s3/multimedia-1-8/9902222000.jpg"
+        ],
+        "pdf_list": [],
+        "attributes": [
+          {
+            "id": 85,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 126745801,
+                "value": "Нет бренда"
+              }
+            ]
+          },
+          {
+            "id": 10097,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "Серый"
+              }
+            ]
+          },
+          {
+            "id": 9048,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "1776582511388-3870983217298"
+              }
+            ]
+          },
+          {
+            "id": 23171,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "#уборка #салфетки_для_уборки #тряпки_для_уборки #без_разводов #чисто_без_разводов #салфетка_без_разводов #для_стекол #умная_тряпка #чудо_салфетка #для_зеркал #стекло_и_зеркала"
+              }
+            ]
+          },
+          {
+            "id": 4191,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "Салфетки для уборки подходят для стекол, зеркал, мебели и других гладких поверхностей. Помогают быстро удалить пыль, влагу и загрязнения, не оставляя заметных разводов.<br/><br/>Салфетки хорошо впитывают влагу, подходят для сухой и влажной уборки, удобны для ежедневного использования дома, на кухне и в автомобиле.<br/><br/>Размер каждой салфетки — 30x40 см. В наборе 2 штуки. Цвет — серый."
+              }
+            ]
+          },
+          {
+            "id": 11254,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "{\n  \"content\": [\n    {\n      \"gapSize\": \"m\",\n      \"padding\": \"type2\",\n      \"text\": {\n        \"align\": \"left\",\n        \"color\": \"color1\",\n        \"items\": [\n          {\n            \"type\": \"text\",\n            \"content\": \"Салфетки для уборки подходят для стекол, зеркал, мебели и других гладких поверхностей. Хорошо впитывают влагу и помогают уменьшить появление разводов после уборки.\"\n          }\n        ],\n        \"size\": \"size2\"\n      },\n      \"theme\": \"primary\",\n      \"title\": {\n        \"color\": \"color1\",\n        \"items\": [\n          {\n            \"content\": \"Аннотация\",\n            \"type\": \"text\"\n          }\n        ],\n        \"size\": \"size5\"\n      },\n      \"widgetName\": \"raTextBlock\"\n    },\n    {\n      \"blocks\": [\n        {\n          \"img\": {\n            \"alt\": \"\",\n            \"heightMobile\": 709,\n            \"position\": \"width_full\",\n            \"positionMobile\": \"width_full\",\n            \"src\": \"https://cdn1.ozone.ru/s3/multimedia-1-n/9902221691.jpg\",\n            \"srcMobile\": \"https://cdn1.ozone.ru/s3/multimedia-1-n/9902221691.jpg\",\n            \"widthMobile\": 709\n          },\n          \"imgLink\": \"\"\n        },\n        {\n          \"img\": {\n            \"alt\": \"\",\n            \"heightMobile\": 709,\n            \"position\": \"width_full\",\n            \"positionMobile\": \"width_full\",\n            \"src\": \"https://cdn1.ozone.ru/s3/multimedia-1-m/9902221726.jpg\",\n            \"srcMobile\": \"https://cdn1.ozone.ru/s3/multimedia-1-m/9902221726.jpg\",\n            \"widthMobile\": 709\n          },\n          \"imgLink\": \"\"\n        },\n        {\n          \"img\": {\n            \"alt\": \"\",\n            \"heightMobile\": 709,\n            \"position\": \"width_full\",\n            \"positionMobile\": \"width_full\",\n            \"src\": \"https://cdn1.ozone.ru/s3/multimedia-1-m/9902222122.jpg\",\n            \"srcMobile\": \"https://cdn1.ozone.ru/s3/multimedia-1-m/9902222122.jpg\",\n            \"widthMobile\": 709\n          },\n          \"imgLink\": \"\"\n        },\n        {\n          \"img\": {\n            \"alt\": \"\",\n            \"heightMobile\": 709,\n            \"position\": \"width_full\",\n            \"positionMobile\": \"width_full\",\n            \"src\": \"https://cdn1.ozone.ru/s3/multimedia-1-w/9902220764.jpg\",\n            \"srcMobile\": \"https://cdn1.ozone.ru/s3/multimedia-1-w/9902220764.jpg\",\n            \"widthMobile\": 709\n          },\n          \"imgLink\": \"\"\n        },\n        {\n          \"img\": {\n            \"alt\": \"\",\n            \"heightMobile\": 709,\n            \"position\": \"width_full\",\n            \"positionMobile\": \"width_full\",\n            \"src\": \"https://cdn1.ozone.ru/s3/multimedia-1-8/9902222000.jpg\",\n            \"srcMobile\": \"https://cdn1.ozone.ru/s3/multimedia-1-8/9902222000.jpg\",\n            \"widthMobile\": 709\n          },\n          \"imgLink\": \"\"\n        }\n      ],\n      \"type\": \"roll\",\n      \"widgetName\": \"raShowcase\"\n    }\n  ],\n  \"version\": 0.3\n}"
+              }
+            ]
+          },
+          {
+            "id": 4067,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "30x40"
+              }
+            ]
+          },
+          {
+            "id": 6456,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 81851,
+                "value": "для мебели"
+              }
+            ]
+          },
+          {
+            "id": 7359,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 75133,
+                "value": "Впитывающая"
+              }
+            ]
+          },
+          {
+            "id": 22126,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "2"
+              }
+            ]
+          },
+          {
+            "id": 8962,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "2"
+              }
+            ]
+          },
+          {
+            "id": 10096,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 61576,
+                "value": "серый"
+              }
+            ]
+          },
+          {
+            "id": 6383,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 62083,
+                "value": "Синтетика"
+              }
+            ]
+          },
+          {
+            "id": 4389,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 90296,
+                "value": "Китай"
+              }
+            ]
+          },
+          {
+            "id": 4384,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "2 салфетки для уборки"
+              }
+            ]
+          },
+          {
+            "id": 11650,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "2"
+              }
+            ]
+          },
+          {
+            "id": 4180,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "Тряпки для уборки, салфетки для стекол и зеркал, без разводов, 30x40 см, 2 шт"
+              }
+            ]
+          },
+          {
+            "id": 4383,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "72"
+              }
+            ]
+          },
+          {
+            "id": 4497,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "76"
+              }
+            ]
+          },
+          {
+            "id": 9024,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "1776582511388-3870983217298"
+              }
+            ]
+          }
+        ],
+        "complex_attributes": [
+          {
+            "id": 21837,
+            "complex_id": 100001,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "4月21日 (1).mp4"
+              }
+            ]
+          },
+          {
+            "id": 21841,
+            "complex_id": 100001,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "https://v-1.ozone.ru/vod/video-67/01KPT8QR1PPNVTAWF4Z0V9RMDT/asset_3_h264.mp4"
+              }
+            ]
+          }
+        ],
+        "color_image": "",
+        "sku": 4005998490,
+        "barcodes": [
+          "OZN4005998490"
+        ],
+        "attributes_with_defaults": [
+          9905,
+          10100,
+          11794,
+          21156,
+          22074,
+          22806,
+          23120,
+          23121,
+          23133,
+          23134,
+          23137,
+          23138,
+          23173,
+          23183,
+          23184,
+          23185,
+          23186,
+          23187,
+          23188,
+          23379,
+          23380,
+          23524
+        ]
+      },
+      "info_response_item": {
+        "id": 4213447835,
+        "name": "Тряпки для уборки, салфетки для стекол и зеркал, без разводов, 30x40 см, 2 шт",
+        "offer_id": "1776582511388-3870983217298",
+        "is_archived": false,
+        "is_autoarchived": false,
+        "barcodes": [
+          "OZN4005998490"
+        ],
+        "description_category_id": 17028718,
+        "type_id": 96018,
+        "created_at": "2026-04-19T10:08:40.929101Z",
+        "images": [
+          "https://cdn1.ozone.ru/s3/multimedia-1-m/9902221726.jpg",
+          "https://cdn1.ozone.ru/s3/multimedia-1-m/9902222122.jpg",
+          "https://cdn1.ozone.ru/s3/multimedia-1-w/9902220764.jpg",
+          "https://cdn1.ozone.ru/s3/multimedia-1-8/9902222000.jpg"
+        ],
+        "currency_code": "CNY",
+        "min_price": "",
+        "old_price": "32.12",
+        "price": "15.93",
+        "sources": [
+          {
+            "sku": 4005998490,
+            "source": "sds",
+            "created_at": "2026-04-19T10:19:17.559933Z",
+            "shipment_type": "SHIPMENT_TYPE_GENERAL",
+            "quant_code": ""
+          }
+        ],
+        "model_info": {
+          "model_id": 1468945154,
+          "count": 1
+        },
+        "commissions": [
+          {
+            "delivery_amount": 2.27,
+            "percent": 17,
+            "return_amount": 1.94,
+            "sale_schema": "FBO",
+            "value": 2.71
+          },
+          {
+            "delivery_amount": 0,
+            "percent": 18,
+            "return_amount": 1.94,
+            "sale_schema": "FBS",
+            "value": 2.87
+          },
+          {
+            "percent": 12,
+            "sale_schema": "RFBS",
+            "value": 1.91
+          },
+          {
+            "percent": 11,
+            "sale_schema": "FBP",
+            "value": 1.75
+          }
+        ],
+        "is_prepayment_allowed": true,
+        "volume_weight": 0.1,
+        "has_discounted_fbo_item": false,
+        "is_discounted": false,
+        "discounted_fbo_stocks": 0,
+        "stocks": {
+          "has_stock": true,
+          "stocks": [
+            {
+              "present": 199,
+              "reserved": 0,
+              "sku": 4005998490,
+              "source": "fbs"
+            }
+          ]
+        },
+        "errors": [],
+        "updated_at": "2026-04-22T09:35:52.578229Z",
+        "vat": "0.00",
+        "visibility_details": {
+          "has_price": true,
+          "has_stock": true
+        },
+        "price_indexes": {
+          "color_index": "COLOR_INDEX_WITHOUT_INDEX",
+          "external_index_data": {
+            "minimal_price": "",
+            "minimal_price_currency": "RUB",
+            "price_index_value": 0
+          },
+          "ozon_index_data": {
+            "minimal_price": "",
+            "minimal_price_currency": "RUB",
+            "price_index_value": 0
+          },
+          "self_marketplaces_index_data": {
+            "minimal_price": "",
+            "minimal_price_currency": "RUB",
+            "price_index_value": 0
+          }
+        },
+        "images360": [],
+        "is_kgt": false,
+        "color_image": [],
+        "primary_image": [
+          "https://cdn1.ozone.ru/s3/multimedia-1-n/9902221691.jpg"
+        ],
+        "statuses": {
+          "status": "price_sent",
+          "status_failed": "",
+          "moderate_status": "approved",
+          "validation_status": "success",
+          "status_name": "Продается",
+          "status_description": "",
+          "is_created": true,
+          "status_tooltip": "",
+          "status_updated_at": "2026-04-22T09:37:39.993867Z"
+        },
+        "is_super": false,
+        "is_seasonal": false,
+        "promotions": [
+          {
+            "is_enabled": false,
+            "type": "REVIEWS_PROMO"
+          }
+        ],
+        "sku": 4005998490,
+        "availabilities": [
+          {
+            "availability": "AVAILABLE",
+            "reasons": [],
+            "sku": 4005998490,
+            "source": "sds"
+          }
+        ]
+      },
+      "description_response": {
+        "result": {
+          "id": 4213447835,
+          "offer_id": "1776582511388-3870983217298",
+          "name": "Тряпки для уборки, салфетки для стекол и зеркал, без разводов, 30x40 см, 2 шт",
+          "description": "Салфетки для уборки подходят для стекол, зеркал, мебели и других гладких поверхностей. Помогают быстро удалить пыль, влагу и загрязнения, не оставляя заметных разводов.<br/><br/>Салфетки хорошо впитывают влагу, подходят для сухой и влажной уборки, удобны для ежедневного использования дома, на кухне и в автомобиле.<br/><br/>Размер каждой салфетки — 30x40 см. В наборе 2 штуки. Цвет — серый."
+        }
+      },
+      "description_error": null
+    },
+    {
+      "key": "product:4227059232",
+      "product_id": 4227059232,
+      "offer_id": "1776675206069-9840525683464",
+      "product_list_item": {
+        "product_id": 4227059232,
+        "offer_id": "1776675206069-9840525683464",
+        "has_fbo_stocks": false,
+        "has_fbs_stocks": true,
+        "archived": false,
+        "is_discounted": false,
+        "quants": []
+      },
+      "attributes_response_item": {
+        "id": 4227059232,
+        "barcode": "OZN4016870560",
+        "name": "Салфетки для уборки дома и кухни, для разных поверхностей, 30x30 см, 2 шт",
+        "offer_id": "1776675206069-9840525683464",
+        "height": 14,
+        "depth": 213,
+        "width": 201,
+        "dimension_unit": "mm",
+        "weight": 75,
+        "weight_unit": "g",
+        "description_category_id": 17028718,
+        "type_id": 96018,
+        "primary_image": "https://cdn1.ozone.ru/s3/multimedia-1-x/9921400377.jpg",
+        "model_info": {
+          "model_id": 1473642273,
+          "count": 1
+        },
+        "images": [
+          "https://cdn1.ozone.ru/s3/multimedia-1-4/9921401968.jpg",
+          "https://cdn1.ozone.ru/s3/multimedia-1-v/9921400735.jpg",
+          "https://cdn1.ozone.ru/s3/multimedia-1-e/9921397262.jpg",
+          "https://cdn1.ozone.ru/s3/multimedia-1-t/9921402029.jpg"
+        ],
+        "pdf_list": [],
+        "attributes": [
+          {
+            "id": 85,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 126745801,
+                "value": "Нет бренда"
+              }
+            ]
+          },
+          {
+            "id": 10097,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "Серый"
+              }
+            ]
+          },
+          {
+            "id": 9048,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "1776675206069-9840525683464"
+              }
+            ]
+          },
+          {
+            "id": 23171,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "#салфеткидляуборки #салфетки_для_уборки #салфеткадляуборки #салфетки_из_микрофибры #тряпкадляуборки #тряпка_для_уборки #тряпкадлястекол #тряпкаизмикрофибры #тряпкауниверсальная #тряпка_из_микрофибры #тряпкадлячистки #тряпкадляпосуды"
+              }
+            ]
+          },
+          {
+            "id": 4191,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "Практичные салфетки для уборки дома, которые подходят для кухни, мебели и других поверхностей. Удобны для ежедневной сухой и влажной уборки.\nСалфетки хорошо впитывают влагу, помогают поддерживать чистоту в доме и подходят для регулярного использования.\nРазмер каждой салфетки — 30x30 см. В наборе 2 штуки. Цвет — серый."
+              }
+            ]
+          },
+          {
+            "id": 11254,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "{\"content\":[{\"gapSize\":\"m\",\"padding\":\"type2\",\"text\":{\"align\":\"left\",\"color\":\"color1\",\"items\":[{\"content\":\"Практичные салфетки для уборки дома, которые подходят для кухни, мебели и других поверхностей. Удобны для ежедневной сухой и влажной уборки.\\nСалфетки хорошо впитывают влагу, помогают поддерживать чистоту в доме и подходят для регулярного использования.\\nРазмер каждой салфетки — 30x30 см. В наборе 2 штуки. Цвет — серый.\",\"type\":\"text\"}],\"size\":\"size2\"},\"theme\":\"primary\",\"title\":{\"color\":\"color1\",\"items\":[{\"content\":\"Аннотация\",\"type\":\"text\"}],\"size\":\"size5\"},\"widgetName\":\"raTextBlock\"},{\"blocks\":[{\"img\":{\"alt\":\"\",\"heightMobile\":709,\"position\":\"width_full\",\"positionMobile\":\"width_full\",\"src\":\"https://cdn1.ozone.ru/s3/multimedia-1-x/9921400377.jpg\",\"srcMobile\":\"https://cdn1.ozone.ru/s3/multimedia-1-x/9921400377.jpg\",\"widthMobile\":709},\"imgLink\":\"\"},{\"img\":{\"alt\":\"\",\"heightMobile\":709,\"position\":\"width_full\",\"positionMobile\":\"width_full\",\"src\":\"https://cdn1.ozone.ru/s3/multimedia-1-4/9921401968.jpg\",\"srcMobile\":\"https://cdn1.ozone.ru/s3/multimedia-1-4/9921401968.jpg\",\"widthMobile\":709},\"imgLink\":\"\"},{\"img\":{\"alt\":\"\",\"heightMobile\":709,\"position\":\"width_full\",\"positionMobile\":\"width_full\",\"src\":\"https://cdn1.ozone.ru/s3/multimedia-1-v/9921400735.jpg\",\"srcMobile\":\"https://cdn1.ozone.ru/s3/multimedia-1-v/9921400735.jpg\",\"widthMobile\":709},\"imgLink\":\"\"},{\"img\":{\"alt\":\"\",\"heightMobile\":709,\"position\":\"width_full\",\"positionMobile\":\"width_full\",\"src\":\"https://cdn1.ozone.ru/s3/multimedia-1-e/9921397262.jpg\",\"srcMobile\":\"https://cdn1.ozone.ru/s3/multimedia-1-e/9921397262.jpg\",\"widthMobile\":709},\"imgLink\":\"\"},{\"img\":{\"alt\":\"\",\"heightMobile\":709,\"position\":\"width_full\",\"positionMobile\":\"width_full\",\"src\":\"https://cdn1.ozone.ru/s3/multimedia-1-t/9921402029.jpg\",\"srcMobile\":\"https://cdn1.ozone.ru/s3/multimedia-1-t/9921402029.jpg\",\"widthMobile\":709},\"imgLink\":\"\"}],\"type\":\"roll\",\"widgetName\":\"raShowcase\"}],\"version\":0.3}"
+              }
+            ]
+          },
+          {
+            "id": 4067,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "30x30"
+              }
+            ]
+          },
+          {
+            "id": 6456,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 81863,
+                "value": "универсальная"
+              },
+              {
+                "dictionary_value_id": 81851,
+                "value": "для мебели"
+              }
+            ]
+          },
+          {
+            "id": 7359,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 75133,
+                "value": "Впитывающая"
+              },
+              {
+                "dictionary_value_id": 75131,
+                "value": "Антистатический эффект"
+              },
+              {
+                "dictionary_value_id": 75130,
+                "value": "Антибактериальная"
+              }
+            ]
+          },
+          {
+            "id": 22126,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "2"
+              }
+            ]
+          },
+          {
+            "id": 10096,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 61576,
+                "value": "серый"
+              }
+            ]
+          },
+          {
+            "id": 4389,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 90296,
+                "value": "Китай"
+              }
+            ]
+          },
+          {
+            "id": 4384,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "2"
+              }
+            ]
+          },
+          {
+            "id": 11650,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "1"
+              }
+            ]
+          },
+          {
+            "id": 22232,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 971398776,
+                "value": "6307109000 - Прочие тряпки для мытья полов, посуды, удаления пыли и аналогичные протирочные материалы"
+              }
+            ]
+          },
+          {
+            "id": 4180,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "Салфетки для уборки дома и кухни, для разных поверхностей, 30x30 см, 2 шт"
+              }
+            ]
+          },
+          {
+            "id": 4383,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "70"
+              }
+            ]
+          },
+          {
+            "id": 4497,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "75"
+              }
+            ]
+          },
+          {
+            "id": 9024,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "1776675206069-9840525683464"
+              }
+            ]
+          }
+        ],
+        "complex_attributes": [
+          {
+            "id": 21837,
+            "complex_id": 100001,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "4月21日 (1)(1).mp4"
+              }
+            ]
+          },
+          {
+            "id": 21841,
+            "complex_id": 100001,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "https://v-1.ozone.ru/vod/video-68/01KPT8PVF3S60EQFCDYQGGTMW5/asset_3_h264.mp4"
+              }
+            ]
+          }
+        ],
+        "color_image": "",
+        "sku": 4016870560,
+        "barcodes": [
+          "OZN4016870560"
+        ],
+        "attributes_with_defaults": [
+          9905,
+          10100,
+          11794,
+          21156,
+          22074,
+          22806,
+          23120,
+          23121,
+          23133,
+          23134,
+          23137,
+          23138,
+          23173,
+          23183,
+          23184,
+          23185,
+          23186,
+          23187,
+          23188,
+          23379,
+          23380,
+          23524
+        ]
+      },
+      "info_response_item": {
+        "id": 4227059232,
+        "name": "Салфетки для уборки дома и кухни, для разных поверхностей, 30x30 см, 2 шт",
+        "offer_id": "1776675206069-9840525683464",
+        "is_archived": false,
+        "is_autoarchived": false,
+        "barcodes": [
+          "OZN4016870560"
+        ],
+        "description_category_id": 17028718,
+        "type_id": 96018,
+        "created_at": "2026-04-20T09:05:29.420677Z",
+        "images": [
+          "https://cdn1.ozone.ru/s3/multimedia-1-4/9921401968.jpg",
+          "https://cdn1.ozone.ru/s3/multimedia-1-v/9921400735.jpg",
+          "https://cdn1.ozone.ru/s3/multimedia-1-e/9921397262.jpg",
+          "https://cdn1.ozone.ru/s3/multimedia-1-t/9921402029.jpg"
+        ],
+        "currency_code": "CNY",
+        "min_price": "",
+        "old_price": "32.12",
+        "price": "15.93",
+        "sources": [
+          {
+            "sku": 4016870560,
+            "source": "sds",
+            "created_at": "2026-04-20T09:07:02.885863Z",
+            "shipment_type": "SHIPMENT_TYPE_GENERAL",
+            "quant_code": ""
+          }
+        ],
+        "model_info": {
+          "model_id": 1473642273,
+          "count": 1
+        },
+        "commissions": [
+          {
+            "delivery_amount": 2.27,
+            "percent": 17,
+            "return_amount": 1.94,
+            "sale_schema": "FBO",
+            "value": 2.71
+          },
+          {
+            "delivery_amount": 0,
+            "percent": 18,
+            "return_amount": 1.94,
+            "sale_schema": "FBS",
+            "value": 2.87
+          },
+          {
+            "percent": 12,
+            "sale_schema": "RFBS",
+            "value": 1.91
+          },
+          {
+            "percent": 11,
+            "sale_schema": "FBP",
+            "value": 1.75
+          }
+        ],
+        "is_prepayment_allowed": true,
+        "volume_weight": 0.1,
+        "has_discounted_fbo_item": false,
+        "is_discounted": false,
+        "discounted_fbo_stocks": 0,
+        "stocks": {
+          "has_stock": true,
+          "stocks": [
+            {
+              "present": 196,
+              "reserved": 5,
+              "sku": 4016870560,
+              "source": "fbs"
+            }
+          ]
+        },
+        "errors": [],
+        "updated_at": "2026-04-23T06:19:40.702267Z",
+        "vat": "0.00",
+        "visibility_details": {
+          "has_price": true,
+          "has_stock": true
+        },
+        "price_indexes": {
+          "color_index": "COLOR_INDEX_WITHOUT_INDEX",
+          "external_index_data": {
+            "minimal_price": "",
+            "minimal_price_currency": "RUB",
+            "price_index_value": 0
+          },
+          "ozon_index_data": {
+            "minimal_price": "",
+            "minimal_price_currency": "RUB",
+            "price_index_value": 0
+          },
+          "self_marketplaces_index_data": {
+            "minimal_price": "",
+            "minimal_price_currency": "RUB",
+            "price_index_value": 0
+          }
+        },
+        "images360": [],
+        "is_kgt": false,
+        "color_image": [],
+        "primary_image": [
+          "https://cdn1.ozone.ru/s3/multimedia-1-x/9921400377.jpg"
+        ],
+        "statuses": {
+          "status": "price_sent",
+          "status_failed": "",
+          "moderate_status": "approved",
+          "validation_status": "success",
+          "status_name": "Продается",
+          "status_description": "",
+          "is_created": true,
+          "status_tooltip": "",
+          "status_updated_at": "2026-04-23T06:20:54.968652Z"
+        },
+        "is_super": false,
+        "is_seasonal": false,
+        "promotions": [
+          {
+            "is_enabled": false,
+            "type": "REVIEWS_PROMO"
+          }
+        ],
+        "sku": 4016870560,
+        "availabilities": [
+          {
+            "availability": "AVAILABLE",
+            "reasons": [],
+            "sku": 4016870560,
+            "source": "sds"
+          }
+        ]
+      },
+      "description_response": {
+        "result": {
+          "id": 4227059232,
+          "offer_id": "1776675206069-9840525683464",
+          "name": "Салфетки для уборки дома и кухни, для разных поверхностей, 30x30 см, 2 шт",
+          "description": "Практичные салфетки для уборки дома, которые подходят для кухни, мебели и других поверхностей. Удобны для ежедневной сухой и влажной уборки.\nСалфетки хорошо впитывают влагу, помогают поддерживать чистоту в доме и подходят для регулярного использования.\nРазмер каждой салфетки — 30x30 см. В наборе 2 штуки. Цвет — серый."
+        }
+      },
+      "description_error": null
+    },
+    {
+      "key": "product:4237469424",
+      "product_id": 4237469424,
+      "offer_id": "17767433129865423704958774",
+      "product_list_item": {
+        "product_id": 4237469424,
+        "offer_id": "17767433129865423704958774",
+        "has_fbo_stocks": false,
+        "has_fbs_stocks": true,
+        "archived": false,
+        "is_discounted": false,
+        "quants": []
+      },
+      "attributes_response_item": {
+        "id": 4237469424,
+        "barcode": "OZN4025233874",
+        "name": "Салфетки для уборки, Серый, 30*40 см, 2 шт.",
+        "offer_id": "17767433129865423704958774",
+        "height": 70,
+        "depth": 300,
+        "width": 190,
+        "dimension_unit": "mm",
+        "weight": 70,
+        "weight_unit": "g",
+        "description_category_id": 17028718,
+        "type_id": 96018,
+        "primary_image": "https://cdn1.ozone.ru/s3/multimedia-1-l/9937542873.jpg",
+        "model_info": {
+          "model_id": 1483747470,
+          "count": 1
+        },
+        "images": [
+          "https://cdn1.ozone.ru/s3/multimedia-1-u/9937540506.jpg",
+          "https://cdn1.ozone.ru/s3/multimedia-1-a/9937541710.jpg",
+          "https://cdn1.ozone.ru/s3/multimedia-1-2/9937543142.jpg",
+          "https://cdn1.ozone.ru/s3/multimedia-1-z/9937541267.jpg",
+          "https://cdn1.ozone.ru/s3/multimedia-1-8/9937540880.jpg",
+          "https://cdn1.ozone.ru/s3/multimedia-1-2/9950982770.jpg"
+        ],
+        "pdf_list": [],
+        "attributes": [
+          {
+            "id": 85,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 126745801,
+                "value": "Нет бренда"
+              }
+            ]
+          },
+          {
+            "id": 9048,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "177674331298644519771"
+              }
+            ]
+          },
+          {
+            "id": 23171,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "#салфетки_для_уборки #тряпки_для_уборки #тряпка_для_уборки #тряпки #набор_для_уборки #корейская_умная_салфетка #салфетка_из_микрофибры #микро_фибра #smart_wash_салфетки #тряпка_для_чистки_стекол"
+              }
+            ]
+          },
+          {
+            "id": 4191,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "Умные салфетки для уборки — ваш идеальный помощник по дому!<br/><br/><br/><br/>Ищете способ сделать уборку быстрее и проще?<br/><br/>Наши умные салфетки — это идеальное решение для тех, кто ценит безупречную чистоту и комфорт.<br/><br/>Они выполнены из высококачественного инновационного материала, который справляется с грязью и пятнами в два счета.<br/><br/><br/><br/>Почему выбирают наши умные салфетки?<br/><br/><br/><br/>Невероятная эффективность: Благодаря особой текстуре ткани, салфетки безупречно удаляют загрязнения даже без использования бытовой химии.<br/><br/>Только вода и салфетка!<br/><br/>Универсальность 100%: Отлично подходят как для ежедневной домашней уборки, так и для профессионального клининга.<br/><br/>Идеальный размер (30x40 см): Удобно лежат в руке и подходят для любых задач — от мытья посуды и протирания пыли до мытья окон и полов.<br/><br/>Экономичная упаковка: В комплекте сразу 2 салфетки.<br/><br/>Этого запаса вам хватит надолго!<br/><br/>Как пользоваться:<br/><br/><br/><br/>Просто намочите салфетку и слегка отожмите (она также отлично работает и в сухом виде для смахивания пыли).<br/><br/>Протрите нужную поверхность.<br/><br/>После использования салфетка легко стирается, быстро сохнет и снова готова к бою за чистоту!<br/><br/>Умные салфетки — это ваша реальная экономия сил, времени и денег на моющие средства.<br/><br/>Порадуйте себя качественным инвентарем.<br/><br/>Сделайте свой дом сияющим без лишних усилий!"
+              }
+            ]
+          },
+          {
+            "id": 11254,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "{\"content\":[{\"gapSize\":\"m\",\"padding\":\"type2\",\"text\":{\"align\":\"left\",\"color\":\"color1\",\"items\":[{\"content\":\"Умные салфетки для уборки — ваш идеальный помощник по дому!\\n\\nИщете способ сделать уборку быстрее и проще? Наши умные салфетки — это идеальное решение для тех, кто ценит безупречную чистоту и комфорт. Они выполнены из высококачественного инновационного материала, который справляется с грязью и пятнами в два счета.\\n\\nПочему выбирают наши умные салфетки?\\n\\nНевероятная эффективность: Благодаря особой текстуре ткани, салфетки безупречно удаляют загрязнения даже без использования бытовой химии. Только вода и салфетка!\\nУниверсальность 100%: Отлично подходят как для ежедневной домашней уборки, так и для профессионального клининга.\\nИдеальный размер (30x40 см): Удобно лежат в руке и подходят для любых задач — от мытья посуды и протирания пыли до мытья окон и полов.\\nЭкономичная упаковка: В комплекте сразу 2 салфетки. Этого запаса вам хватит надолго!\\nКак пользоваться:\\n\\nПросто намочите салфетку и слегка отожмите (она также отлично работает и в сухом виде для смахивания пыли).\\nПротрите нужную поверхность.\\nПосле использования салфетка легко стирается, быстро сохнет и снова готова к бою за чистоту!\\nУмные салфетки — это ваша реальная экономия сил, времени и денег на моющие средства. Порадуйте себя качественным инвентарем. Сделайте свой дом сияющим без лишних усилий!\",\"type\":\"text\"}],\"size\":\"size2\"},\"theme\":\"primary\",\"title\":{\"color\":\"color1\",\"items\":[{\"content\":\"Аннотация\",\"type\":\"text\"}],\"size\":\"size5\"},\"widgetName\":\"raTextBlock\"},{\"blocks\":[{\"img\":{\"alt\":\"\",\"heightMobile\":709,\"position\":\"width_full\",\"positionMobile\":\"width_full\",\"src\":\"https://cdn1.ozone.ru/s3/multimedia-1-l/9937542873.jpg\",\"srcMobile\":\"https://cdn1.ozone.ru/s3/multimedia-1-l/9937542873.jpg\",\"widthMobile\":709},\"imgLink\":\"\"},{\"img\":{\"alt\":\"\",\"heightMobile\":709,\"position\":\"width_full\",\"positionMobile\":\"width_full\",\"src\":\"https://cdn1.ozone.ru/s3/multimedia-1-u/9937540506.jpg\",\"srcMobile\":\"https://cdn1.ozone.ru/s3/multimedia-1-u/9937540506.jpg\",\"widthMobile\":709},\"imgLink\":\"\"},{\"img\":{\"alt\":\"\",\"heightMobile\":709,\"position\":\"width_full\",\"positionMobile\":\"width_full\",\"src\":\"https://cdn1.ozone.ru/s3/multimedia-1-a/9937541710.jpg\",\"srcMobile\":\"https://cdn1.ozone.ru/s3/multimedia-1-a/9937541710.jpg\",\"widthMobile\":709},\"imgLink\":\"\"},{\"img\":{\"alt\":\"\",\"heightMobile\":709,\"position\":\"width_full\",\"positionMobile\":\"width_full\",\"src\":\"https://cdn1.ozone.ru/s3/multimedia-1-2/9937543142.jpg\",\"srcMobile\":\"https://cdn1.ozone.ru/s3/multimedia-1-2/9937543142.jpg\",\"widthMobile\":709},\"imgLink\":\"\"},{\"img\":{\"alt\":\"\",\"heightMobile\":709,\"position\":\"width_full\",\"positionMobile\":\"width_full\",\"src\":\"https://cdn1.ozone.ru/s3/multimedia-1-z/9937541267.jpg\",\"srcMobile\":\"https://cdn1.ozone.ru/s3/multimedia-1-z/9937541267.jpg\",\"widthMobile\":709},\"imgLink\":\"\"},{\"img\":{\"alt\":\"\",\"heightMobile\":709,\"position\":\"width_full\",\"positionMobile\":\"width_full\",\"src\":\"https://cdn1.ozone.ru/s3/multimedia-1-8/9937540880.jpg\",\"srcMobile\":\"https://cdn1.ozone.ru/s3/multimedia-1-8/9937540880.jpg\",\"widthMobile\":709},\"imgLink\":\"\"}],\"type\":\"roll\",\"widgetName\":\"raShowcase\"}],\"version\":0.3}"
+              }
+            ]
+          },
+          {
+            "id": 4067,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "30*40"
+              }
+            ]
+          },
+          {
+            "id": 6456,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 81859,
+                "value": "для стеклокерамики"
+              },
+              {
+                "dictionary_value_id": 81849,
+                "value": "для кафеля и плитки"
+              },
+              {
+                "dictionary_value_id": 971434509,
+                "value": "для жалюзи"
+              },
+              {
+                "dictionary_value_id": 971101728,
+                "value": "для металла"
+              },
+              {
+                "dictionary_value_id": 81862,
+                "value": "для унитаза"
+              }
+            ]
+          },
+          {
+            "id": 7359,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 75134,
+                "value": "Губка"
+              },
+              {
+                "dictionary_value_id": 75137,
+                "value": "Многослойная"
+              },
+              {
+                "dictionary_value_id": 75133,
+                "value": "Впитывающая"
+              }
+            ]
+          },
+          {
+            "id": 22126,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "2"
+              }
+            ]
+          },
+          {
+            "id": 10096,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 61576,
+                "value": "серый"
+              }
+            ]
+          },
+          {
+            "id": 6383,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 970894445,
+                "value": "Микроспан"
+              },
+              {
+                "dictionary_value_id": 61786,
+                "value": "Вискоза"
+              }
+            ]
+          },
+          {
+            "id": 4389,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 90296,
+                "value": "Китай"
+              }
+            ]
+          },
+          {
+            "id": 22232,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 971398776,
+                "value": "6307109000 - Прочие тряпки для мытья полов, посуды, удаления пыли и аналогичные протирочные материалы"
+              }
+            ]
+          },
+          {
+            "id": 4180,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "Салфетки для уборки, Серый, 30*40 см, 2 шт."
+              }
+            ]
+          },
+          {
+            "id": 4383,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "70"
+              }
+            ]
+          },
+          {
+            "id": 4497,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "70"
+              }
+            ]
+          },
+          {
+            "id": 9024,
+            "complex_id": 0,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "17767433129865423704958774"
+              }
+            ]
+          }
+        ],
+        "complex_attributes": [
+          {
+            "id": 21837,
+            "complex_id": 100001,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "4月21日 (1).mp4"
+              }
+            ]
+          },
+          {
+            "id": 21841,
+            "complex_id": 100001,
+            "values": [
+              {
+                "dictionary_value_id": 0,
+                "value": "https://v-1.ozone.ru/vod/video-70/01KPR51H690E649SGAFEM3S1XS/asset_2_h264.mp4"
+              }
+            ]
+          }
+        ],
+        "color_image": "",
+        "sku": 4025233874,
+        "barcodes": [
+          "OZN4025233874"
+        ],
+        "attributes_with_defaults": [
+          9905,
+          10100,
+          11794,
+          21156,
+          22074,
+          23120,
+          23121,
+          23133,
+          23134,
+          23137,
+          23138,
+          23173,
+          23183,
+          23184,
+          23185,
+          23186,
+          23187,
+          23188,
+          23379,
+          23380,
+          23524
+        ]
+      },
+      "info_response_item": {
+        "id": 4237469424,
+        "name": "Салфетки для уборки, Серый, 30*40 см, 2 шт.",
+        "offer_id": "17767433129865423704958774",
+        "is_archived": false,
+        "is_autoarchived": false,
+        "barcodes": [
+          "OZN4025233874"
+        ],
+        "description_category_id": 17028718,
+        "type_id": 96018,
+        "created_at": "2026-04-21T03:48:41.874615Z",
+        "images": [
+          "https://cdn1.ozone.ru/s3/multimedia-1-u/9937540506.jpg",
+          "https://cdn1.ozone.ru/s3/multimedia-1-a/9937541710.jpg",
+          "https://cdn1.ozone.ru/s3/multimedia-1-2/9937543142.jpg",
+          "https://cdn1.ozone.ru/s3/multimedia-1-z/9937541267.jpg",
+          "https://cdn1.ozone.ru/s3/multimedia-1-8/9937540880.jpg",
+          "https://cdn1.ozone.ru/s3/multimedia-1-2/9950982770.jpg"
+        ],
+        "currency_code": "CNY",
+        "min_price": "",
+        "old_price": "19.81",
+        "price": "15.28",
+        "sources": [
+          {
+            "sku": 4025233874,
+            "source": "sds",
+            "created_at": "2026-04-21T03:50:14.161865Z",
+            "shipment_type": "SHIPMENT_TYPE_GENERAL",
+            "quant_code": ""
+          }
+        ],
+        "model_info": {
+          "model_id": 1483747470,
+          "count": 1
+        },
+        "commissions": [
+          {
+            "delivery_amount": 2.27,
+            "percent": 17,
+            "return_amount": 3.24,
+            "sale_schema": "FBO",
+            "value": 2.6
+          },
+          {
+            "delivery_amount": 0,
+            "percent": 18,
+            "return_amount": 3.24,
+            "sale_schema": "FBS",
+            "value": 2.75
+          },
+          {
+            "percent": 12,
+            "sale_schema": "RFBS",
+            "value": 1.83
+          },
+          {
+            "percent": 11,
+            "sale_schema": "FBP",
+            "value": 1.68
+          }
+        ],
+        "is_prepayment_allowed": true,
+        "volume_weight": 0.8,
+        "has_discounted_fbo_item": false,
+        "is_discounted": false,
+        "discounted_fbo_stocks": 0,
+        "stocks": {
+          "has_stock": true,
+          "stocks": [
+            {
+              "present": 191,
+              "reserved": 2,
+              "sku": 4025233874,
+              "source": "fbs"
+            }
+          ]
+        },
+        "errors": [],
+        "updated_at": "2026-04-23T06:19:27.310747Z",
+        "vat": "0.00",
+        "visibility_details": {
+          "has_price": true,
+          "has_stock": true
+        },
+        "price_indexes": {
+          "color_index": "COLOR_INDEX_WITHOUT_INDEX",
+          "external_index_data": {
+            "minimal_price": "",
+            "minimal_price_currency": "RUB",
+            "price_index_value": 0
+          },
+          "ozon_index_data": {
+            "minimal_price": "",
+            "minimal_price_currency": "RUB",
+            "price_index_value": 0
+          },
+          "self_marketplaces_index_data": {
+            "minimal_price": "",
+            "minimal_price_currency": "RUB",
+            "price_index_value": 0
+          }
+        },
+        "images360": [],
+        "is_kgt": false,
+        "color_image": [],
+        "primary_image": [
+          "https://cdn1.ozone.ru/s3/multimedia-1-l/9937542873.jpg"
+        ],
+        "statuses": {
+          "status": "price_sent",
+          "status_failed": "",
+          "moderate_status": "approved",
+          "validation_status": "success",
+          "status_name": "Продается",
+          "status_description": "",
+          "is_created": true,
+          "status_tooltip": "",
+          "status_updated_at": "2026-04-23T06:20:32.606435Z"
+        },
+        "is_super": false,
+        "is_seasonal": false,
+        "promotions": [
+          {
+            "is_enabled": false,
+            "type": "REVIEWS_PROMO"
+          }
+        ],
+        "sku": 4025233874,
+        "availabilities": [
+          {
+            "availability": "AVAILABLE",
+            "reasons": [],
+            "sku": 4025233874,
+            "source": "sds"
+          }
+        ]
+      },
+      "description_response": {
+        "result": {
+          "id": 4237469424,
+          "offer_id": "17767433129865423704958774",
+          "name": "Салфетки для уборки, Серый, 30*40 см, 2 шт.",
+          "description": "Умные салфетки для уборки — ваш идеальный помощник по дому!<br/><br/><br/><br/>Ищете способ сделать уборку быстрее и проще?<br/><br/>Наши умные салфетки — это идеальное решение для тех, кто ценит безупречную чистоту и комфорт.<br/><br/>Они выполнены из высококачественного инновационного материала, который справляется с грязью и пятнами в два счета.<br/><br/><br/><br/>Почему выбирают наши умные салфетки?<br/><br/><br/><br/>Невероятная эффективность: Благодаря особой текстуре ткани, салфетки безупречно удаляют загрязнения даже без использования бытовой химии.<br/><br/>Только вода и салфетка!<br/><br/>Универсальность 100%: Отлично подходят как для ежедневной домашней уборки, так и для профессионального клининга.<br/><br/>Идеальный размер (30x40 см): Удобно лежат в руке и подходят для любых задач — от мытья посуды и протирания пыли до мытья окон и полов.<br/><br/>Экономичная упаковка: В комплекте сразу 2 салфетки.<br/><br/>Этого запаса вам хватит надолго!<br/><br/>Как пользоваться:<br/><br/><br/><br/>Просто намочите салфетку и слегка отожмите (она также отлично работает и в сухом виде для смахивания пыли).<br/><br/>Протрите нужную поверхность.<br/><br/>После использования салфетка легко стирается, быстро сохнет и снова готова к бою за чистоту!<br/><br/>Умные салфетки — это ваша реальная экономия сил, времени и денег на моющие средства.<br/><br/>Порадуйте себя качественным инвентарем.<br/><br/>Сделайте свой дом сияющим без лишних усилий!"
+        }
+      },
+      "description_error": null
+    }
+  ],
+  "import_items": [
+    {
+      "offer_id": "1776582511388-3870983217298",
+      "name": "Тряпки для уборки, салфетки для стекол и зеркал, без разводов, 30x40 см, 2 шт",
+      "description": "Салфетки для уборки подходят для стекол, зеркал, мебели и других гладких поверхностей. Помогают быстро удалить пыль, влагу и загрязнения, не оставляя заметных разводов.<br/><br/>Салфетки хорошо впитывают влагу, подходят для сухой и влажной уборки, удобны для ежедневного использования дома, на кухне и в автомобиле.<br/><br/>Размер каждой салфетки — 30x40 см. В наборе 2 штуки. Цвет — серый.",
+      "description_category_id": 17028718,
+      "type_id": 96018,
+      "price": "15.93",
+      "old_price": "32.12",
+      "currency_code": "CNY",
+      "vat": "0.00",
+      "barcode": "OZN4005998490",
+      "depth": 192,
+      "width": 130,
+      "height": 23,
+      "dimension_unit": "mm",
+      "weight": 76,
+      "weight_unit": "g",
+      "images": [
+        "https://cdn1.ozone.ru/s3/multimedia-1-m/9902221726.jpg",
+        "https://cdn1.ozone.ru/s3/multimedia-1-m/9902222122.jpg",
+        "https://cdn1.ozone.ru/s3/multimedia-1-w/9902220764.jpg",
+        "https://cdn1.ozone.ru/s3/multimedia-1-8/9902222000.jpg"
+      ],
+      "primary_image": "https://cdn1.ozone.ru/s3/multimedia-1-n/9902221691.jpg",
+      "attributes": [
+        {
+          "id": 85,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 126745801,
+              "value": "Нет бренда"
+            }
+          ]
+        },
+        {
+          "id": 10097,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "Серый"
+            }
+          ]
+        },
+        {
+          "id": 9048,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "1776582511388-3870983217298"
+            }
+          ]
+        },
+        {
+          "id": 23171,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "#уборка #салфетки_для_уборки #тряпки_для_уборки #без_разводов #чисто_без_разводов #салфетка_без_разводов #для_стекол #умная_тряпка #чудо_салфетка #для_зеркал #стекло_и_зеркала"
+            }
+          ]
+        },
+        {
+          "id": 4191,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "Салфетки для уборки подходят для стекол, зеркал, мебели и других гладких поверхностей. Помогают быстро удалить пыль, влагу и загрязнения, не оставляя заметных разводов.<br/><br/>Салфетки хорошо впитывают влагу, подходят для сухой и влажной уборки, удобны для ежедневного использования дома, на кухне и в автомобиле.<br/><br/>Размер каждой салфетки — 30x40 см. В наборе 2 штуки. Цвет — серый."
+            }
+          ]
+        },
+        {
+          "id": 11254,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "{\n  \"content\": [\n    {\n      \"gapSize\": \"m\",\n      \"padding\": \"type2\",\n      \"text\": {\n        \"align\": \"left\",\n        \"color\": \"color1\",\n        \"items\": [\n          {\n            \"type\": \"text\",\n            \"content\": \"Салфетки для уборки подходят для стекол, зеркал, мебели и других гладких поверхностей. Хорошо впитывают влагу и помогают уменьшить появление разводов после уборки.\"\n          }\n        ],\n        \"size\": \"size2\"\n      },\n      \"theme\": \"primary\",\n      \"title\": {\n        \"color\": \"color1\",\n        \"items\": [\n          {\n            \"content\": \"Аннотация\",\n            \"type\": \"text\"\n          }\n        ],\n        \"size\": \"size5\"\n      },\n      \"widgetName\": \"raTextBlock\"\n    },\n    {\n      \"blocks\": [\n        {\n          \"img\": {\n            \"alt\": \"\",\n            \"heightMobile\": 709,\n            \"position\": \"width_full\",\n            \"positionMobile\": \"width_full\",\n            \"src\": \"https://cdn1.ozone.ru/s3/multimedia-1-n/9902221691.jpg\",\n            \"srcMobile\": \"https://cdn1.ozone.ru/s3/multimedia-1-n/9902221691.jpg\",\n            \"widthMobile\": 709\n          },\n          \"imgLink\": \"\"\n        },\n        {\n          \"img\": {\n            \"alt\": \"\",\n            \"heightMobile\": 709,\n            \"position\": \"width_full\",\n            \"positionMobile\": \"width_full\",\n            \"src\": \"https://cdn1.ozone.ru/s3/multimedia-1-m/9902221726.jpg\",\n            \"srcMobile\": \"https://cdn1.ozone.ru/s3/multimedia-1-m/9902221726.jpg\",\n            \"widthMobile\": 709\n          },\n          \"imgLink\": \"\"\n        },\n        {\n          \"img\": {\n            \"alt\": \"\",\n            \"heightMobile\": 709,\n            \"position\": \"width_full\",\n            \"positionMobile\": \"width_full\",\n            \"src\": \"https://cdn1.ozone.ru/s3/multimedia-1-m/9902222122.jpg\",\n            \"srcMobile\": \"https://cdn1.ozone.ru/s3/multimedia-1-m/9902222122.jpg\",\n            \"widthMobile\": 709\n          },\n          \"imgLink\": \"\"\n        },\n        {\n          \"img\": {\n            \"alt\": \"\",\n            \"heightMobile\": 709,\n            \"position\": \"width_full\",\n            \"positionMobile\": \"width_full\",\n            \"src\": \"https://cdn1.ozone.ru/s3/multimedia-1-w/9902220764.jpg\",\n            \"srcMobile\": \"https://cdn1.ozone.ru/s3/multimedia-1-w/9902220764.jpg\",\n            \"widthMobile\": 709\n          },\n          \"imgLink\": \"\"\n        },\n        {\n          \"img\": {\n            \"alt\": \"\",\n            \"heightMobile\": 709,\n            \"position\": \"width_full\",\n            \"positionMobile\": \"width_full\",\n            \"src\": \"https://cdn1.ozone.ru/s3/multimedia-1-8/9902222000.jpg\",\n            \"srcMobile\": \"https://cdn1.ozone.ru/s3/multimedia-1-8/9902222000.jpg\",\n            \"widthMobile\": 709\n          },\n          \"imgLink\": \"\"\n        }\n      ],\n      \"type\": \"roll\",\n      \"widgetName\": \"raShowcase\"\n    }\n  ],\n  \"version\": 0.3\n}"
+            }
+          ]
+        },
+        {
+          "id": 4067,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "30x40"
+            }
+          ]
+        },
+        {
+          "id": 6456,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 81851,
+              "value": "для мебели"
+            }
+          ]
+        },
+        {
+          "id": 7359,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 75133,
+              "value": "Впитывающая"
+            }
+          ]
+        },
+        {
+          "id": 22126,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "2"
+            }
+          ]
+        },
+        {
+          "id": 8962,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "2"
+            }
+          ]
+        },
+        {
+          "id": 10096,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 61576,
+              "value": "серый"
+            }
+          ]
+        },
+        {
+          "id": 6383,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 62083,
+              "value": "Синтетика"
+            }
+          ]
+        },
+        {
+          "id": 4389,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 90296,
+              "value": "Китай"
+            }
+          ]
+        },
+        {
+          "id": 4384,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "2 салфетки для уборки"
+            }
+          ]
+        },
+        {
+          "id": 11650,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "2"
+            }
+          ]
+        },
+        {
+          "id": 4180,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "Тряпки для уборки, салфетки для стекол и зеркал, без разводов, 30x40 см, 2 шт"
+            }
+          ]
+        },
+        {
+          "id": 4383,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "72"
+            }
+          ]
+        },
+        {
+          "id": 4497,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "76"
+            }
+          ]
+        },
+        {
+          "id": 9024,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "1776582511388-3870983217298"
+            }
+          ]
+        }
+      ],
+      "complex_attributes": [
+        {
+          "id": 21837,
+          "complex_id": 100001,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "4月21日 (1).mp4"
+            }
+          ]
+        },
+        {
+          "id": 21841,
+          "complex_id": 100001,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "https://v-1.ozone.ru/vod/video-67/01KPT8QR1PPNVTAWF4Z0V9RMDT/asset_3_h264.mp4"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "offer_id": "1776675206069-9840525683464",
+      "name": "Салфетки для уборки дома и кухни, для разных поверхностей, 30x30 см, 2 шт",
+      "description": "Практичные салфетки для уборки дома, которые подходят для кухни, мебели и других поверхностей. Удобны для ежедневной сухой и влажной уборки.\nСалфетки хорошо впитывают влагу, помогают поддерживать чистоту в доме и подходят для регулярного использования.\nРазмер каждой салфетки — 30x30 см. В наборе 2 штуки. Цвет — серый.",
+      "description_category_id": 17028718,
+      "type_id": 96018,
+      "price": "15.93",
+      "old_price": "32.12",
+      "currency_code": "CNY",
+      "vat": "0.00",
+      "barcode": "OZN4016870560",
+      "depth": 213,
+      "width": 201,
+      "height": 14,
+      "dimension_unit": "mm",
+      "weight": 75,
+      "weight_unit": "g",
+      "images": [
+        "https://cdn1.ozone.ru/s3/multimedia-1-4/9921401968.jpg",
+        "https://cdn1.ozone.ru/s3/multimedia-1-v/9921400735.jpg",
+        "https://cdn1.ozone.ru/s3/multimedia-1-e/9921397262.jpg",
+        "https://cdn1.ozone.ru/s3/multimedia-1-t/9921402029.jpg"
+      ],
+      "primary_image": "https://cdn1.ozone.ru/s3/multimedia-1-x/9921400377.jpg",
+      "attributes": [
+        {
+          "id": 85,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 126745801,
+              "value": "Нет бренда"
+            }
+          ]
+        },
+        {
+          "id": 10097,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "Серый"
+            }
+          ]
+        },
+        {
+          "id": 9048,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "1776675206069-9840525683464"
+            }
+          ]
+        },
+        {
+          "id": 23171,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "#салфеткидляуборки #салфетки_для_уборки #салфеткадляуборки #салфетки_из_микрофибры #тряпкадляуборки #тряпка_для_уборки #тряпкадлястекол #тряпкаизмикрофибры #тряпкауниверсальная #тряпка_из_микрофибры #тряпкадлячистки #тряпкадляпосуды"
+            }
+          ]
+        },
+        {
+          "id": 4191,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "Практичные салфетки для уборки дома, которые подходят для кухни, мебели и других поверхностей. Удобны для ежедневной сухой и влажной уборки.\nСалфетки хорошо впитывают влагу, помогают поддерживать чистоту в доме и подходят для регулярного использования.\nРазмер каждой салфетки — 30x30 см. В наборе 2 штуки. Цвет — серый."
+            }
+          ]
+        },
+        {
+          "id": 11254,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "{\"content\":[{\"gapSize\":\"m\",\"padding\":\"type2\",\"text\":{\"align\":\"left\",\"color\":\"color1\",\"items\":[{\"content\":\"Практичные салфетки для уборки дома, которые подходят для кухни, мебели и других поверхностей. Удобны для ежедневной сухой и влажной уборки.\\nСалфетки хорошо впитывают влагу, помогают поддерживать чистоту в доме и подходят для регулярного использования.\\nРазмер каждой салфетки — 30x30 см. В наборе 2 штуки. Цвет — серый.\",\"type\":\"text\"}],\"size\":\"size2\"},\"theme\":\"primary\",\"title\":{\"color\":\"color1\",\"items\":[{\"content\":\"Аннотация\",\"type\":\"text\"}],\"size\":\"size5\"},\"widgetName\":\"raTextBlock\"},{\"blocks\":[{\"img\":{\"alt\":\"\",\"heightMobile\":709,\"position\":\"width_full\",\"positionMobile\":\"width_full\",\"src\":\"https://cdn1.ozone.ru/s3/multimedia-1-x/9921400377.jpg\",\"srcMobile\":\"https://cdn1.ozone.ru/s3/multimedia-1-x/9921400377.jpg\",\"widthMobile\":709},\"imgLink\":\"\"},{\"img\":{\"alt\":\"\",\"heightMobile\":709,\"position\":\"width_full\",\"positionMobile\":\"width_full\",\"src\":\"https://cdn1.ozone.ru/s3/multimedia-1-4/9921401968.jpg\",\"srcMobile\":\"https://cdn1.ozone.ru/s3/multimedia-1-4/9921401968.jpg\",\"widthMobile\":709},\"imgLink\":\"\"},{\"img\":{\"alt\":\"\",\"heightMobile\":709,\"position\":\"width_full\",\"positionMobile\":\"width_full\",\"src\":\"https://cdn1.ozone.ru/s3/multimedia-1-v/9921400735.jpg\",\"srcMobile\":\"https://cdn1.ozone.ru/s3/multimedia-1-v/9921400735.jpg\",\"widthMobile\":709},\"imgLink\":\"\"},{\"img\":{\"alt\":\"\",\"heightMobile\":709,\"position\":\"width_full\",\"positionMobile\":\"width_full\",\"src\":\"https://cdn1.ozone.ru/s3/multimedia-1-e/9921397262.jpg\",\"srcMobile\":\"https://cdn1.ozone.ru/s3/multimedia-1-e/9921397262.jpg\",\"widthMobile\":709},\"imgLink\":\"\"},{\"img\":{\"alt\":\"\",\"heightMobile\":709,\"position\":\"width_full\",\"positionMobile\":\"width_full\",\"src\":\"https://cdn1.ozone.ru/s3/multimedia-1-t/9921402029.jpg\",\"srcMobile\":\"https://cdn1.ozone.ru/s3/multimedia-1-t/9921402029.jpg\",\"widthMobile\":709},\"imgLink\":\"\"}],\"type\":\"roll\",\"widgetName\":\"raShowcase\"}],\"version\":0.3}"
+            }
+          ]
+        },
+        {
+          "id": 4067,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "30x30"
+            }
+          ]
+        },
+        {
+          "id": 6456,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 81863,
+              "value": "универсальная"
+            },
+            {
+              "dictionary_value_id": 81851,
+              "value": "для мебели"
+            }
+          ]
+        },
+        {
+          "id": 7359,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 75133,
+              "value": "Впитывающая"
+            },
+            {
+              "dictionary_value_id": 75131,
+              "value": "Антистатический эффект"
+            },
+            {
+              "dictionary_value_id": 75130,
+              "value": "Антибактериальная"
+            }
+          ]
+        },
+        {
+          "id": 22126,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "2"
+            }
+          ]
+        },
+        {
+          "id": 10096,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 61576,
+              "value": "серый"
+            }
+          ]
+        },
+        {
+          "id": 4389,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 90296,
+              "value": "Китай"
+            }
+          ]
+        },
+        {
+          "id": 4384,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "2"
+            }
+          ]
+        },
+        {
+          "id": 11650,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "1"
+            }
+          ]
+        },
+        {
+          "id": 22232,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 971398776,
+              "value": "6307109000 - Прочие тряпки для мытья полов, посуды, удаления пыли и аналогичные протирочные материалы"
+            }
+          ]
+        },
+        {
+          "id": 4180,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "Салфетки для уборки дома и кухни, для разных поверхностей, 30x30 см, 2 шт"
+            }
+          ]
+        },
+        {
+          "id": 4383,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "70"
+            }
+          ]
+        },
+        {
+          "id": 4497,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "75"
+            }
+          ]
+        },
+        {
+          "id": 9024,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "1776675206069-9840525683464"
+            }
+          ]
+        }
+      ],
+      "complex_attributes": [
+        {
+          "id": 21837,
+          "complex_id": 100001,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "4月21日 (1)(1).mp4"
+            }
+          ]
+        },
+        {
+          "id": 21841,
+          "complex_id": 100001,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "https://v-1.ozone.ru/vod/video-68/01KPT8PVF3S60EQFCDYQGGTMW5/asset_3_h264.mp4"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "offer_id": "17767433129865423704958774",
+      "name": "Салфетки для уборки, Серый, 30*40 см, 2 шт.",
+      "description": "Умные салфетки для уборки — ваш идеальный помощник по дому!<br/><br/><br/><br/>Ищете способ сделать уборку быстрее и проще?<br/><br/>Наши умные салфетки — это идеальное решение для тех, кто ценит безупречную чистоту и комфорт.<br/><br/>Они выполнены из высококачественного инновационного материала, который справляется с грязью и пятнами в два счета.<br/><br/><br/><br/>Почему выбирают наши умные салфетки?<br/><br/><br/><br/>Невероятная эффективность: Благодаря особой текстуре ткани, салфетки безупречно удаляют загрязнения даже без использования бытовой химии.<br/><br/>Только вода и салфетка!<br/><br/>Универсальность 100%: Отлично подходят как для ежедневной домашней уборки, так и для профессионального клининга.<br/><br/>Идеальный размер (30x40 см): Удобно лежат в руке и подходят для любых задач — от мытья посуды и протирания пыли до мытья окон и полов.<br/><br/>Экономичная упаковка: В комплекте сразу 2 салфетки.<br/><br/>Этого запаса вам хватит надолго!<br/><br/>Как пользоваться:<br/><br/><br/><br/>Просто намочите салфетку и слегка отожмите (она также отлично работает и в сухом виде для смахивания пыли).<br/><br/>Протрите нужную поверхность.<br/><br/>После использования салфетка легко стирается, быстро сохнет и снова готова к бою за чистоту!<br/><br/>Умные салфетки — это ваша реальная экономия сил, времени и денег на моющие средства.<br/><br/>Порадуйте себя качественным инвентарем.<br/><br/>Сделайте свой дом сияющим без лишних усилий!",
+      "description_category_id": 17028718,
+      "type_id": 96018,
+      "price": "15.28",
+      "old_price": "19.81",
+      "currency_code": "CNY",
+      "vat": "0.00",
+      "barcode": "OZN4025233874",
+      "depth": 300,
+      "width": 190,
+      "height": 70,
+      "dimension_unit": "mm",
+      "weight": 70,
+      "weight_unit": "g",
+      "images": [
+        "https://cdn1.ozone.ru/s3/multimedia-1-u/9937540506.jpg",
+        "https://cdn1.ozone.ru/s3/multimedia-1-a/9937541710.jpg",
+        "https://cdn1.ozone.ru/s3/multimedia-1-2/9937543142.jpg",
+        "https://cdn1.ozone.ru/s3/multimedia-1-z/9937541267.jpg",
+        "https://cdn1.ozone.ru/s3/multimedia-1-8/9937540880.jpg",
+        "https://cdn1.ozone.ru/s3/multimedia-1-2/9950982770.jpg"
+      ],
+      "primary_image": "https://cdn1.ozone.ru/s3/multimedia-1-l/9937542873.jpg",
+      "attributes": [
+        {
+          "id": 85,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 126745801,
+              "value": "Нет бренда"
+            }
+          ]
+        },
+        {
+          "id": 9048,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "177674331298644519771"
+            }
+          ]
+        },
+        {
+          "id": 23171,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "#салфетки_для_уборки #тряпки_для_уборки #тряпка_для_уборки #тряпки #набор_для_уборки #корейская_умная_салфетка #салфетка_из_микрофибры #микро_фибра #smart_wash_салфетки #тряпка_для_чистки_стекол"
+            }
+          ]
+        },
+        {
+          "id": 4191,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "Умные салфетки для уборки — ваш идеальный помощник по дому!<br/><br/><br/><br/>Ищете способ сделать уборку быстрее и проще?<br/><br/>Наши умные салфетки — это идеальное решение для тех, кто ценит безупречную чистоту и комфорт.<br/><br/>Они выполнены из высококачественного инновационного материала, который справляется с грязью и пятнами в два счета.<br/><br/><br/><br/>Почему выбирают наши умные салфетки?<br/><br/><br/><br/>Невероятная эффективность: Благодаря особой текстуре ткани, салфетки безупречно удаляют загрязнения даже без использования бытовой химии.<br/><br/>Только вода и салфетка!<br/><br/>Универсальность 100%: Отлично подходят как для ежедневной домашней уборки, так и для профессионального клининга.<br/><br/>Идеальный размер (30x40 см): Удобно лежат в руке и подходят для любых задач — от мытья посуды и протирания пыли до мытья окон и полов.<br/><br/>Экономичная упаковка: В комплекте сразу 2 салфетки.<br/><br/>Этого запаса вам хватит надолго!<br/><br/>Как пользоваться:<br/><br/><br/><br/>Просто намочите салфетку и слегка отожмите (она также отлично работает и в сухом виде для смахивания пыли).<br/><br/>Протрите нужную поверхность.<br/><br/>После использования салфетка легко стирается, быстро сохнет и снова готова к бою за чистоту!<br/><br/>Умные салфетки — это ваша реальная экономия сил, времени и денег на моющие средства.<br/><br/>Порадуйте себя качественным инвентарем.<br/><br/>Сделайте свой дом сияющим без лишних усилий!"
+            }
+          ]
+        },
+        {
+          "id": 11254,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "{\"content\":[{\"gapSize\":\"m\",\"padding\":\"type2\",\"text\":{\"align\":\"left\",\"color\":\"color1\",\"items\":[{\"content\":\"Умные салфетки для уборки — ваш идеальный помощник по дому!\\n\\nИщете способ сделать уборку быстрее и проще? Наши умные салфетки — это идеальное решение для тех, кто ценит безупречную чистоту и комфорт. Они выполнены из высококачественного инновационного материала, который справляется с грязью и пятнами в два счета.\\n\\nПочему выбирают наши умные салфетки?\\n\\nНевероятная эффективность: Благодаря особой текстуре ткани, салфетки безупречно удаляют загрязнения даже без использования бытовой химии. Только вода и салфетка!\\nУниверсальность 100%: Отлично подходят как для ежедневной домашней уборки, так и для профессионального клининга.\\nИдеальный размер (30x40 см): Удобно лежат в руке и подходят для любых задач — от мытья посуды и протирания пыли до мытья окон и полов.\\nЭкономичная упаковка: В комплекте сразу 2 салфетки. Этого запаса вам хватит надолго!\\nКак пользоваться:\\n\\nПросто намочите салфетку и слегка отожмите (она также отлично работает и в сухом виде для смахивания пыли).\\nПротрите нужную поверхность.\\nПосле использования салфетка легко стирается, быстро сохнет и снова готова к бою за чистоту!\\nУмные салфетки — это ваша реальная экономия сил, времени и денег на моющие средства. Порадуйте себя качественным инвентарем. Сделайте свой дом сияющим без лишних усилий!\",\"type\":\"text\"}],\"size\":\"size2\"},\"theme\":\"primary\",\"title\":{\"color\":\"color1\",\"items\":[{\"content\":\"Аннотация\",\"type\":\"text\"}],\"size\":\"size5\"},\"widgetName\":\"raTextBlock\"},{\"blocks\":[{\"img\":{\"alt\":\"\",\"heightMobile\":709,\"position\":\"width_full\",\"positionMobile\":\"width_full\",\"src\":\"https://cdn1.ozone.ru/s3/multimedia-1-l/9937542873.jpg\",\"srcMobile\":\"https://cdn1.ozone.ru/s3/multimedia-1-l/9937542873.jpg\",\"widthMobile\":709},\"imgLink\":\"\"},{\"img\":{\"alt\":\"\",\"heightMobile\":709,\"position\":\"width_full\",\"positionMobile\":\"width_full\",\"src\":\"https://cdn1.ozone.ru/s3/multimedia-1-u/9937540506.jpg\",\"srcMobile\":\"https://cdn1.ozone.ru/s3/multimedia-1-u/9937540506.jpg\",\"widthMobile\":709},\"imgLink\":\"\"},{\"img\":{\"alt\":\"\",\"heightMobile\":709,\"position\":\"width_full\",\"positionMobile\":\"width_full\",\"src\":\"https://cdn1.ozone.ru/s3/multimedia-1-a/9937541710.jpg\",\"srcMobile\":\"https://cdn1.ozone.ru/s3/multimedia-1-a/9937541710.jpg\",\"widthMobile\":709},\"imgLink\":\"\"},{\"img\":{\"alt\":\"\",\"heightMobile\":709,\"position\":\"width_full\",\"positionMobile\":\"width_full\",\"src\":\"https://cdn1.ozone.ru/s3/multimedia-1-2/9937543142.jpg\",\"srcMobile\":\"https://cdn1.ozone.ru/s3/multimedia-1-2/9937543142.jpg\",\"widthMobile\":709},\"imgLink\":\"\"},{\"img\":{\"alt\":\"\",\"heightMobile\":709,\"position\":\"width_full\",\"positionMobile\":\"width_full\",\"src\":\"https://cdn1.ozone.ru/s3/multimedia-1-z/9937541267.jpg\",\"srcMobile\":\"https://cdn1.ozone.ru/s3/multimedia-1-z/9937541267.jpg\",\"widthMobile\":709},\"imgLink\":\"\"},{\"img\":{\"alt\":\"\",\"heightMobile\":709,\"position\":\"width_full\",\"positionMobile\":\"width_full\",\"src\":\"https://cdn1.ozone.ru/s3/multimedia-1-8/9937540880.jpg\",\"srcMobile\":\"https://cdn1.ozone.ru/s3/multimedia-1-8/9937540880.jpg\",\"widthMobile\":709},\"imgLink\":\"\"}],\"type\":\"roll\",\"widgetName\":\"raShowcase\"}],\"version\":0.3}"
+            }
+          ]
+        },
+        {
+          "id": 4067,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "30*40"
+            }
+          ]
+        },
+        {
+          "id": 6456,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 81859,
+              "value": "для стеклокерамики"
+            },
+            {
+              "dictionary_value_id": 81849,
+              "value": "для кафеля и плитки"
+            },
+            {
+              "dictionary_value_id": 971434509,
+              "value": "для жалюзи"
+            },
+            {
+              "dictionary_value_id": 971101728,
+              "value": "для металла"
+            },
+            {
+              "dictionary_value_id": 81862,
+              "value": "для унитаза"
+            }
+          ]
+        },
+        {
+          "id": 7359,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 75134,
+              "value": "Губка"
+            },
+            {
+              "dictionary_value_id": 75137,
+              "value": "Многослойная"
+            },
+            {
+              "dictionary_value_id": 75133,
+              "value": "Впитывающая"
+            }
+          ]
+        },
+        {
+          "id": 22126,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "2"
+            }
+          ]
+        },
+        {
+          "id": 10096,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 61576,
+              "value": "серый"
+            }
+          ]
+        },
+        {
+          "id": 6383,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 970894445,
+              "value": "Микроспан"
+            },
+            {
+              "dictionary_value_id": 61786,
+              "value": "Вискоза"
+            }
+          ]
+        },
+        {
+          "id": 4389,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 90296,
+              "value": "Китай"
+            }
+          ]
+        },
+        {
+          "id": 22232,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 971398776,
+              "value": "6307109000 - Прочие тряпки для мытья полов, посуды, удаления пыли и аналогичные протирочные материалы"
+            }
+          ]
+        },
+        {
+          "id": 4180,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "Салфетки для уборки, Серый, 30*40 см, 2 шт."
+            }
+          ]
+        },
+        {
+          "id": 4383,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "70"
+            }
+          ]
+        },
+        {
+          "id": 4497,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "70"
+            }
+          ]
+        },
+        {
+          "id": 9024,
+          "complex_id": 0,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "17767433129865423704958774"
+            }
+          ]
+        }
+      ],
+      "complex_attributes": [
+        {
+          "id": 21837,
+          "complex_id": 100001,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "4月21日 (1).mp4"
+            }
+          ]
+        },
+        {
+          "id": 21841,
+          "complex_id": 100001,
+          "values": [
+            {
+              "dictionary_value_id": 0,
+              "value": "https://v-1.ozone.ru/vod/video-70/01KPR51H690E649SGAFEM3S1XS/asset_2_h264.mp4"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
