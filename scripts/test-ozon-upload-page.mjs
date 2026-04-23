@@ -23,11 +23,12 @@ const ozonMock = createServer(async (req, res) => {
     return;
   }
 
-  if (req.url === '/v3/category/attribute') {
+  if (req.url === '/v1/description-category/attribute') {
     res.end(JSON.stringify({
       result: [
         {
-          category_id: body.category_id[0],
+          description_category_id: body.description_category_id,
+          type_id: body.type_id,
           attributes: [{ id: 85, name: 'Brand', is_required: true, dictionary_id: 0 }],
         },
       ],
@@ -35,7 +36,7 @@ const ozonMock = createServer(async (req, res) => {
     return;
   }
 
-  if (req.url === '/v2/category/attribute/values') {
+  if (req.url === '/v1/description-category/attribute/values') {
     res.end(JSON.stringify({ result: [{ id: 1, value: 'Generic' }], has_next: false }));
     return;
   }
@@ -83,13 +84,14 @@ try {
   await page.waitForSelector('text=任务状态已更新');
 
   await page.fill('input[placeholder="例如 17031663"]', '17031663');
+  await page.fill('input[placeholder="例如 100001234"]', '100001234');
   await page.getByRole('button', { name: '查询类目属性' }).click();
   await page.waitForSelector('text=类目属性已返回，优先关注必填属性和字典属性');
   await page.screenshot({ path: path.join(screenshotDir, 'ozon-upload-result.png'), fullPage: true });
 
   await page.getByRole('button', { name: '展开原始返回' }).click();
   const resultText = await page.locator('.wb-pre').textContent();
-  assert.match(resultText || '', /category_id|task_id|status|attributes/);
+  assert.match(resultText || '', /description_category_id|task_id|status|attributes/);
 
   console.log('ozon-upload-page 测试通过');
 } finally {

@@ -22,8 +22,8 @@ Ozon 批量上货工具
   node scripts/ozon-batch-tool.mjs upload --input data/ozon-upload/products.json --report data/ozon-upload/report.json
   node scripts/ozon-batch-tool.mjs import-info --task-id 123456
   node scripts/ozon-batch-tool.mjs category-tree --output data/ozon-upload/category-tree.json
-  node scripts/ozon-batch-tool.mjs category-attributes --category-id 17031663 --output data/ozon-upload/category-17031663-attrs.json
-  node scripts/ozon-batch-tool.mjs attribute-values --category-id 17031663 --attribute-id 85
+  node scripts/ozon-batch-tool.mjs category-attributes --description-category-id 17031663 --type-id 100001234 --output data/ozon-upload/category-17031663-attrs.json
+  node scripts/ozon-batch-tool.mjs attribute-values --description-category-id 17031663 --type-id 100001234 --attribute-id 85
   node scripts/ozon-batch-tool.mjs prices --input data/ozon-upload/prices.json
   node scripts/ozon-batch-tool.mjs stocks --input data/ozon-upload/stocks.json
 
@@ -182,11 +182,12 @@ async function handleCategoryTree(args) {
 }
 
 async function handleCategoryAttributes(args) {
-  const categoryId = toInt(args['category-id'], 'category-id');
+  const descriptionCategoryId = toInt(args['description-category-id'] || args['category-id'], 'description-category-id');
+  const typeId = toInt(args['type-id'], 'type-id');
   const client = createClient(args);
   const result = await client.getCategoryAttributes({
-    categoryIds: [categoryId],
-    attributeType: String(args['attribute-type'] || 'ALL'),
+    descriptionCategoryId,
+    typeId,
     language: String(args.language || 'DEFAULT'),
   });
   if (args.output) {
@@ -196,11 +197,13 @@ async function handleCategoryAttributes(args) {
 }
 
 async function handleAttributeValues(args) {
-  const categoryId = toInt(args['category-id'], 'category-id');
+  const descriptionCategoryId = toInt(args['description-category-id'] || args['category-id'], 'description-category-id');
+  const typeId = toInt(args['type-id'], 'type-id');
   const attributeId = toInt(args['attribute-id'], 'attribute-id');
   const client = createClient(args);
   const result = await client.getCategoryAttributeValues({
-    categoryId,
+    descriptionCategoryId,
+    typeId,
     attributeId,
     language: String(args.language || 'DEFAULT'),
     lastValueId: Number.parseInt(String(args['last-value-id'] || '0'), 10) || 0,

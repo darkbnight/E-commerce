@@ -23,6 +23,11 @@ function ensurePositiveInteger(value) {
   return Number.isInteger(normalized) && normalized > 0 ? normalized : null;
 }
 
+function ensureNonNegativeInteger(value) {
+  const normalized = Number.parseInt(String(value), 10);
+  return Number.isInteger(normalized) && normalized >= 0 ? normalized : null;
+}
+
 export async function readJsonFile(filePath) {
   const content = await readFile(filePath, 'utf8');
   return JSON.parse(content);
@@ -66,6 +71,31 @@ function validateAttribute(attribute, itemIndex, attributeIndex, errors) {
   if (values.length === 0) {
     errors.push(`items[${itemIndex}].attributes[${attributeIndex}].values 不能为空`);
   }
+
+  const complexId = attribute.complex_id;
+  if (complexId != null && ensureNonNegativeInteger(complexId) == null) {
+    errors.push(`items[${itemIndex}].attributes[${attributeIndex}].complex_id 必须是大于等于 0 的整数`);
+  }
+
+  values.forEach((value, valueIndex) => {
+    if (!isObject(value)) {
+      errors.push(`items[${itemIndex}].attributes[${attributeIndex}].values[${valueIndex}] 必须是对象`);
+      return;
+    }
+
+    const textValue = ensureString(value.value).trim();
+    const dictionaryValueId = value.dictionary_value_id == null
+      ? null
+      : ensurePositiveInteger(value.dictionary_value_id);
+
+    if (!textValue && !dictionaryValueId) {
+      errors.push(`items[${itemIndex}].attributes[${attributeIndex}].values[${valueIndex}] 至少需要 value 或 dictionary_value_id`);
+    }
+
+    if (value.dictionary_value_id != null && !dictionaryValueId) {
+      errors.push(`items[${itemIndex}].attributes[${attributeIndex}].values[${valueIndex}].dictionary_value_id 必须是正整数`);
+    }
+  });
 }
 
 export function validateProductItems(items) {
@@ -96,7 +126,14 @@ export function validateProductItems(items) {
     const name = ensureString(item.name).trim();
     const price = ensureString(item.price).trim();
     const vat = ensureString(item.vat).trim();
-    const categoryId = ensurePositiveInteger(item.category_id);
+    const descriptionCategoryId = ensurePositiveInteger(item.description_category_id);
+    const typeId = ensurePositiveInteger(item.type_id);
+    const depth = ensurePositiveInteger(item.depth);
+    const width = ensurePositiveInteger(item.width);
+    const height = ensurePositiveInteger(item.height);
+    const weight = ensurePositiveInteger(item.weight);
+    const dimensionUnit = ensureString(item.dimension_unit).trim();
+    const weightUnit = ensureString(item.weight_unit).trim();
     const images = ensureArray(item.images);
     const attributes = ensureArray(item.attributes);
 
@@ -112,8 +149,12 @@ export function validateProductItems(items) {
       errors.push(`items[${itemIndex}].name 不能为空`);
     }
 
-    if (!categoryId) {
-      errors.push(`items[${itemIndex}].category_id 必须是正整数`);
+    if (!descriptionCategoryId) {
+      errors.push(`items[${itemIndex}].description_category_id 必须是正整数`);
+    }
+
+    if (!typeId) {
+      errors.push(`items[${itemIndex}].type_id 必须是正整数`);
     }
 
     if (!price) {
@@ -126,6 +167,30 @@ export function validateProductItems(items) {
 
     if (images.length === 0) {
       errors.push(`items[${itemIndex}].images 至少需要 1 张图片`);
+    }
+
+    if (!depth) {
+      errors.push(`items[${itemIndex}].depth 必须是正整数`);
+    }
+
+    if (!width) {
+      errors.push(`items[${itemIndex}].width 必须是正整数`);
+    }
+
+    if (!height) {
+      errors.push(`items[${itemIndex}].height 必须是正整数`);
+    }
+
+    if (!dimensionUnit) {
+      errors.push(`items[${itemIndex}].dimension_unit 不能为空`);
+    }
+
+    if (!weight) {
+      errors.push(`items[${itemIndex}].weight 必须是正整数`);
+    }
+
+    if (!weightUnit) {
+      errors.push(`items[${itemIndex}].weight_unit 不能为空`);
     }
 
     if (attributes.length === 0) {
@@ -219,7 +284,8 @@ export function buildTemplate(kind = 'products') {
           offer_id: 'CLOTH-30X40-2PK-GREY',
           name: 'Cleaning Cloth Microfiber 30x40 cm 2 pcs Grey',
           description: 'Reusable cleaning cloth for kitchen and household use.',
-          category_id: 17031663,
+          description_category_id: 17031663,
+          type_id: 100001234,
           price: '199',
           old_price: '259',
           premium_price: '189',
@@ -239,10 +305,12 @@ export function buildTemplate(kind = 'products') {
           attributes: [
             {
               id: 85,
+              complex_id: 0,
               values: [{ value: 'Generic' }]
             },
             {
               id: 8229,
+              complex_id: 0,
               values: [{ value: '2' }]
             }
           ]
@@ -332,21 +400,29 @@ export class OzonSellerClient {
   }
 
   async getCategoryTree() {
-    return this.request('/v2/category/tree', {});
+    return this.request('/v1/description-category/tree', {});
   }
 
-  async getCategoryAttributes({ categoryIds, attributeType = 'ALL', language = 'DEFAULT' }) {
-    return this.request('/v3/category/attribute', {
-      attribute_type: attributeType,
-      category_id: categoryIds,
+  async getCategoryAttributes({ descriptionCategoryId, typeId, language = 'DEFAULT' }) {
+    return this.request('/v1/description-category/attribute', {
+      description_category_id: descriptionCategoryId,
+      type_id: typeId,
       language,
     });
   }
 
-  async getCategoryAttributeValues({ attributeId, categoryId, language = 'DEFAULT', lastValueId = 0, limit = 50 }) {
-    return this.request('/v2/category/attribute/values', {
+  async getCategoryAttributeValues({
+    attributeId,
+    descriptionCategoryId,
+    typeId,
+    language = 'DEFAULT',
+    lastValueId = 0,
+    limit = 50
+  }) {
+    return this.request('/v1/description-category/attribute/values', {
       attribute_id: attributeId,
-      category_id: categoryId,
+      description_category_id: descriptionCategoryId,
+      type_id: typeId,
       language,
       last_value_id: lastValueId,
       limit,
@@ -359,7 +435,7 @@ export class OzonSellerClient {
 
     for (let index = 0; index < batches.length; index += 1) {
       const batch = batches[index];
-      const response = await this.request('/v2/product/import', { items: batch });
+      const response = await this.request('/v3/product/import', { items: batch });
       results.push({
         batchIndex: index + 1,
         itemCount: batch.length,

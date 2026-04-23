@@ -5,7 +5,10 @@ function collectDraftIssues(draft) {
 
   if (!draft.offerId) issues.push({ field: 'offerId', level: 'error', message: '缺少商家货号 offer_id' });
   if (!draft.name) issues.push({ field: 'name', level: 'error', message: '缺少标题 name' });
-  if (!draft.categoryId) issues.push({ field: 'categoryId', level: 'error', message: '缺少 Ozon category_id' });
+  if (!draft.descriptionCategoryId) {
+    issues.push({ field: 'descriptionCategoryId', level: 'error', message: '缺少 Ozon description_category_id' });
+  }
+  if (!draft.typeId) issues.push({ field: 'typeId', level: 'error', message: '缺少 Ozon type_id' });
   if (!draft.price) issues.push({ field: 'price', level: 'error', message: '缺少售价 price' });
   if (!draft.currencyCode) issues.push({ field: 'currencyCode', level: 'error', message: '缺少币种 currency_code' });
   if (!draft.vat) issues.push({ field: 'vat', level: 'error', message: '缺少 VAT' });
@@ -15,9 +18,34 @@ function collectDraftIssues(draft) {
   if (!draft.packageWeightG) issues.push({ field: 'packageWeightG', level: 'error', message: '缺少包装重量(g)' });
   if (!Array.isArray(draft.images) || draft.images.length === 0) {
     issues.push({ field: 'images', level: 'error', message: '至少需要 1 张商品图片' });
+  } else if (!draft.images.some((image) => image?.url)) {
+    issues.push({ field: 'images', level: 'error', message: '至少需要 1 个可访问的商品图片 URL' });
   }
   if (!Array.isArray(draft.attributes) || draft.attributes.length === 0) {
     issues.push({ field: 'attributes', level: 'error', message: '至少需要 1 个类目属性' });
+  } else {
+    draft.attributes.forEach((attribute, index) => {
+      if (!attribute.attributeId) {
+        issues.push({ field: `attributes[${index}].attributeId`, level: 'error', message: '属性缺少 attribute_id' });
+      }
+      if (!Array.isArray(attribute.values) || attribute.values.length === 0) {
+        issues.push({ field: `attributes[${index}].values`, level: 'error', message: '属性值不能为空' });
+      } else {
+        attribute.values.forEach((value, valueIndex) => {
+          const hasTextValue = typeof value === 'string'
+            ? value.trim()
+            : value?.value != null && String(value.value).trim();
+          const hasDictionaryValue = value?.dictionaryValueId != null && value.dictionaryValueId !== '';
+          if (!hasTextValue && !hasDictionaryValue) {
+            issues.push({
+              field: `attributes[${index}].values[${valueIndex}]`,
+              level: 'error',
+              message: '属性值至少需要 value 或 dictionaryValueId',
+            });
+          }
+        });
+      }
+    });
   }
   if (!draft.description) issues.push({ field: 'description', level: 'warning', message: '缺少 description，审核和转化风险较高' });
   if (!draft.warehouseId) issues.push({ field: 'warehouseId', level: 'warning', message: '缺少仓库 ID，后续库存链路无法直接执行' });
@@ -25,12 +53,46 @@ function collectDraftIssues(draft) {
   return issues;
 }
 
+function normalizeAttributeValue(value) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const normalized = {};
+    if (value.value != null && value.value !== '') normalized.value = String(value.value);
+    if (value.dictionaryValueId != null && value.dictionaryValueId !== '') {
+      normalized.dictionary_value_id = Number(value.dictionaryValueId);
+    }
+    return normalized;
+  }
+
+  return { value: String(value) };
+}
+
+function buildExportAttributes(attributes) {
+  return attributes.map((attribute) => {
+    const exported = {
+      id: attribute.attributeId,
+      values: attribute.values.map(normalizeAttributeValue),
+    };
+
+    if (attribute.complexId != null) {
+      exported.complex_id = Number(attribute.complexId);
+    }
+
+    return exported;
+  });
+}
+
 function buildExportItem(draft) {
+  const images = [...draft.images]
+    .sort((a, b) => Number(a.sortOrder ?? 0) - Number(b.sortOrder ?? 0))
+    .map((image) => image.url)
+    .filter(Boolean);
+
   return {
     offer_id: draft.offerId,
     name: draft.name,
     description: draft.description,
-    category_id: draft.categoryId,
+    description_category_id: draft.descriptionCategoryId,
+    type_id: draft.typeId,
     price: draft.price,
     old_price: draft.oldPrice || undefined,
     premium_price: draft.premiumPrice || undefined,
@@ -44,11 +106,8 @@ function buildExportItem(draft) {
     dimension_unit: 'mm',
     weight: draft.packageWeightG,
     weight_unit: 'g',
-    images: draft.images.map((image) => image.url),
-    attributes: draft.attributes.map((attribute) => ({
-      id: attribute.attributeId,
-      values: attribute.values.map((value) => ({ value })),
-    })),
+    images,
+    attributes: buildExportAttributes(draft.attributes),
   };
 }
 

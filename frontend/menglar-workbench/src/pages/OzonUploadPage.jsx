@@ -100,9 +100,14 @@ function collectValidationIssues(result) {
   ];
 }
 
-function inferCategoryId(payload) {
+function inferCategorySelection(payload) {
   const firstItem = payload?.items?.[0];
-  return firstItem?.category_id ? String(firstItem.category_id) : '';
+  return {
+    descriptionCategoryId: firstItem?.description_category_id || firstItem?.category_id
+      ? String(firstItem.description_category_id || firstItem.category_id)
+      : '',
+    typeId: firstItem?.type_id ? String(firstItem.type_id) : '',
+  };
 }
 
 export function OzonUploadPage() {
@@ -113,7 +118,8 @@ export function OzonUploadPage() {
   const [jsonText, setJsonText] = useState('');
   const [result, setResult] = useState(null);
   const [taskId, setTaskId] = useState('');
-  const [categoryId, setCategoryId] = useState('');
+  const [descriptionCategoryId, setDescriptionCategoryId] = useState('');
+  const [typeId, setTypeId] = useState('');
   const [attributeId, setAttributeId] = useState('');
   const [confirmLiveRun, setConfirmLiveRun] = useState(false);
   const [showRaw, setShowRaw] = useState(false);
@@ -145,8 +151,9 @@ export function OzonUploadPage() {
     onSuccess: (payload, kind) => {
       setMode(kind);
       setJsonText(`${JSON.stringify(payload, null, 2)}\n`);
-      const inferredCategoryId = inferCategoryId(payload);
-      if (inferredCategoryId) setCategoryId(inferredCategoryId);
+      const inferredCategory = inferCategorySelection(payload);
+      if (inferredCategory.descriptionCategoryId) setDescriptionCategoryId(inferredCategory.descriptionCategoryId);
+      if (inferredCategory.typeId) setTypeId(inferredCategory.typeId);
       setResult({ kind: 'template', ok: true, title: `已载入 ${kind} 模板`, payload });
     },
     onError: (error) => setResult({ kind: 'template', ok: false, title: error.message, payload: null }),
@@ -192,7 +199,11 @@ export function OzonUploadPage() {
   });
 
   const categoryMutation = useMutation({
-    mutationFn: () => fetchOzonCategoryAttributes({ categoryId: Number(categoryId), ...credentials }),
+    mutationFn: () => fetchOzonCategoryAttributes({
+      descriptionCategoryId: Number(descriptionCategoryId),
+      typeId: Number(typeId),
+      ...credentials,
+    }),
     onSuccess: (payload) => {
       setResult({
         kind: 'category',
@@ -205,7 +216,12 @@ export function OzonUploadPage() {
   });
 
   const attributeMutation = useMutation({
-    mutationFn: () => fetchOzonAttributeValues({ categoryId: Number(categoryId), attributeId: Number(attributeId), ...credentials }),
+    mutationFn: () => fetchOzonAttributeValues({
+      descriptionCategoryId: Number(descriptionCategoryId),
+      typeId: Number(typeId),
+      attributeId: Number(attributeId),
+      ...credentials,
+    }),
     onSuccess: (payload) => setResult({ kind: 'attribute', ok: true, title: '属性值已返回', payload }),
     onError: (error) => setResult({ kind: 'attribute', ok: false, title: error.message, payload: null }),
   });
@@ -260,8 +276,9 @@ export function OzonUploadPage() {
     try {
       const payload = JSON.parse(text);
       setJsonText(`${JSON.stringify(payload, null, 2)}\n`);
-      const inferredCategoryId = inferCategoryId(payload);
-      if (inferredCategoryId) setCategoryId(inferredCategoryId);
+      const inferredCategory = inferCategorySelection(payload);
+      if (inferredCategory.descriptionCategoryId) setDescriptionCategoryId(inferredCategory.descriptionCategoryId);
+      if (inferredCategory.typeId) setTypeId(inferredCategory.typeId);
       setResult({ kind: 'file', ok: true, title: `已导入文件：${file.name}`, payload: { itemCount: payload.items?.length || 0 } });
     } catch (error) {
       setResult({ kind: 'file', ok: false, title: `文件不是合法 JSON：${error.message}`, payload: null });
@@ -413,26 +430,34 @@ export function OzonUploadPage() {
             <button className="wb-button ghost" onClick={() => taskMutation.mutate()} disabled={isBusy || !taskId.trim()}>查询任务</button>
           </Panel>
 
-          <Panel title="类目属性助手" subtitle="商品 JSON 中如果已有 category_id，会自动带到这里。">
+          <Panel title="类目属性助手" subtitle="商品 JSON 中如果已有 description_category_id 和 type_id，会自动带到这里。">
             <label className="wb-field">
-              <span>category_id</span>
-              <input value={categoryId} onChange={(event) => setCategoryId(event.target.value)} placeholder="例如 17031663" />
+              <span>description_category_id</span>
+              <input value={descriptionCategoryId} onChange={(event) => setDescriptionCategoryId(event.target.value)} placeholder="例如 17031663" />
             </label>
-            <button className="wb-button ghost" onClick={() => categoryMutation.mutate()} disabled={isBusy || !categoryId.trim()}>查询类目属性</button>
+            <label className="wb-field">
+              <span>type_id</span>
+              <input value={typeId} onChange={(event) => setTypeId(event.target.value)} placeholder="例如 100001234" />
+            </label>
+            <button className="wb-button ghost" onClick={() => categoryMutation.mutate()} disabled={isBusy || !descriptionCategoryId.trim() || !typeId.trim()}>查询类目属性</button>
           </Panel>
 
           <Panel title="属性值查询" subtitle="当属性有 dictionary_id 时，再查该属性的可选值。">
             <div className="wb-filter-grid">
               <label className="wb-field">
-                <span>category_id</span>
-                <input value={categoryId} onChange={(event) => setCategoryId(event.target.value)} placeholder="沿用上面的类目 ID" />
+                <span>description_category_id</span>
+                <input value={descriptionCategoryId} onChange={(event) => setDescriptionCategoryId(event.target.value)} placeholder="沿用上面的描述类目 ID" />
+              </label>
+              <label className="wb-field">
+                <span>type_id</span>
+                <input value={typeId} onChange={(event) => setTypeId(event.target.value)} placeholder="沿用上面的 type_id" />
               </label>
               <label className="wb-field">
                 <span>attribute_id</span>
                 <input value={attributeId} onChange={(event) => setAttributeId(event.target.value)} placeholder="例如 85" />
               </label>
             </div>
-            <button className="wb-button ghost" onClick={() => attributeMutation.mutate()} disabled={isBusy || !categoryId.trim() || !attributeId.trim()}>查询属性值</button>
+            <button className="wb-button ghost" onClick={() => attributeMutation.mutate()} disabled={isBusy || !descriptionCategoryId.trim() || !typeId.trim() || !attributeId.trim()}>查询属性值</button>
           </Panel>
         </div>
       </div>

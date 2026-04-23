@@ -54,7 +54,7 @@ const server = createServer(async (req, res) => {
 
   res.setHeader('content-type', 'application/json; charset=utf-8');
 
-  if (req.url === '/v2/product/import') {
+  if (req.url === '/v3/product/import') {
     requests.uploadCalls.push(body.items.length);
     res.end(JSON.stringify({
       result: {
@@ -75,11 +75,12 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  if (req.url === '/v3/category/attribute') {
+  if (req.url === '/v1/description-category/attribute') {
     res.end(JSON.stringify({
       result: [
         {
-          category_id: body.category_id[0],
+          description_category_id: body.description_category_id,
+          type_id: body.type_id,
           attributes: [
             { id: 85, name: 'Brand', is_required: true, dictionary_id: 0 }
           ]
@@ -89,7 +90,7 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  if (req.url === '/v2/category/attribute/values') {
+  if (req.url === '/v1/description-category/attribute/values') {
     res.end(JSON.stringify({
       result: [
         { id: 1, value: 'Generic' }
@@ -99,9 +100,9 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  if (req.url === '/v2/category/tree') {
+  if (req.url === '/v1/description-category/tree') {
     res.end(JSON.stringify({
-      result: [{ description_category_id: 17031663, title: 'Cleaning cloth' }]
+      result: [{ description_category_id: 17031663, type_id: 100001234, title: 'Cleaning cloth' }]
     }));
     return;
   }
@@ -155,13 +156,21 @@ try {
     offer_id: 'SKU-001',
     name: 'Cleaning Cloth 30x40 2 pcs',
     description: 'Reusable cleaning cloth',
-    category_id: 17031663,
+    description_category_id: 17031663,
+    type_id: 100001234,
     price: '199',
     vat: '0',
+    depth: 30,
+    width: 200,
+    height: 300,
+    dimension_unit: 'mm',
+    weight: 120,
+    weight_unit: 'g',
     images: ['https://example.com/1.jpg'],
     attributes: [
       {
         id: 85,
+        complex_id: 0,
         values: [{ value: 'Generic' }]
       }
     ]
@@ -199,8 +208,10 @@ try {
 
   result = await captureRun([
     'category-attributes',
-    '--category-id',
+    '--description-category-id',
     '17031663',
+    '--type-id',
+    '100001234',
   ], env);
   assert.equal(result.code, 0, result.stderr);
 

@@ -21,7 +21,7 @@ const ozonMock = createServer(async (req, res) => {
 
   res.setHeader('content-type', 'application/json; charset=utf-8');
 
-  if (req.url === '/v2/product/import') {
+  if (req.url === '/v3/product/import') {
     requests.uploadCalls.push(body.items.length);
     res.end(JSON.stringify({ result: { task_id: requests.uploadCalls.length * 1000 } }));
     return;
@@ -44,11 +44,12 @@ const ozonMock = createServer(async (req, res) => {
     return;
   }
 
-  if (req.url === '/v3/category/attribute') {
+  if (req.url === '/v1/description-category/attribute') {
     res.end(JSON.stringify({
       result: [
         {
-          category_id: body.category_id[0],
+          description_category_id: body.description_category_id,
+          type_id: body.type_id,
           attributes: [{ id: 85, name: 'Brand', is_required: true, dictionary_id: 0 }],
         },
       ],
@@ -56,13 +57,13 @@ const ozonMock = createServer(async (req, res) => {
     return;
   }
 
-  if (req.url === '/v2/category/attribute/values') {
+  if (req.url === '/v1/description-category/attribute/values') {
     res.end(JSON.stringify({ result: [{ id: 1, value: 'Generic' }], has_next: false }));
     return;
   }
 
-  if (req.url === '/v2/category/tree') {
-    res.end(JSON.stringify({ result: [{ description_category_id: 17031663, title: 'Cleaning cloth' }] }));
+  if (req.url === '/v1/description-category/tree') {
+    res.end(JSON.stringify({ result: [{ description_category_id: 17031663, type_id: 100001234, title: 'Cleaning cloth' }] }));
     return;
   }
 
@@ -89,11 +90,18 @@ const productPayload = {
     offer_id: `SKU-${String(index + 1).padStart(3, '0')}`,
     name: 'Cleaning Cloth 30x40 2 pcs',
     description: 'Reusable cleaning cloth',
-    category_id: 17031663,
+    description_category_id: 17031663,
+    type_id: 100001234,
     price: '199',
     vat: '0',
+    depth: 30,
+    width: 200,
+    height: 300,
+    dimension_unit: 'mm',
+    weight: 120,
+    weight_unit: 'g',
     images: ['https://example.com/1.jpg'],
-    attributes: [{ id: 85, values: [{ value: 'Generic' }] }],
+    attributes: [{ id: 85, complex_id: 0, values: [{ value: 'Generic' }] }],
   })),
 };
 
@@ -165,7 +173,7 @@ try {
   response = await fetch(`${workbenchBaseUrl}/api/ozon/category-attributes`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ categoryId: 17031663, ...demoCredentials }),
+    body: JSON.stringify({ descriptionCategoryId: 17031663, typeId: 100001234, ...demoCredentials }),
   });
   payload = await readJson(response);
   assert.equal(payload.result[0].attributes[0].id, 85);
@@ -173,7 +181,7 @@ try {
   response = await fetch(`${workbenchBaseUrl}/api/ozon/attribute-values`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ categoryId: 17031663, attributeId: 85, ...demoCredentials }),
+    body: JSON.stringify({ descriptionCategoryId: 17031663, typeId: 100001234, attributeId: 85, ...demoCredentials }),
   });
   payload = await readJson(response);
   assert.equal(payload.result[0].value, 'Generic');

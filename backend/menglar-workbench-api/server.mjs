@@ -556,14 +556,15 @@ async function handleApiOzonImportInfo(req, res) {
 async function handleApiOzonCategoryAttributes(req, res) {
   try {
     const body = await readJsonBody(req);
-    const categoryId = parseInteger(body.categoryId, null);
-    if (!categoryId) {
-      sendError(res, 400, 'categoryId 必须是正整数');
+    const descriptionCategoryId = parseInteger(body.descriptionCategoryId, null);
+    const typeId = parseInteger(body.typeId, null);
+    if (!descriptionCategoryId || !typeId) {
+      sendError(res, 400, 'descriptionCategoryId 和 typeId 必须是正整数');
       return;
     }
 
     const client = createOzonClient(body);
-    const result = await client.getCategoryAttributes({ categoryIds: [categoryId] });
+    const result = await client.getCategoryAttributes({ descriptionCategoryId, typeId });
     sendJson(res, 200, result);
   } catch (error) {
     sendError(res, error.status || 500, error.message, error.body || null);
@@ -573,15 +574,16 @@ async function handleApiOzonCategoryAttributes(req, res) {
 async function handleApiOzonAttributeValues(req, res) {
   try {
     const body = await readJsonBody(req);
-    const categoryId = parseInteger(body.categoryId, null);
+    const descriptionCategoryId = parseInteger(body.descriptionCategoryId, null);
+    const typeId = parseInteger(body.typeId, null);
     const attributeId = parseInteger(body.attributeId, null);
-    if (!categoryId || !attributeId) {
-      sendError(res, 400, 'categoryId 和 attributeId 必须是正整数');
+    if (!descriptionCategoryId || !typeId || !attributeId) {
+      sendError(res, 400, 'descriptionCategoryId、typeId 和 attributeId 必须是正整数');
       return;
     }
 
     const client = createOzonClient(body);
-    const result = await client.getCategoryAttributeValues({ categoryId, attributeId });
+    const result = await client.getCategoryAttributeValues({ descriptionCategoryId, typeId, attributeId });
     sendJson(res, 200, result);
   } catch (error) {
     sendError(res, error.status || 500, error.message, error.body || null);

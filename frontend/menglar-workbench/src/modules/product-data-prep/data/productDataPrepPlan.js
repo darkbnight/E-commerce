@@ -5,7 +5,7 @@ export const productPrepWorkflowSteps = [
   },
   {
     title: '整理发布字段',
-    description: '补齐 offer_id、标题、类目、属性、图片、价格、币种、VAT、包装尺寸和库存所需字段。',
+    description: '补齐 offer_id、标题、description_category_id、type_id、属性、图片、价格、币种、VAT、包装尺寸和库存所需字段。',
   },
   {
     title: '发布前校验',
@@ -66,7 +66,7 @@ export const productPrepFieldGroups = [
   },
   {
     title: '建品最小字段',
-    description: '这些字段直接决定 `/v2/product/import` 是否有机会通过。',
+    description: '这些字段直接决定 `/v3/product/import` 是否有机会通过。',
     items: [
       {
         key: 'name',
@@ -77,12 +77,12 @@ export const productPrepFieldGroups = [
         note: '不能直接复用竞品标题，必须经过命名规则整理。',
       },
       {
-        key: 'category_id',
-        label: 'Ozon 类目 ID',
+        key: 'description_category_id / type_id',
+        label: 'Ozon 描述类目与商品类型',
         required: '必填',
         source: '草稿域新增',
         status: 'missing',
-        note: '现有上游只有类目文本，不足以直接建品。',
+        note: '官方当前建品 API 需要同时传 description_category_id 和 type_id，现有上游类目文本不足以直接建品。',
       },
       {
         key: 'attributes[]',
@@ -90,7 +90,7 @@ export const productPrepFieldGroups = [
         required: '必填',
         source: '类目属性接口 + 草稿域新增',
         status: 'missing',
-        note: '至少要支持 attribute_id、值数组、字典值和排序信息。',
+        note: '至少要支持 attribute_id、complex_id、值对象、dictionary_value_id 和排序信息。',
       },
       {
         key: 'images[]',
@@ -222,7 +222,7 @@ export const productPrepReadinessChecklist = [
   '前端真实编辑器只在模块目录里新增，不继续放大 ProductDataPrepPage.jsx。',
   '候选商品接口和草稿接口分开，先固定字段契约，再接数据库。',
   '草稿表至少补齐 offer_id、currency_code、vat、包装尺寸、包装重量、warehouse_id。',
-  '属性表支持 attribute_id、dictionary_value_id、value、sort_order，不只存一个 value。',
+  '属性表支持 attribute_id、complex_id、dictionary_value_id、value、sort_order，不只存一个 value。',
   '图片表支持主图标记和排序，导出时能稳定映射到 Ozon images 数组。',
 ];
 
@@ -242,7 +242,7 @@ export const productPrepUpstreamGapSections = [
     description: '这些字段目前没有稳定来源，不补齐就无法安全下发到 Ozon。',
     items: [
       'offer_id、name、description',
-      'category_id、attributes[]',
+      'description_category_id、type_id、attributes[]',
       'images[] 直链、排序、主图标记',
       'price、currency_code、vat',
       'warehouse_id、stock、barcode、model_name',
