@@ -6,8 +6,6 @@ data/shipping-sources/*
 .playwright-mcp/
 .cache/*
 !.cache/README.md
-db/*.sqlite
-db/**/*.sqlite
 frontend/**/dist/
 todo.md
 docs/测试文档/**/UI/
