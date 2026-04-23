@@ -4,7 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "mvp:probe": "node scripts/menglar-mvp.mjs",
+    "capture:hot-products": "node scripts/menglar-capture/hot-products.mjs",
+    "db:migrate": "node scripts/migrate-ecommerce-workbench-db.mjs",
+    "db:inspect": "node scripts/inspect-menglar-db.mjs",
+    "db:migration:test": "node scripts/test-ecommerce-db-migration.mjs",
+    "db:ui:test": "node scripts/test-ecommerce-db-ui.mjs",
+    "mvp:probe": "node scripts/menglar-capture/hot-products.mjs",
     "mvp:db:inspect": "node scripts/inspect-menglar-db.mjs",
     "shipping:validate": "node scripts/validate-shipping-config.mjs",
     "shipping:validate:generated": "node scripts/validate-shipping-config.mjs config/shipping/rules.generated.json",

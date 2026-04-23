@@ -18,29 +18,29 @@
 | `started_at` | string | 开始时间 |
 | `finished_at` | string | 结束时间 |
 | `raw_count` | number | 原始记录数 |
-| `normalized_count` | number | 标准化记录数 |
+| `normalized_count` | number | 历史字段，当前对应经营快照入库数 |
 | `warning_count` | number | 警告数 |
 | `request_count` | number | 采集请求数。行业任务表示请求的类目数，商品任务表示捕获的业务接口响应数 |
 | `success_count` | number | 成功请求数 |
-| `record_count` | number | 采集结果记录数。行业任务表示类目记录数，商品任务表示标准化入库商品数 |
+| `record_count` | number | 采集结果记录数。行业任务表示类目记录数，商品任务表示经营快照入库数 |
 | `error_type` | string\|null | 标准错误类型，如 `login_required`、`guest_blocked`、`profile_locked`、`browser_blocked`、`api_auth_missing`、`db_error` |
 | `error_message` | string\|null | 错误信息 |
 
 ### GET /api/products
 #### 说明
-读取最新有标准化商品数据的成功任务，或读取指定任务下的标准化商品数据，支持基础筛选与分页。
+读取最新有商品经营快照的成功任务，或读取指定任务下的商品经营快照，支持基础筛选与分页。
 
 #### 请求参数
 | 参数 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `jobId` | number | 否 | 指定任务ID，默认最新有标准化商品数据的成功任务 |
+| `jobId` | number | 否 | 指定任务ID，默认最新有商品经营快照的成功任务 |
 | `page` | number | 否 | 页码，默认 `1` |
 | `pageSize` | number | 否 | 每页条数，默认 `20`，最大 `100` |
-| `keyword` | string | 否 | 关键词，匹配商品ID / 品牌 / 类目 |
+| `keyword` | string | 否 | 关键词，匹配平台商品 ID / 品牌 / 类目 |
 | `productType` | string | 否 | 商品类型 |
 | `categoryLevel1` | string | 否 | 一级类目 |
-| `minSales` | number | 否 | 最低销量 |
-| `minRevenue` | number | 否 | 最低销售额 |
+| `minSales` | number | 否 | 最低销售量，对应 `sales_volume` |
+| `minRevenue` | number | 否 | 最低销售金额，对应 `sales_amount` |
 | `sort` | string | 否 | 排序方式，可选值：`sales_desc`、`sales_growth_desc`、`revenue_desc`、`margin_desc`、`impressions_desc` |
 
 #### 返回结构
@@ -52,7 +52,7 @@
 | `summary` | object\|null | 当前任务汇总指标 |
 | `items` | array | 当前页商品列表 |
 | `total` | number | 匹配总数 |
-| `actualProductCount` | number | 当前任务实际关联的标准化商品总数，不受筛选条件影响 |
+| `actualProductCount` | number | 当前任务实际关联的商品经营快照总数，不受筛选条件影响 |
 
 ### GET /api/result-jobs
 #### 说明
@@ -80,7 +80,7 @@
 | `job_status` | string | 任务状态 |
 | `raw_count` | number | 原始记录数 |
 | `normalized_count` | number | 任务记录的标准化数量 |
-| `product_count` | number | 通过 `products_normalized.job_id` 实际关联出来的商品数量 |
+| `product_count` | number | 通过 `product_business_snapshots.job_id` 实际关联出来的商品经营快照数量 |
 | `finished_at` | string\|null | 任务结束时间 |
 
 ## Ozon批量上货工作台

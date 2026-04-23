@@ -34,7 +34,7 @@ export function ProductPrepReadinessPanel({ candidates, drafts, checklist, upstr
 
       <Panel
         title="上游缺口判断"
-        subtitle="当前 `products_normalized` 更像候选研究源，还不够直接变成可发布草稿。"
+        subtitle="当前商品经营快照更像候选研究源，还不够直接变成可发布草稿。"
       >
         <div className="product-prep-gap-sections">
           {upstreamGapSections.map((section) => (

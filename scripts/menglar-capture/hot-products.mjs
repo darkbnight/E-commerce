@@ -10,7 +10,7 @@ import { runPreflight } from './preflight.mjs';
 const ROOT = process.cwd();
 const DATA_DIR = path.join(ROOT, 'data', 'menglar-mvp');
 const DB_DIR = path.join(ROOT, 'db');
-const DB_PATH = path.join(DB_DIR, 'menglar-mvp.sqlite');
+const DB_PATH = path.join(DB_DIR, 'ecommerce-workbench.sqlite');
 const REPORT_PATH = path.join(DATA_DIR, 'last-run.json');
 const CAPTURED_JSON_PATH = path.join(DATA_DIR, 'captured-json-full.json');
 const SCREENSHOT_PATH = path.join(DATA_DIR, 'dashboard.png');
@@ -31,6 +31,21 @@ const CHROME_EXECUTABLE_PATH =
 const TARGET_URL =
   process.env.MENGLAR_TARGET_URL ||
   'https://ozon.menglar.com/workbench/selection/hot?catId=17027489';
+
+function readPositiveInt(value, fallback) {
+  const parsed = Number.parseInt(String(value ?? ''), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+const HOT_PAGE_SIZE = readPositiveInt(
+  process.env.MENGLAR_PAGE_SIZE || process.env.MENGLAR_MAX_RECORDS,
+  50,
+);
+const MAX_RECORDS = readPositiveInt(process.env.MENGLAR_MAX_RECORDS, HOT_PAGE_SIZE);
+const HOT_DATE_TYPE = process.env.MENGLAR_DATE_TYPE || 'TWENTY_EIGHT_DAY';
+const FORCED_HOT_CAT_ID = process.env.MENGLAR_HOT_CAT_ID || '';
+const FORCED_HOT_TYPE_ID = process.env.MENGLAR_HOT_TYPE_ID || '';
+const FORCED_HOT_CAT_LEVEL = Number.parseInt(process.env.MENGLAR_HOT_CAT_LEVEL || '3', 10);
 
 const MENGLAR_ORIGIN = 'https://ozon.menglar.com';
 const USER_DATA_DEFAULT_DIR = path.join(SOURCE_PROFILE, 'Default');
@@ -265,19 +280,23 @@ async function ensureDb() {
       UNIQUE(job_id, record_key)
     );
 
-    CREATE TABLE IF NOT EXISTS products_normalized (
+    CREATE TABLE IF NOT EXISTS product_business_snapshots (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       job_id INTEGER NOT NULL,
-      ozon_product_id TEXT NOT NULL,
+      raw_record_id INTEGER,
+      platform TEXT NOT NULL DEFAULT 'ozon',
+      platform_product_id TEXT NOT NULL,
+      product_url TEXT,
       product_type TEXT,
       brand TEXT,
+      title TEXT,
       category_level_1 TEXT,
       category_level_2 TEXT,
       category_level_3 TEXT,
-      sales REAL,
+      sales_volume REAL,
       sales_growth REAL,
       potential_index REAL,
-      revenue REAL,
+      sales_amount REAL,
       add_to_cart_rate REAL,
       impressions REAL,
       clicks REAL,
@@ -293,12 +312,43 @@ async function ensureDb() {
       width_cm REAL,
       height_cm REAL,
       weight_g REAL,
-      raw_record_id INTEGER,
       parse_status TEXT NOT NULL,
+      captured_at TEXT NOT NULL,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
-      UNIQUE(job_id, ozon_product_id)
+      UNIQUE(job_id, platform, platform_product_id)
     );
+
+    CREATE TABLE IF NOT EXISTS product_content_assets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      platform TEXT NOT NULL DEFAULT 'ozon',
+      platform_product_id TEXT NOT NULL,
+      product_url TEXT,
+      source_job_id INTEGER,
+      source_snapshot_id INTEGER,
+      title TEXT,
+      description TEXT,
+      attributes_json TEXT,
+      tags_json TEXT,
+      main_image_url TEXT,
+      image_urls_json TEXT,
+      downloaded_images_json TEXT,
+      content_hash TEXT,
+      content_status TEXT NOT NULL DEFAULT 'pending',
+      captured_at TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(platform, platform_product_id, content_hash)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_product_business_snapshots_job
+    ON product_business_snapshots(job_id);
+
+    CREATE INDEX IF NOT EXISTS idx_product_business_snapshots_product
+    ON product_business_snapshots(platform, platform_product_id);
+
+    CREATE INDEX IF NOT EXISTS idx_product_content_assets_product
+    ON product_content_assets(platform, platform_product_id);
   `);
   ensureSourceJobsSchema(db);
   return db;
@@ -498,6 +548,25 @@ function classifyCaptureError(error) {
   return 'unknown';
 }
 
+function summarizeRuntimeStorage(runtimeStorage) {
+  return {
+    localStorageKeys: Object.keys(runtimeStorage.localStorage || {}).sort(),
+    sessionStorageKeys: Object.keys(runtimeStorage.sessionStorage || {}).sort(),
+    debug: runtimeStorage.debug || null,
+  };
+}
+
+function pickFetchHeaders(headers) {
+  const result = {
+    accept: 'application/json, text/plain, */*',
+    'content-type': 'application/json',
+  };
+  for (const key of ['authorization', 'control-t', 'x-risk-dida']) {
+    if (headers?.[key]) result[key] = headers[key];
+  }
+  return result;
+}
+
 function toNumber(value) {
   if (value == null || value === '') return null;
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
@@ -685,7 +754,8 @@ async function main() {
   };
 
   try {
-    report.runtimeStorage = await extractRuntimeStorage();
+    const runtimeStorage = await extractRuntimeStorage();
+    report.runtimeStorage = summarizeRuntimeStorage(runtimeStorage);
 
     const profileCopy = await resetProfileCopy();
     report.copiedProfile = profileCopy;
@@ -716,7 +786,7 @@ async function main() {
       throw new Error(`浏览器启动失败: ${launchErrors.join(' | ')}`);
     }
 
-    await injectRuntimeStorage(context, report.runtimeStorage);
+    await injectRuntimeStorage(context, runtimeStorage);
 
     const capturedJson = [];
     context.on('request', (request) => {
@@ -793,6 +863,58 @@ async function main() {
     await page.screenshot({ path: SCREENSHOT_PATH, fullPage: true });
     await page.waitForTimeout(3000);
 
+    if (FORCED_HOT_CAT_ID) {
+      const latestBusinessHeaders = [...report.apiRequestHeaders]
+        .reverse()
+        .find((item) => item.headers?.authorization);
+      if (!latestBusinessHeaders) {
+        throw new Error('未捕获到可复用的萌拉业务接口 Authorization，无法按指定类目采集热销商品');
+      }
+
+      const forcedBody = {
+        catId: Number(FORCED_HOT_CAT_ID),
+        currentCatId: String(FORCED_HOT_CAT_ID),
+        catLevel: Number.isFinite(FORCED_HOT_CAT_LEVEL) ? FORCED_HOT_CAT_LEVEL : 3,
+        pageNum: 1,
+        pageSize: HOT_PAGE_SIZE > 0 ? HOT_PAGE_SIZE : 50,
+        dateType: HOT_DATE_TYPE,
+      };
+      if (FORCED_HOT_TYPE_ID) {
+        forcedBody.typeId = Number(FORCED_HOT_TYPE_ID);
+      }
+
+      const forcedData = await page.evaluate(async ({ apiPath, headers, body }) => {
+        const response = await fetch(apiPath, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body),
+        });
+        return {
+          status: response.status,
+          data: await response.json(),
+        };
+      }, {
+        apiPath: HOT_PAGE_API_PATH,
+        headers: pickFetchHeaders(latestBusinessHeaders.headers),
+        body: forcedBody,
+      });
+
+      capturedJson.push({
+        url: `${MENGLAR_ORIGIN}${HOT_PAGE_API_PATH}?manualCatId=${encodeURIComponent(FORCED_HOT_CAT_ID)}`,
+        status: forcedData.status,
+        data: forcedData.data,
+      });
+      report.forcedHotCategory = {
+        catId: String(FORCED_HOT_CAT_ID),
+        typeId: FORCED_HOT_TYPE_ID || null,
+        catLevel: forcedBody.catLevel,
+        dateType: forcedBody.dateType,
+        pageSize: forcedBody.pageSize,
+        status: forcedData.status,
+        code: forcedData.data?.code,
+      };
+    }
+
     report.capturedResponses = capturedJson.map((item) => ({
       url: item.url,
       status: item.status,
@@ -812,19 +934,25 @@ async function main() {
         job_id, record_key, raw_payload, parse_status, parse_error, captured_at, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
-    const normalizedInsert = db.prepare(`
-      INSERT OR IGNORE INTO products_normalized (
-        job_id, ozon_product_id, product_type, brand, category_level_1, category_level_2, category_level_3,
-        sales, sales_growth, potential_index, revenue, add_to_cart_rate, impressions, clicks, view_rate,
+    const businessSnapshotInsert = db.prepare(`
+      INSERT OR IGNORE INTO product_business_snapshots (
+        job_id, raw_record_id, platform, platform_product_id, product_type, brand,
+        category_level_1, category_level_2, category_level_3,
+        sales_volume, sales_growth, potential_index, sales_amount, add_to_cart_rate, impressions, clicks, view_rate,
         ad_cost, ad_cost_rate, order_conversion_rate, estimated_gross_margin, shipping_mode, delivery_time,
-        average_sales_amount, length_cm, width_cm, height_cm, weight_g, raw_record_id, parse_status, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        average_sales_amount, length_cm, width_cm, height_cm, weight_g, parse_status, captured_at, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    for (const response of capturedJson) {
-      if (!response.url.includes(HOT_PAGE_API_PATH)) continue;
+    const hotResponses = capturedJson.filter((response) => response.url.includes(HOT_PAGE_API_PATH));
+    const responsesForInsert = FORCED_HOT_CAT_ID
+      ? hotResponses.filter((response) => response.url.includes('manualCatId='))
+      : hotResponses;
+
+    for (const response of responsesForInsert) {
       const records = flattenRecords(response.data);
       for (const [index, record] of records.entries()) {
+        if (MAX_RECORDS > 0 && report.normalizedInserted >= MAX_RECORDS) break;
         const ts = nowIso();
         const recordKey = `${response.url}#${record.normalized.ozon_product_id}#${index}`;
         const rawResult = rawInsert.run(
@@ -839,8 +967,10 @@ async function main() {
         const rawRecordId = Number(rawResult.lastInsertRowid || 0);
         report.rawInserted += rawResult.changes;
 
-        const normalizedResult = normalizedInsert.run(
+        const businessSnapshotResult = businessSnapshotInsert.run(
           jobId,
+          rawRecordId || null,
+          'ozon',
           record.normalized.ozon_product_id,
           record.normalized.product_type,
           record.normalized.brand,
@@ -866,13 +996,14 @@ async function main() {
           record.normalized.width_cm,
           record.normalized.height_cm,
           record.normalized.weight_g,
-          rawRecordId || null,
           'partial',
           ts,
           ts,
+          ts,
         );
-        report.normalizedInserted += normalizedResult.changes;
+        report.normalizedInserted += businessSnapshotResult.changes;
       }
+      if (MAX_RECORDS > 0 && report.normalizedInserted >= MAX_RECORDS) break;
     }
 
     await context.close();
