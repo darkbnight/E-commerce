@@ -3,6 +3,12 @@ import {
   getAttributeKey,
 } from '../data/descriptionCategoryAttributes';
 
+const BRAND_ATTRIBUTE_ID = 85;
+const NO_BRAND_DICTIONARY_VALUE = {
+  dictionaryValueId: 126745801,
+  value: 'Нет бренда',
+};
+
 function formatValue(value) {
   if (!value) return '待填写';
   const text = value.value || '';
@@ -23,6 +29,16 @@ function getAttributeTypeLabel(attribute) {
   return attribute.type ? `自由填写 value，类型: ${attribute.type}` : '自由填写 value';
 }
 
+function isBrandDictionaryAttribute(attribute) {
+  return Number(attribute.id) === BRAND_ATTRIBUTE_ID && Boolean(attribute.dictionaryId);
+}
+
+function getNoBrandDictionaryValue(dictionaryValues) {
+  return dictionaryValues.find((value) => (
+    Number(value.dictionaryValueId) === NO_BRAND_DICTIONARY_VALUE.dictionaryValueId
+  )) || NO_BRAND_DICTIONARY_VALUE;
+}
+
 function AttributeValueEditor({
   attribute,
   dictionaryValues,
@@ -37,19 +53,26 @@ function AttributeValueEditor({
     .filter(Boolean)
     .map(String);
   const currentText = currentValues.map((value) => value.value).filter(Boolean).join('\n');
-  const canHaveMultiple = attribute.isCollection ||
+  const canHaveMultiple = Boolean(attribute.isCollection) && (
     attribute.maxValueCount == null ||
     attribute.maxValueCount === 0 ||
-    attribute.maxValueCount > 1;
+    attribute.maxValueCount > 1
+  );
 
   if (attribute.dictionaryId) {
     const selectValue = canHaveMultiple ? currentDictionaryIds : (currentDictionaryIds[0] || '');
+    const showNoBrandShortcut = isBrandDictionaryAttribute(attribute);
+    const noBrandValue = getNoBrandDictionaryValue(dictionaryValues);
+    const selectDictionaryValues = showNoBrandShortcut &&
+      !dictionaryValues.some((value) => Number(value.dictionaryValueId) === NO_BRAND_DICTIONARY_VALUE.dictionaryValueId)
+      ? [noBrandValue, ...dictionaryValues]
+      : dictionaryValues;
     return (
-      <label className="product-prep-attribute-fill">
+      <div className="product-prep-attribute-fill">
         <span>填写值</span>
         <select
           multiple={canHaveMultiple}
-          size={canHaveMultiple ? Math.min(Math.max(dictionaryValues.length, 3), 6) : undefined}
+          size={canHaveMultiple ? Math.min(Math.max(selectDictionaryValues.length, 3), 6) : undefined}
           value={selectValue}
           onChange={(event) => {
             const selectedOptions = Array.from(event.target.selectedOptions);
@@ -61,7 +84,7 @@ function AttributeValueEditor({
           }}
         >
           {!canHaveMultiple ? <option value="">请选择字典值</option> : null}
-          {dictionaryValues.map((value) => (
+          {selectDictionaryValues.map((value) => (
             <option
               value={String(value.dictionaryValueId)}
               data-label={value.value}
@@ -71,7 +94,20 @@ function AttributeValueEditor({
             </option>
           ))}
         </select>
-      </label>
+        {showNoBrandShortcut ? (
+          <button
+            className="product-prep-no-brand-button"
+            type="button"
+            onClick={() => {
+              onFormValueChange(attributeKey, {
+                values: [noBrandValue],
+              });
+            }}
+          >
+            填入无品牌（Нет бренда #{NO_BRAND_DICTIONARY_VALUE.dictionaryValueId}）
+          </button>
+        ) : null}
+      </div>
     );
   }
 

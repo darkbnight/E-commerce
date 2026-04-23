@@ -189,7 +189,7 @@ function buildImportItem({ attributesItem, infoItem, descriptionItem }) {
   });
 }
 
-async function fetchAllAttributeItems(client, {
+async function fetchAllListedProducts(client, {
   visibility,
   pageLimit,
   maxItems,
@@ -201,7 +201,7 @@ async function fetchAllAttributeItems(client, {
     const remaining = maxItems > 0 ? maxItems - items.length : pageLimit;
     if (maxItems > 0 && remaining <= 0) break;
 
-    const response = await client.getProductInfoAttributes({
+    const response = await client.getProductList({
       filter: { visibility },
       lastId,
       limit: Math.min(pageLimit, remaining),
@@ -216,9 +216,44 @@ async function fetchAllAttributeItems(client, {
   return maxItems > 0 ? items.slice(0, maxItems) : items;
 }
 
-async function fetchInfoItems(client, attributeItems) {
-  const productIds = unique(attributeItems.map(getProductId));
-  const offerIds = unique(attributeItems.map(getOfferId));
+async function fetchAttributeItems(client, listedItems) {
+  const productIds = unique(listedItems.map(getProductId));
+  const offerIds = unique(listedItems.map(getOfferId));
+  const attributeItems = [];
+
+  if (productIds.length) {
+    for (const ids of chunk(productIds, DEFAULT_INFO_BATCH_SIZE)) {
+      const filter = { product_id: ids };
+      try {
+        const response = await client.getProductInfoAttributes({ filter, limit: ids.length });
+        attributeItems.push(...getItems(response));
+      } catch (error) {
+        if (error.status !== 404) throw error;
+        const response = await client.getProductInfoAttributesV3({ filter, limit: ids.length });
+        attributeItems.push(...getItems(response));
+      }
+    }
+    return attributeItems;
+  }
+
+  for (const ids of chunk(offerIds, DEFAULT_INFO_BATCH_SIZE)) {
+    const filter = { offer_id: ids };
+    try {
+      const response = await client.getProductInfoAttributes({ filter, limit: ids.length });
+      attributeItems.push(...getItems(response));
+    } catch (error) {
+      if (error.status !== 404) throw error;
+      const response = await client.getProductInfoAttributesV3({ filter, limit: ids.length });
+      attributeItems.push(...getItems(response));
+    }
+  }
+
+  return attributeItems;
+}
+
+async function fetchInfoItems(client, sourceItems) {
+  const productIds = unique(sourceItems.map(getProductId));
+  const offerIds = unique(sourceItems.map(getOfferId));
   const infoItems = [];
 
   if (productIds.length) {
@@ -268,19 +303,26 @@ function mapByKey(items) {
 function buildOutput({
   args,
   visibility,
+  listedItems,
   attributeItems,
   infoItems,
   descriptionItems,
 }) {
+  const listedByKey = mapByKey(listedItems);
+  const attributesByKey = mapByKey(attributeItems);
   const infoByKey = mapByKey(infoItems);
   const descriptionByKey = new Map(descriptionItems.map((item) => [item.key, item]));
+  const sourceItems = attributeItems.length ? attributeItems : listedItems;
 
-  const rawItems = attributeItems.map((attributesItem) => {
-    const key = buildProductKey(attributesItem);
+  const rawItems = sourceItems.map((sourceItem) => {
+    const key = buildProductKey(sourceItem);
+    const attributesItem = attributesByKey.get(key) || null;
+    const listedItem = listedByKey.get(key) || null;
     return {
       key,
-      product_id: getProductId(attributesItem),
-      offer_id: getOfferId(attributesItem),
+      product_id: getProductId(attributesItem || listedItem || sourceItem),
+      offer_id: getOfferId(attributesItem || listedItem || sourceItem),
+      product_list_item: listedItem,
       attributes_response_item: attributesItem,
       info_response_item: infoByKey.get(key) || null,
       description_response: descriptionByKey.get(key)?.response || null,
@@ -296,7 +338,9 @@ function buildOutput({
       include_description: Boolean(args['include-description']),
       total_items: rawItems.length,
       endpoints: [
+        '/v3/product/list',
         '/v4/product/info/attributes',
+        '/v3/products/info/attributes',
         '/v3/product/info/list',
         ...(args['include-description'] ? ['/v1/product/info/description'] : []),
       ],
@@ -326,15 +370,17 @@ async function main() {
     args.output || path.join('data', 'ozon-store-products', `store-products-${timestamp}.json`)
   );
 
-  const attributeItems = await fetchAllAttributeItems(client, { visibility, pageLimit, maxItems });
-  const infoItems = await fetchInfoItems(client, attributeItems);
+  const listedItems = await fetchAllListedProducts(client, { visibility, pageLimit, maxItems });
+  const attributeItems = await fetchAttributeItems(client, listedItems);
+  const infoItems = await fetchInfoItems(client, attributeItems.length ? attributeItems : listedItems);
   const descriptionItems = args['include-description']
-    ? await fetchDescriptionItems(client, attributeItems)
+    ? await fetchDescriptionItems(client, attributeItems.length ? attributeItems : listedItems)
     : [];
 
   const output = buildOutput({
     args,
     visibility,
+    listedItems,
     attributeItems,
     infoItems,
     descriptionItems,
@@ -354,6 +400,7 @@ main().catch((error) => {
     ok: false,
     error: error.message,
     status: error.status,
+    endpoint: error.endpoint,
     body: error.body,
   }, null, 2));
   process.exitCode = 1;

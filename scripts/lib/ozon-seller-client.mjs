@@ -393,6 +393,7 @@ export class OzonSellerClient {
     if (!response.ok) {
       const error = new Error(`Ozon API 请求失败: ${response.status} ${response.statusText}`);
       error.status = response.status;
+      error.endpoint = endpoint;
       error.body = body;
       throw error;
     }
@@ -463,6 +464,20 @@ export class OzonSellerClient {
     sortDir = 'ASC',
   } = {}) {
     return this.request('/v4/product/info/attributes', {
+      filter,
+      last_id: lastId,
+      limit,
+      sort_dir: sortDir,
+    });
+  }
+
+  async getProductInfoAttributesV3({
+    filter = {},
+    lastId = '',
+    limit = 100,
+    sortDir = 'ASC',
+  } = {}) {
+    return this.request('/v3/products/info/attributes', {
       filter,
       last_id: lastId,
       limit,
