@@ -31,7 +31,18 @@ const CHROME_EXECUTABLE_PATH =
 const TARGET_URL =
   process.env.MENGLAR_TARGET_URL ||
   'https://ozon.menglar.com/workbench/selection/hot?catId=17027489';
-const MAX_RECORDS = Number.parseInt(process.env.MENGLAR_MAX_RECORDS || '0', 10);
+
+function readPositiveInt(value, fallback) {
+  const parsed = Number.parseInt(String(value ?? ''), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+const HOT_PAGE_SIZE = readPositiveInt(
+  process.env.MENGLAR_PAGE_SIZE || process.env.MENGLAR_MAX_RECORDS,
+  50,
+);
+const MAX_RECORDS = readPositiveInt(process.env.MENGLAR_MAX_RECORDS, HOT_PAGE_SIZE);
+const HOT_DATE_TYPE = process.env.MENGLAR_DATE_TYPE || 'TWENTY_EIGHT_DAY';
 const FORCED_HOT_CAT_ID = process.env.MENGLAR_HOT_CAT_ID || '';
 const FORCED_HOT_TYPE_ID = process.env.MENGLAR_HOT_TYPE_ID || '';
 const FORCED_HOT_CAT_LEVEL = Number.parseInt(process.env.MENGLAR_HOT_CAT_LEVEL || '3', 10);
@@ -865,8 +876,8 @@ async function main() {
         currentCatId: String(FORCED_HOT_CAT_ID),
         catLevel: Number.isFinite(FORCED_HOT_CAT_LEVEL) ? FORCED_HOT_CAT_LEVEL : 3,
         pageNum: 1,
-        pageSize: MAX_RECORDS > 0 ? MAX_RECORDS : 10,
-        dateType: 'SEVEN_DAY',
+        pageSize: HOT_PAGE_SIZE > 0 ? HOT_PAGE_SIZE : 50,
+        dateType: HOT_DATE_TYPE,
       };
       if (FORCED_HOT_TYPE_ID) {
         forcedBody.typeId = Number(FORCED_HOT_TYPE_ID);
@@ -896,6 +907,8 @@ async function main() {
       report.forcedHotCategory = {
         catId: String(FORCED_HOT_CAT_ID),
         typeId: FORCED_HOT_TYPE_ID || null,
+        catLevel: forcedBody.catLevel,
+        dateType: forcedBody.dateType,
         pageSize: forcedBody.pageSize,
         status: forcedData.status,
         code: forcedData.data?.code,
