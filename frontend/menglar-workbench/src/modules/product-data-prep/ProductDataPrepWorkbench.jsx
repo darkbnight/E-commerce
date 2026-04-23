@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useQueries, useQuery } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery } from '@tanstack/react-query';
 import { ProductPrepDescriptionCategorySelect } from './components/ProductPrepDescriptionCategorySelect';
 import { ProductPrepAttributePanel } from './components/ProductPrepAttributePanel';
 import { ProductPrepFieldBoard } from './components/ProductPrepFieldBoard';
@@ -18,7 +18,10 @@ import {
 } from './data/descriptionCategoryAttributes';
 import { buildProductPrepFieldViewModel } from './data/productDataPrepFieldViews';
 import { productPrepMockCandidates, productPrepMockDrafts } from './mock/productDataPrepMock';
-import { fetchProductPrepCandidates } from './api/productDataPrepApi';
+import {
+  fetchProductPrepCandidates,
+  saveProductPrepContentResult,
+} from './api/productDataPrepApi';
 import {
   fetchOzonAttributeValues,
   fetchOzonCategoryAttributes,
@@ -59,6 +62,41 @@ const emptyCandidate = {
   weightG: null,
 };
 
+function buildLiveDraftFromCandidate(candidate) {
+  return {
+    id: `candidate-${candidate.id || 'empty'}`,
+    sourceJobId: candidate.sourceJobId || null,
+    sourceSnapshotId: candidate.sourceSnapshotId || candidate.productNormalizedId || null,
+    productNormalizedId: candidate.productNormalizedId || null,
+    platform: candidate.platform || 'ozon',
+    platformProductId: candidate.platformProductId || candidate.ozonProductId || '',
+    ozonProductId: candidate.ozonProductId || candidate.platformProductId || '',
+    offerId: '',
+    name: candidate.title || '',
+    description: '',
+    descriptionCategoryId: null,
+    typeId: null,
+    vendor: candidate.brand || '',
+    modelName: '',
+    barcode: '',
+    price: '',
+    oldPrice: '',
+    premiumPrice: '',
+    minPrice: '',
+    currencyCode: '',
+    vat: '',
+    warehouseId: null,
+    stock: 0,
+    packageDepthMm: candidate.lengthCm == null ? null : Math.round(Number(candidate.lengthCm) * 10),
+    packageWidthMm: candidate.widthCm == null ? null : Math.round(Number(candidate.widthCm) * 10),
+    packageHeightMm: candidate.heightCm == null ? null : Math.round(Number(candidate.heightCm) * 10),
+    packageWeightG: candidate.weightG ?? null,
+    images: [],
+    attributes: [],
+    draftStatus: 'draft',
+  };
+}
+
 function loadStoredOzonCredentials() {
   if (typeof window === 'undefined') return emptyOzonCredentials;
   try {
@@ -89,7 +127,7 @@ function getCandidateStatus(candidateQuery) {
 
   const source = candidateQuery.data?.meta?.source;
   const total = candidateQuery.data?.total ?? 0;
-  if (source === 'db/menglar-mvp.sqlite') return `已读取 SQLite 候选商品：${total} 条`;
+  if (source === 'db/ecommerce-workbench.sqlite') return `已读取 SQLite 候选商品：${total} 条`;
   if (source === 'module-mock-fallback') return '未发现本地 SQLite 数据库，暂用模块兜底样例';
   return '等待候选商品数据';
 }
@@ -128,14 +166,16 @@ export function ProductDataPrepWorkbench() {
   });
 
   const candidatePayloadItems = Array.isArray(candidateQuery.data?.items) ? candidateQuery.data.items : [];
-  const hasDbCandidatePayload = candidateQuery.data?.meta?.source === 'db/menglar-mvp.sqlite';
+  const hasDbCandidatePayload = candidateQuery.data?.meta?.source === 'db/ecommerce-workbench.sqlite';
   const candidateItems = candidatePayloadItems.length
     ? candidatePayloadItems
     : hasDbCandidatePayload
       ? []
       : productPrepMockCandidates;
   const activeCandidate = candidateItems[0] || emptyCandidate;
-  const activeDraft = productPrepMockDrafts[0];
+  const activeDraft = hasDbCandidatePayload
+    ? buildLiveDraftFromCandidate(activeCandidate)
+    : productPrepMockDrafts[0];
   const categorySelection = useMemo(
     () => getDescriptionCategorySelection(categoryTreeQuery.data, selectedCategoryIndexes),
     [categoryTreeQuery.data, selectedCategoryIndexes]
@@ -229,12 +269,19 @@ export function ProductDataPrepWorkbench() {
   const displayedDraft = {
     ...activeDraft,
     sourceJobId: activeCandidate.sourceJobId || activeDraft.sourceJobId,
+    sourceSnapshotId: activeCandidate.sourceSnapshotId || activeCandidate.productNormalizedId || activeDraft.sourceSnapshotId,
     productNormalizedId: activeCandidate.productNormalizedId || activeDraft.productNormalizedId,
+    platform: activeCandidate.platform || activeDraft.platform || 'ozon',
+    platformProductId: activeCandidate.platformProductId || activeCandidate.ozonProductId || activeDraft.platformProductId || '',
+    ozonProductId: activeCandidate.ozonProductId || activeCandidate.platformProductId || activeDraft.ozonProductId || '',
     vendor: activeDraft.vendor || activeCandidate.brand || '',
     descriptionCategoryId: resolvedDescriptionCategoryId,
     typeId: resolvedTypeId,
     attributes: displayedAttributes,
   };
+  const contentResultMutation = useMutation({
+    mutationFn: () => saveProductPrepContentResult({ draft: displayedDraft }),
+  });
   const descriptionCategoryControl = (
     <ProductPrepDescriptionCategorySelect
       treePayload={categoryTreeQuery.data}
@@ -281,7 +328,9 @@ export function ProductDataPrepWorkbench() {
       control: attributeControl,
     },
   });
-  const readyDraftCount = productPrepMockDrafts.filter((draft) => draft.draftStatus === 'ready').length;
+  const readyDraftCount = hasDbCandidatePayload
+    ? 0
+    : productPrepMockDrafts.filter((draft) => draft.draftStatus === 'ready').length;
   const categoryTreeStatus = getCategoryTreeStatus({ hasOzonCredentials, categoryTreeQuery });
   const attributeStatus = getAttributeStatus({ hasOzonCredentials, categoryAttributesQuery, attributes });
   const candidateStatus = getCandidateStatus(candidateQuery);
@@ -318,13 +367,33 @@ export function ProductDataPrepWorkbench() {
           >
             刷新 Ozon 类目与属性
           </button>
+          <button
+            className="wb-button"
+            disabled={contentResultMutation.isPending}
+            onClick={() => contentResultMutation.mutate()}
+          >
+            {contentResultMutation.isPending ? 'Saving...' : '保存下游结果到 DB'}
+          </button>
+          {contentResultMutation.isSuccess ? (
+            <small className="cell-sub">
+              已写入 product_content_result #{contentResultMutation.data?.item?.id}
+              {Array.isArray(contentResultMutation.data?.issues) && contentResultMutation.data.issues.length
+                ? `，发现 ${contentResultMutation.data.issues.length} 个待处理问题`
+                : ''}
+            </small>
+          ) : null}
+          {contentResultMutation.isError ? (
+            <small className="cell-sub">
+              保存失败：{contentResultMutation.error.message}
+            </small>
+          ) : null}
         </div>
       </section>
 
       <section className="product-prep-dashboard-grid">
         <ProductPrepFieldBoard
           title="上游已拿到的字段"
-          subtitle="这里会读取 /api/product-data-prep/candidates，后端再映射 source_jobs 和 products_normalized。"
+          subtitle="这里会读取 /api/product-data-prep/candidates，后端再映射 source_jobs 和 product_business_snapshots。"
           tone="upstream"
           groups={upstreamGroups}
         />

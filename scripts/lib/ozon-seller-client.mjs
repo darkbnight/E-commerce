@@ -498,7 +498,7 @@ export class OzonSellerClient {
 
     for (let index = 0; index < batches.length; index += 1) {
       const batch = batches[index];
-      const response = await this.request('/v3/product/import', { items: batch });
+      const response = await this.request('/v2/product/import', { items: batch });
       results.push({
         batchIndex: index + 1,
         itemCount: batch.length,

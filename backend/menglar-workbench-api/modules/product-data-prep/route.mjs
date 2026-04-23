@@ -65,6 +65,11 @@ export async function handleProductDataPrepRoute(req, res) {
     return;
   }
 
+  if (req.method === 'GET' && pathname === '/api/product-data-prep/content-results') {
+    sendJson(res, 200, service.listContentResults({ searchParams }));
+    return;
+  }
+
   const draftRoute = matchDraftRoute(pathname);
   if (req.method === 'GET' && draftRoute?.action === 'detail') {
     const draft = service.getDraftById(draftRoute.draftId);
@@ -89,6 +94,16 @@ export async function handleProductDataPrepRoute(req, res) {
         return;
       }
       sendJson(res, 201, { item: draft });
+    } catch (error) {
+      sendError(res, 400, error.message);
+    }
+    return;
+  }
+
+  if (req.method === 'POST' && pathname === '/api/product-data-prep/content-results') {
+    try {
+      const body = await readJsonBody(req);
+      sendJson(res, 201, service.saveContentResult(body));
     } catch (error) {
       sendError(res, 400, error.message);
     }

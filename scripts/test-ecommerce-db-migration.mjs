@@ -36,6 +36,15 @@ try {
     'image_urls_json',
     'content_status',
   ]);
+  assertColumns(db, 'product_content_result', [
+    'result_key',
+    'source_job_id',
+    'source_snapshot_id',
+    'description_category_id',
+    'type_id',
+    'attributes_json',
+    'ozon_import_item_json',
+  ]);
 
   const oldTableCount = db.prepare(`
     SELECT COUNT(*) AS total

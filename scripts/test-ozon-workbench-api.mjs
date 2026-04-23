@@ -25,7 +25,7 @@ const ozonMock = createServer(async (req, res) => {
 
   res.setHeader('content-type', 'application/json; charset=utf-8');
 
-  if (req.url === '/v3/product/import') {
+  if (req.url === '/v2/product/import') {
     requests.uploadCalls.push(body.items.length);
     res.end(JSON.stringify({ result: { task_id: requests.uploadCalls.length * 1000 } }));
     return;
@@ -253,7 +253,7 @@ try {
   assert.equal(response.status, 200);
   assert.equal(Array.isArray(payload.items), true);
   assert.equal(payload.items.length <= 1, true);
-  assert.equal(['db/menglar-mvp.sqlite', 'module-mock-fallback'].includes(payload.meta.source), true);
+  assert.equal(['db/ecommerce-workbench.sqlite', 'module-mock-fallback'].includes(payload.meta.source), true);
 
   console.log('ozon-workbench-api 测试通过');
   const ozonClient = new OzonSellerClient({ ...demoCredentials });

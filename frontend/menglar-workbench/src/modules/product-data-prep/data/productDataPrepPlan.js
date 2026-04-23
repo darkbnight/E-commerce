@@ -66,7 +66,7 @@ export const productPrepFieldGroups = [
   },
   {
     title: '建品最小字段',
-    description: '这些字段直接决定 `/v3/product/import` 是否有机会通过。',
+    description: '这些字段直接决定 `/v2/product/import` 是否有机会通过。',
     items: [
       {
         key: 'name',

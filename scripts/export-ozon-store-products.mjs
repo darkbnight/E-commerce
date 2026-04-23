@@ -30,7 +30,7 @@ Ozon 店铺商品 JSON 导出
 
 输出:
   raw_items               每个商品的原始 info / attributes / description 返回
-  import_items            尽量整理成 /v3/product/import 可参考的 items 结构
+  import_items            尽量整理成 /v2/product/import 可参考的 items 结构
 `.trim());
 }
 
