@@ -44,7 +44,10 @@ export function ProductPrepFieldBoard({ title, subtitle, tone, groups }) {
 
               <div className="product-prep-display-table-body">
                 {group.items.map((item) => (
-                  <article className={`product-prep-display-row is-${tone}`} key={item.key}>
+                  <article
+                    className={`product-prep-display-row is-${tone} ${item.control ? 'has-control' : ''}`}
+                    key={item.key}
+                  >
                     <div className="product-prep-display-col is-name">
                       <strong>{item.label}</strong>
                       <code>{item.key}</code>
@@ -55,6 +58,11 @@ export function ProductPrepFieldBoard({ title, subtitle, tone, groups }) {
                     </div>
 
                     <div className="product-prep-display-col is-data">
+                      {item.control ? (
+                        <div className="product-prep-display-control">
+                          {item.control}
+                        </div>
+                      ) : null}
                       <FieldValue value={item.value} isPending={Boolean(item.isPending)} />
                     </div>
                   </article>

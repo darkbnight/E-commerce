@@ -1,3 +1,8 @@
+import {
+  findDescriptionCategoryNode,
+  getDescriptionCategoryRoots,
+} from './descriptionCategoryTree';
+
 function fallbackValue(value, pendingText = '待补充') {
   if (value == null || value === '') {
     return pendingText;
@@ -45,7 +50,53 @@ function formatImageUrls(images) {
   });
 }
 
-export function buildProductPrepFieldViewModel({ candidate, draft }) {
+function formatDescriptionCategoryValue(draft, treeState = {}) {
+  const values = [
+    `description_category_id: ${fallbackValue(draft.descriptionCategoryId, '待确认')}`,
+    `type_id: ${fallbackValue(draft.typeId, '待确认')}`,
+  ];
+
+  if (!draft.descriptionCategoryId || !draft.typeId) {
+    values.push('DescriptionCategoryAPI_GetTree: 等待先补齐 ID');
+    return values;
+  }
+
+  if (!treeState.hasCredentials) {
+    values.push('DescriptionCategoryAPI_GetTree: 未配置 Ozon 连接');
+    return values;
+  }
+
+  if (treeState.isLoading) {
+    values.push('DescriptionCategoryAPI_GetTree: 正在获取类目树');
+    return values;
+  }
+
+  if (treeState.error) {
+    values.push(`DescriptionCategoryAPI_GetTree: 获取失败 - ${treeState.error.message}`);
+    return values;
+  }
+
+  const match = findDescriptionCategoryNode(
+    getDescriptionCategoryRoots(treeState.data),
+    draft.descriptionCategoryId,
+    draft.typeId
+  );
+
+  if (!match) {
+    values.push('DescriptionCategoryAPI_GetTree: 未匹配到当前描述类目与类型');
+    return values;
+  }
+
+  values.push(`DescriptionCategoryAPI_GetTree: ${match.exact ? '已匹配' : '仅匹配到描述类目'}`);
+  values.push(`类目路径: ${match.path.join(' > ') || '未返回名称'}`);
+
+  const typeName = match.node?.type_name;
+  if (typeName) values.push(`type_name: ${typeName}`);
+
+  return values;
+}
+
+export function buildProductPrepFieldViewModel({ candidate, draft, descriptionCategoryTreeState }) {
   const upstreamGroups = [
     {
       title: '来源批次',
@@ -228,12 +279,15 @@ export function buildProductPrepFieldViewModel({ candidate, draft }) {
         {
           key: 'description_category_id / type_id',
           label: 'Ozon 描述类目与类型',
-          description: '官方当前建品 API 需要 description_category_id 和 type_id，不能只保存旧 category_id。',
-          value: [
-            `description_category_id: ${fallbackValue(draft.descriptionCategoryId, '待确认')}`,
-            `type_id: ${fallbackValue(draft.typeId, '待确认')}`,
-          ],
-          isPending: !draft.descriptionCategoryId || !draft.typeId,
+          description: '先通过 DescriptionCategoryAPI_GetTree 拉取描述类目树，再确认 description_category_id 和 type_id 是否能匹配到真实类目。',
+          value: formatDescriptionCategoryValue(draft, descriptionCategoryTreeState),
+          control: descriptionCategoryTreeState?.control,
+          isPending:
+            !draft.descriptionCategoryId ||
+            !draft.typeId ||
+            !descriptionCategoryTreeState?.hasCredentials ||
+            descriptionCategoryTreeState?.isLoading ||
+            Boolean(descriptionCategoryTreeState?.error),
         },
         {
           key: 'attributes[]',

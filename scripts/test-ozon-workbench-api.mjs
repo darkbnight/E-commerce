@@ -170,6 +170,15 @@ try {
   payload = await readJson(response);
   assert.equal(payload.result.status, 'imported');
 
+  response = await fetch(`${workbenchBaseUrl}/api/ozon/category-tree`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(demoCredentials),
+  });
+  payload = await readJson(response);
+  assert.equal(payload.result[0].description_category_id, 17031663);
+  assert.equal(payload.result[0].type_id, 100001234);
+
   response = await fetch(`${workbenchBaseUrl}/api/ozon/category-attributes`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

@@ -76,6 +76,15 @@ export async function fetchOzonImportInfo(input) {
   return readJson(response, '任务查询失败');
 }
 
+export async function fetchOzonCategoryTree(input) {
+  const response = await fetch('/api/ozon/category-tree', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  return readJson(response, '描述类目树查询失败');
+}
+
 export async function fetchOzonCategoryAttributes(input) {
   const response = await fetch('/api/ozon/category-attributes', {
     method: 'POST',

@@ -553,6 +553,17 @@ async function handleApiOzonImportInfo(req, res) {
   }
 }
 
+async function handleApiOzonCategoryTree(req, res) {
+  try {
+    const body = await readJsonBody(req);
+    const client = createOzonClient(body);
+    const result = await client.getCategoryTree();
+    sendJson(res, 200, result);
+  } catch (error) {
+    sendError(res, error.status || 500, error.message, error.body || null);
+  }
+}
+
 async function handleApiOzonCategoryAttributes(req, res) {
   try {
     const body = await readJsonBody(req);
@@ -657,6 +668,11 @@ export function createWorkbenchServer() {
       return;
     }
 
+    if ((req.url || '').startsWith('/api/ozon/category-tree')) {
+      await handleApiOzonCategoryTree(req, res);
+      return;
+    }
+
     if ((req.url || '').startsWith('/api/ozon/category-attributes')) {
       await handleApiOzonCategoryAttributes(req, res);
       return;
@@ -664,6 +680,11 @@ export function createWorkbenchServer() {
 
     if ((req.url || '').startsWith('/api/ozon/attribute-values')) {
       await handleApiOzonAttributeValues(req, res);
+      return;
+    }
+
+    if ((req.url || '').startsWith('/api/')) {
+      sendError(res, 404, '未找到 API 接口');
       return;
     }
 
