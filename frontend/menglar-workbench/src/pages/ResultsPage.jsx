@@ -183,8 +183,8 @@ export function ResultsPage() {
       <div className="result-metrics-bar">
         <MetricCard label="商品数" value={formatNumber(data?.summary?.total_products || 0)} />
         <MetricCard label="当前命中" value={formatNumber(data?.total || 0)} />
-        <MetricCard label="最高销量" value={formatNumber(data?.summary?.max_sales || 0)} />
-        <MetricCard label="最高销售额" value={formatMoney(data?.summary?.max_revenue || 0)} />
+        <MetricCard label="最高销售量" value={formatNumber(data?.summary?.max_sales || 0)} />
+        <MetricCard label="最高销售金额" value={formatMoney(data?.summary?.max_revenue || 0)} />
         <MetricCard label="平均毛利率" value={formatPercent(data?.summary?.avg_margin || 0)} />
       </div>
 
@@ -252,7 +252,7 @@ export function ResultsPage() {
 
             <label className="wb-field">
               <span>关键词</span>
-              <input value={filters.keyword} onChange={(event) => applyFilter('keyword', event.target.value)} placeholder="商品ID / 品牌 / 类目" />
+              <input value={filters.keyword} onChange={(event) => applyFilter('keyword', event.target.value)} placeholder="平台商品ID / 品牌 / 类目" />
             </label>
 
             <label className="wb-field">
@@ -276,21 +276,21 @@ export function ResultsPage() {
             </label>
 
             <label className="wb-field">
-              <span>最低销量</span>
+              <span>最低销售量</span>
               <input type="number" min="0" value={filters.minSales} onChange={(event) => applyFilter('minSales', event.target.value)} />
             </label>
 
             <label className="wb-field">
-              <span>最低销售额</span>
+              <span>最低销售金额</span>
               <input type="number" min="0" value={filters.minRevenue} onChange={(event) => applyFilter('minRevenue', event.target.value)} />
             </label>
 
             <label className="wb-field">
               <span>排序方式</span>
               <select value={filters.sort} onChange={(event) => applyFilter('sort', event.target.value)}>
-                <option value="sales_desc">销量降序</option>
-                <option value="sales_growth_desc">销量增长降序</option>
-                <option value="revenue_desc">销售额降序</option>
+                <option value="sales_desc">销售量降序</option>
+                <option value="sales_growth_desc">销售量增长降序</option>
+                <option value="revenue_desc">销售金额降序</option>
                 <option value="margin_desc">毛利率降序</option>
                 <option value="impressions_desc">曝光降序</option>
               </select>
@@ -343,7 +343,7 @@ export function ResultsPage() {
           ) : isEmptyBatch ? (
             <div className="result-empty-batch">
               <strong>当前批次没有商品明细数据</strong>
-              <p>#{selectedJobId} 任务存在，但没有关联到 products_normalized 商品记录。它可能是行业数据采集任务，或本次采集没有解析出商品明细。</p>
+              <p>#{selectedJobId} 任务存在，但没有关联到商品经营快照记录。它可能是行业数据采集任务，或本次采集没有解析出商品明细。</p>
               <div className="wb-inline-actions">
                 {firstAvailableJob ? (
                   <button type="button" className="wb-button wb-button-primary" onClick={() => selectJob(firstAvailableJob.id)}>
@@ -376,13 +376,13 @@ function ProductTable({ items, mode, screeningState, setItemScreeningStatus }) {
         <thead>
           <tr>
             {isScreening ? <th>状态</th> : null}
-            <th>商品ID</th>
+            <th>平台商品ID</th>
             <th>品牌 / 类型</th>
             <th>类目</th>
-            <th className="num">销量</th>
-            <th className="num">销量增长</th>
+            <th className="num">销售量</th>
+            <th className="num">销售量增长</th>
             <th className="num">潜力指数</th>
-            <th className="num">销售额</th>
+            <th className="num">销售金额</th>
             <th className="num">曝光 / 点击</th>
             <th className="num">转化 / 毛利</th>
             <th>物流 / 时效</th>
@@ -400,7 +400,10 @@ function ProductTable({ items, mode, screeningState, setItemScreeningStatus }) {
                     <span className={`screening-state-pill is-${status}`}>{screeningStatusLabels[status]}</span>
                   </td>
                 ) : null}
-                <td className="mono">{item.ozon_product_id}</td>
+                <td className="mono">
+                  <div className="cell-main">{item.platform_product_id}</div>
+                  <div className="cell-sub">{formatText(item.platform)}</div>
+                </td>
                 <td>
                   <div className="cell-main">{formatText(item.brand)}</div>
                   <div className="cell-sub">{formatText(item.product_type)}</div>
@@ -409,10 +412,10 @@ function ProductTable({ items, mode, screeningState, setItemScreeningStatus }) {
                   <div className="cell-main">{formatText(item.category_level_1)}</div>
                   <div className="cell-sub">{formatText(item.category_level_2)} / {formatText(item.category_level_3)}</div>
                 </td>
-                <td className="num">{formatNumber(item.sales)}</td>
+                <td className="num">{formatNumber(item.sales_volume)}</td>
                 <td className="num">{formatPercent(item.sales_growth)}</td>
                 <td className="num">{formatNumber(item.potential_index, 2)}</td>
-                <td className="num">{formatMoney(item.revenue)}</td>
+                <td className="num">{formatMoney(item.sales_amount)}</td>
                 <td className="num">{formatNumber(item.impressions)} / {formatNumber(item.clicks)}</td>
                 <td className="num">
                   <div className={Number(item.estimated_gross_margin) >= 0 ? 'good' : 'danger'}>{formatPercent(item.order_conversion_rate)}</div>

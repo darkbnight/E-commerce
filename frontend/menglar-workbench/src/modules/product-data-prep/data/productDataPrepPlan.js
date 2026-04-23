@@ -21,7 +21,7 @@ export const productPrepSafetyRules = [
   '前端主工作区都放进 src/modules/product-data-prep，ProductDataPrepPage 只保留薄页面挂载。',
   '后端商品整理逻辑统一收进 backend/menglar-workbench-api/modules/product-data-prep，不继续把业务堆进 server.mjs。',
   '接口命名空间固定为 /api/product-data-prep，不复用 /api/products 写入语义，也不把整理逻辑塞进 /api/ozon。',
-  '草稿数据只写独立草稿域，不覆盖 products_normalized，候选商品和发布草稿分层存储。',
+  '草稿数据只写独立草稿域，不覆盖商品经营快照，候选商品和发布草稿分层存储。',
   '图片、属性、标题、导出载荷按文件拆开，减少多人同时编辑同一个大组件或大接口。',
 ];
 
@@ -34,7 +34,7 @@ export const productPrepFieldGroups = [
         key: 'source_job_id',
         label: '来源任务 ID',
         required: '必填',
-        source: 'products_normalized 可继承',
+        source: 'product_business_snapshots 可继承',
         status: 'existing',
         note: '用于回溯候选来源批次，支持重新拉取上下游数据。',
       },
@@ -42,7 +42,7 @@ export const productPrepFieldGroups = [
         key: 'product_normalized_id',
         label: '标准化商品 ID',
         required: '必填',
-        source: 'products_normalized 可继承',
+        source: 'product_business_snapshots 可继承',
         status: 'existing',
         note: '草稿与上游候选的稳定关联键，不应复用 Ozon 线上 product_id。',
       },

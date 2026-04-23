@@ -26,7 +26,8 @@ import {
 
 const ROOT = import.meta.dirname;
 const PORT = Number(process.env.PORT || 4186);
-const DB_PATH = path.resolve(ROOT, '..', '..', 'db', 'menglar-mvp.sqlite');
+const DB_PATH = process.env.ECOMMERCE_WORKBENCH_DB_PATH ||
+  path.resolve(ROOT, '..', '..', 'db', 'ecommerce-workbench.sqlite');
 const WORKBENCH_DIST = path.resolve(ROOT, '..', '..', 'frontend', 'menglar-workbench', 'dist');
 
 const TYPES = {
@@ -147,8 +148,8 @@ function getLatestJobId(db) {
     WHERE source_jobs.job_status = 'success'
       AND EXISTS (
         SELECT 1
-        FROM products_normalized
-        WHERE products_normalized.job_id = source_jobs.id
+        FROM product_business_snapshots
+        WHERE product_business_snapshots.job_id = source_jobs.id
         LIMIT 1
       )
     ORDER BY source_jobs.id DESC
@@ -164,7 +165,7 @@ function buildProductsQuery(searchParams, resolvedJobId) {
   const keyword = searchParams.get('keyword')?.trim();
   if (keyword) {
     conditions.push(`(
-      ozon_product_id LIKE ?
+      platform_product_id LIKE ?
       OR brand LIKE ?
       OR category_level_1 LIKE ?
       OR category_level_2 LIKE ?
@@ -188,23 +189,23 @@ function buildProductsQuery(searchParams, resolvedJobId) {
 
   const minSales = searchParams.get('minSales');
   if (minSales) {
-    conditions.push('sales >= ?');
+    conditions.push('sales_volume >= ?');
     values.push(Number(minSales));
   }
 
   const minRevenue = searchParams.get('minRevenue');
   if (minRevenue) {
-    conditions.push('revenue >= ?');
+    conditions.push('sales_amount >= ?');
     values.push(Number(minRevenue));
   }
 
   const sort = searchParams.get('sort') || 'sales_desc';
   const orderByMap = {
-    sales_desc: 'sales DESC, revenue DESC',
-    sales_growth_desc: 'sales_growth DESC, sales DESC',
-    revenue_desc: 'revenue DESC, sales DESC',
-    margin_desc: 'estimated_gross_margin DESC, sales DESC',
-    impressions_desc: 'impressions DESC, sales DESC',
+    sales_desc: 'sales_volume DESC, sales_amount DESC',
+    sales_growth_desc: 'sales_growth DESC, sales_volume DESC',
+    revenue_desc: 'sales_amount DESC, sales_volume DESC',
+    margin_desc: 'estimated_gross_margin DESC, sales_volume DESC',
+    impressions_desc: 'impressions DESC, sales_volume DESC',
   };
 
   return {
@@ -281,9 +282,9 @@ function handleApiResultJobs(req, res) {
                source_jobs.raw_count,
                source_jobs.normalized_count,
                source_jobs.finished_at,
-               COUNT(products_normalized.id) AS product_count
+               COUNT(product_business_snapshots.id) AS product_count
         FROM source_jobs
-        LEFT JOIN products_normalized ON products_normalized.job_id = source_jobs.id
+        LEFT JOIN product_business_snapshots ON product_business_snapshots.job_id = source_jobs.id
         GROUP BY source_jobs.id
       )
       ${whereClause}
@@ -341,19 +342,19 @@ function handleApiProducts(req, res) {
 
     const totalRow = db.prepare(`
       SELECT COUNT(*) AS total
-      FROM products_normalized
+      FROM product_business_snapshots
       WHERE ${whereClause}
     `).get(...values);
 
     const items = db.prepare(`
-      SELECT id, job_id, ozon_product_id, product_type, brand,
+      SELECT id, job_id, platform, platform_product_id, product_url, product_type, brand, title,
              category_level_1, category_level_2, category_level_3,
-             sales, sales_growth, potential_index, revenue,
+             sales_volume, sales_growth, potential_index, sales_amount,
              add_to_cart_rate, impressions, clicks, view_rate,
              ad_cost, ad_cost_rate, order_conversion_rate, estimated_gross_margin,
              shipping_mode, delivery_time, average_sales_amount,
-             length_cm, width_cm, height_cm, weight_g, created_at
-      FROM products_normalized
+             length_cm, width_cm, height_cm, weight_g, captured_at, created_at, updated_at
+      FROM product_business_snapshots
       WHERE ${whereClause}
       ORDER BY ${orderBy}
       LIMIT ? OFFSET ?
@@ -362,12 +363,12 @@ function handleApiProducts(req, res) {
     const summary = db.prepare(`
       SELECT
         COUNT(*) AS total_products,
-        MAX(sales) AS max_sales,
-        MAX(revenue) AS max_revenue,
-        AVG(sales) AS avg_sales,
-        AVG(revenue) AS avg_revenue,
+        MAX(sales_volume) AS max_sales,
+        MAX(sales_amount) AS max_revenue,
+        AVG(sales_volume) AS avg_sales,
+        AVG(sales_amount) AS avg_revenue,
         AVG(estimated_gross_margin) AS avg_margin
-      FROM products_normalized
+      FROM product_business_snapshots
       WHERE job_id = ?
     `).get(resolvedJobId);
 
@@ -380,20 +381,20 @@ function handleApiProducts(req, res) {
 
     const actualProductCount = db.prepare(`
       SELECT COUNT(*) AS total
-      FROM products_normalized
+      FROM product_business_snapshots
       WHERE job_id = ?
     `).get(resolvedJobId);
 
     const categoryOptions = db.prepare(`
       SELECT DISTINCT category_level_1 AS value
-      FROM products_normalized
+      FROM product_business_snapshots
       WHERE job_id = ? AND category_level_1 IS NOT NULL AND category_level_1 != ''
       ORDER BY category_level_1
     `).all(resolvedJobId).map((row) => row.value);
 
     const productTypeOptions = db.prepare(`
       SELECT DISTINCT product_type AS value
-      FROM products_normalized
+      FROM product_business_snapshots
       WHERE job_id = ? AND product_type IS NOT NULL AND product_type != ''
       ORDER BY product_type
     `).all(resolvedJobId).map((row) => row.value);
