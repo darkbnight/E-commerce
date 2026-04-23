@@ -33,7 +33,7 @@ export const ZINIAO_EXECUTABLE_PATH =
   process.env.ZINIAO_EXECUTABLE_PATH ||
   'C:\\Users\\Administrator\\AppData\\Roaming\\ziniaobrowser\\env-kit\\Core\\chrome_64_142.1.2.74\\ziniaobrowser.exe';
 
-export const DB_PATH = path.join(ROOT, 'db', 'menglar-mvp.sqlite');
+export const DB_PATH = path.join(ROOT, 'db', 'ecommerce-workbench.sqlite');
 
 export const ERROR_ACTIONS = {
   login_required: '重新登录萌拉后再执行采集',
@@ -41,7 +41,7 @@ export const ERROR_ACTIONS = {
   profile_locked: '关闭占用 profile 的浏览器，或设置 MENGLAR_REFRESH_PROFILE=1 刷新副本',
   browser_blocked: '检查 Chrome 路径和启动权限',
   api_auth_missing: '先打开目标页并确认业务接口请求正常出现',
-  db_error: '检查 db/menglar-mvp.sqlite 路径和写权限',
+  db_error: '检查 db/ecommerce-workbench.sqlite 路径和写权限',
   unknown: '查看完整错误详情',
 };
 

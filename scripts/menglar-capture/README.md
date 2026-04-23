@@ -49,7 +49,7 @@ node scripts/menglar-capture/hot-products.mjs
 | `profile_locked` | Profile 副本不可用或源 Profile 被占用 | 关闭占用浏览器，必要时加 `--refresh` |
 | `browser_blocked` | Chrome 路径缺失或启动失败 | 检查 Chrome 路径、权限、杀掉残留进程 |
 | `api_auth_missing` | 页面能打开，但未出现带 Authorization 的业务接口请求 | 手动打开目标页确认接口正常加载 |
-| `db_error` | 数据库不可写或迁移失败 | 检查 `db/menglar-mvp.sqlite` |
+| `db_error` | 数据库不可写或迁移失败 | 检查 `db/ecommerce-workbench.sqlite` |
 
 ## 环境变量
 
@@ -68,7 +68,7 @@ node scripts/menglar-capture/hot-products.mjs
 | --- | --- | --- |
 | `request_count` | 请求的二级类目数 | 捕获的萌拉业务接口响应数 |
 | `success_count` | 成功返回的二级类目数 | 成功返回的萌拉业务接口响应数 |
-| `record_count` | 去重后的行业记录数 | 标准化入库商品数 |
+| `record_count` | 去重后的行业记录数 | 经营快照入库商品数 |
 | `error_type` | 标准错误类型 | 标准错误类型 |
 
 行业机会分析阶段只采到类目层级；商品级、卖家级、物流售后等分析应放到后续专门的商品采集技能里处理。
