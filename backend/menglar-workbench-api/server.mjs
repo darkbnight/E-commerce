@@ -8,6 +8,7 @@ import {
   buildTemplate,
   loadItemsPayload,
   OzonSellerClient,
+  OZON_DEFAULT_LANGUAGE,
   validatePriceItems,
   validateProductItems,
   validateStockItems,
@@ -138,6 +139,12 @@ function createOzonClient(body) {
     apiKey: body.apiKey,
     baseUrl: body.baseUrl,
   });
+}
+
+function getOzonLanguage(body) {
+  return typeof body.language === 'string' && body.language.trim()
+    ? body.language.trim()
+    : OZON_DEFAULT_LANGUAGE;
 }
 
 function getLatestJobId(db) {
@@ -557,7 +564,7 @@ async function handleApiOzonCategoryTree(req, res) {
   try {
     const body = await readJsonBody(req);
     const client = createOzonClient(body);
-    const result = await client.getCategoryTree();
+    const result = await client.getCategoryTree({ language: getOzonLanguage(body) });
     sendJson(res, 200, result);
   } catch (error) {
     sendError(res, error.status || 500, error.message, error.body || null);
@@ -575,7 +582,11 @@ async function handleApiOzonCategoryAttributes(req, res) {
     }
 
     const client = createOzonClient(body);
-    const result = await client.getCategoryAttributes({ descriptionCategoryId, typeId });
+    const result = await client.getCategoryAttributes({
+      descriptionCategoryId,
+      typeId,
+      language: getOzonLanguage(body),
+    });
     sendJson(res, 200, result);
   } catch (error) {
     sendError(res, error.status || 500, error.message, error.body || null);
@@ -594,7 +605,12 @@ async function handleApiOzonAttributeValues(req, res) {
     }
 
     const client = createOzonClient(body);
-    const result = await client.getCategoryAttributeValues({ descriptionCategoryId, typeId, attributeId });
+    const result = await client.getCategoryAttributeValues({
+      descriptionCategoryId,
+      typeId,
+      attributeId,
+      language: getOzonLanguage(body),
+    });
     sendJson(res, 200, result);
   } catch (error) {
     sendError(res, error.status || 500, error.message, error.body || null);

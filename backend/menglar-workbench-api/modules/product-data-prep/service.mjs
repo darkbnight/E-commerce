@@ -1,5 +1,9 @@
 import { createProductDataPrepRepository } from './repository.mjs';
 
+function isBlank(value) {
+  return value == null || value === '';
+}
+
 function collectDraftIssues(draft) {
   const issues = [];
 
@@ -11,7 +15,7 @@ function collectDraftIssues(draft) {
   if (!draft.typeId) issues.push({ field: 'typeId', level: 'error', message: '缺少 Ozon type_id' });
   if (!draft.price) issues.push({ field: 'price', level: 'error', message: '缺少售价 price' });
   if (!draft.currencyCode) issues.push({ field: 'currencyCode', level: 'error', message: '缺少币种 currency_code' });
-  if (!draft.vat) issues.push({ field: 'vat', level: 'error', message: '缺少 VAT' });
+  if (isBlank(draft.vat)) issues.push({ field: 'vat', level: 'error', message: '缺少 VAT' });
   if (!draft.packageDepthMm || !draft.packageWidthMm || !draft.packageHeightMm) {
     issues.push({ field: 'packageSize', level: 'error', message: '缺少包装尺寸(mm)' });
   }
@@ -115,11 +119,14 @@ export function createProductDataPrepService({ repository = createProductDataPre
   return {
     listCandidates({ searchParams }) {
       const sourceJobId = searchParams.get('sourceJobId');
-      const items = repository.listCandidates({ sourceJobId });
+      const limit = searchParams.get('limit');
+      const items = repository.listCandidates({ sourceJobId, limit });
+      const repositorySource = repository.getLastCandidateSource?.() || 'unknown';
+
       return {
         meta: {
-          source: 'module-scaffold',
-          note: '当前返回模块内 mock 候选商品，下一步可替换为真实候选池。',
+          source: repositorySource === 'sqlite-db' ? 'db/menglar-mvp.sqlite' : 'module-mock-fallback',
+          note: '优先读取 SQLite 的 source_jobs + products_normalized；本地数据库不存在时才返回模块兜底样例。',
         },
         total: items.length,
         items,
@@ -131,8 +138,8 @@ export function createProductDataPrepService({ repository = createProductDataPre
       const items = repository.listDrafts({ draftStatus });
       return {
         meta: {
-          source: 'module-scaffold',
-          note: '当前返回模块内内存草稿，方便前期联调字段结构。',
+          source: 'module-memory-drafts',
+          note: '当前草稿仍保存在模块内存态，后续可迁移到 product_publish_drafts 表。',
         },
         total: items.length,
         items,
@@ -188,8 +195,8 @@ export function createProductDataPrepService({ repository = createProductDataPre
 
       return {
         meta: {
-          source: 'module-scaffold',
-          note: '导出结构已对齐本地 Ozon importer，可直接作为下一步真实导出载荷的基础。',
+          source: 'module-memory-drafts',
+          note: '导出结构已对齐本地 Ozon importer，可作为后续真实导出载荷的基础。',
         },
         itemCount: exportedItems.length,
         skippedCount: skipped.length,

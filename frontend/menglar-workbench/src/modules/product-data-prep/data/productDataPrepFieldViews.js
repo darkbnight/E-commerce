@@ -96,7 +96,12 @@ function formatDescriptionCategoryValue(draft, treeState = {}) {
   return values;
 }
 
-export function buildProductPrepFieldViewModel({ candidate, draft, descriptionCategoryTreeState }) {
+export function buildProductPrepFieldViewModel({
+  candidate,
+  draft,
+  descriptionCategoryTreeState,
+  descriptionCategoryAttributeState,
+}) {
   const upstreamGroups = [
     {
       title: '来源批次',
@@ -294,7 +299,12 @@ export function buildProductPrepFieldViewModel({ candidate, draft, descriptionCa
           label: '类目属性',
           description: '最终导出时要能映射成 Ozon 需要的 attributes 数组结构。',
           value: formatAttributes(draft.attributes),
-          isPending: !draft.attributes?.length,
+          control: descriptionCategoryAttributeState?.control,
+          isPending:
+            !draft.attributes?.length ||
+            !descriptionCategoryAttributeState?.hasCredentials ||
+            descriptionCategoryAttributeState?.isLoading ||
+            Boolean(descriptionCategoryAttributeState?.error),
         },
       ],
     },

@@ -1,11 +1,15 @@
 import { createServer } from 'node:http';
 import assert from 'node:assert/strict';
 import { startWorkbenchServer } from '../backend/menglar-workbench-api/server.mjs';
+import { OzonSellerClient } from './lib/ozon-seller-client.mjs';
 
 const requests = {
   uploadCalls: [],
   priceCalls: [],
   stockCalls: [],
+  categoryTreeLanguages: [],
+  categoryAttributeLanguages: [],
+  attributeValueLanguages: [],
 };
 
 async function readJson(response) {
@@ -45,6 +49,7 @@ const ozonMock = createServer(async (req, res) => {
   }
 
   if (req.url === '/v1/description-category/attribute') {
+    requests.categoryAttributeLanguages.push(body.language);
     res.end(JSON.stringify({
       result: [
         {
@@ -58,12 +63,57 @@ const ozonMock = createServer(async (req, res) => {
   }
 
   if (req.url === '/v1/description-category/attribute/values') {
+    requests.attributeValueLanguages.push(body.language);
     res.end(JSON.stringify({ result: [{ id: 1, value: 'Generic' }], has_next: false }));
     return;
   }
 
   if (req.url === '/v1/description-category/tree') {
+    requests.categoryTreeLanguages.push(body.language);
     res.end(JSON.stringify({ result: [{ description_category_id: 17031663, type_id: 100001234, title: 'Cleaning cloth' }] }));
+    return;
+  }
+
+  if (req.url === '/v4/product/info/attributes') {
+    res.end(JSON.stringify({
+      result: {
+        items: [
+          {
+            id: 10001,
+            offer_id: 'SKU-001',
+            name: 'Cleaning Cloth 30x40 2 pcs',
+            description_category_id: 17031663,
+            type_id: 100001234,
+            attributes: [
+              {
+                id: 85,
+                complex_id: 0,
+                values: [{ dictionary_value_id: 1, value: 'Generic' }],
+              },
+            ],
+          },
+        ],
+        last_id: '',
+        total: 1,
+      },
+    }));
+    return;
+  }
+
+  if (req.url === '/v3/product/info/list') {
+    res.end(JSON.stringify({
+      result: {
+        items: [
+          {
+            id: 10001,
+            offer_id: 'SKU-001',
+            price: '199',
+            currency_code: 'CNY',
+            vat: '0',
+          },
+        ],
+      },
+    }));
     return;
   }
 
@@ -178,6 +228,7 @@ try {
   payload = await readJson(response);
   assert.equal(payload.result[0].description_category_id, 17031663);
   assert.equal(payload.result[0].type_id, 100001234);
+  assert.equal(requests.categoryTreeLanguages.at(-1), 'ZH_HANS');
 
   response = await fetch(`${workbenchBaseUrl}/api/ozon/category-attributes`, {
     method: 'POST',
@@ -186,6 +237,7 @@ try {
   });
   payload = await readJson(response);
   assert.equal(payload.result[0].attributes[0].id, 85);
+  assert.equal(requests.categoryAttributeLanguages.at(-1), 'ZH_HANS');
 
   response = await fetch(`${workbenchBaseUrl}/api/ozon/attribute-values`, {
     method: 'POST',
@@ -194,8 +246,26 @@ try {
   });
   payload = await readJson(response);
   assert.equal(payload.result[0].value, 'Generic');
+  assert.equal(requests.attributeValueLanguages.at(-1), 'ZH_HANS');
+
+  response = await fetch(`${workbenchBaseUrl}/api/product-data-prep/candidates?limit=1`);
+  payload = await readJson(response);
+  assert.equal(response.status, 200);
+  assert.equal(Array.isArray(payload.items), true);
+  assert.equal(payload.items.length <= 1, true);
+  assert.equal(['db/menglar-mvp.sqlite', 'module-mock-fallback'].includes(payload.meta.source), true);
 
   console.log('ozon-workbench-api 测试通过');
+  const ozonClient = new OzonSellerClient({ ...demoCredentials });
+  payload = await ozonClient.getProductInfoAttributes({
+    filter: { visibility: 'ALL' },
+    limit: 1,
+  });
+  assert.equal(payload.result.items[0].attributes[0].values[0].dictionary_value_id, 1);
+
+  payload = await ozonClient.getProductInfoList({ productIds: [10001] });
+  assert.equal(payload.result.items[0].offer_id, 'SKU-001');
+
 } finally {
   await new Promise((resolve) => workbench.close(resolve));
   await new Promise((resolve) => ozonMock.close(resolve));

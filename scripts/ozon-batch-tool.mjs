@@ -3,6 +3,7 @@ import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 import {
   buildTemplate,
+  OZON_DEFAULT_LANGUAGE,
   OzonSellerClient,
   readJsonFile,
   writeJsonFile,
@@ -174,7 +175,9 @@ async function handleImportInfo(args) {
 
 async function handleCategoryTree(args) {
   const client = createClient(args);
-  const result = await client.getCategoryTree();
+  const result = await client.getCategoryTree({
+    language: String(args.language || OZON_DEFAULT_LANGUAGE),
+  });
   if (args.output) {
     await writeJsonFile(args.output, result);
   }
@@ -188,7 +191,7 @@ async function handleCategoryAttributes(args) {
   const result = await client.getCategoryAttributes({
     descriptionCategoryId,
     typeId,
-    language: String(args.language || 'DEFAULT'),
+    language: String(args.language || OZON_DEFAULT_LANGUAGE),
   });
   if (args.output) {
     await writeJsonFile(args.output, result);
@@ -205,7 +208,7 @@ async function handleAttributeValues(args) {
     descriptionCategoryId,
     typeId,
     attributeId,
-    language: String(args.language || 'DEFAULT'),
+    language: String(args.language || OZON_DEFAULT_LANGUAGE),
     lastValueId: Number.parseInt(String(args['last-value-id'] || '0'), 10) || 0,
     limit: Number.parseInt(String(args.limit || '50'), 10) || 50,
   });
