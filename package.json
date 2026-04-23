@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "mvp:probe": "node scripts/menglar-mvp.mjs",
+    "mvp:probe": "node scripts/menglar-capture/hot-products.mjs",
     "mvp:db:inspect": "node scripts/inspect-menglar-db.mjs",
     "shipping:validate": "node scripts/validate-shipping-config.mjs",
     "shipping:validate:generated": "node scripts/validate-shipping-config.mjs config/shipping/rules.generated.json",

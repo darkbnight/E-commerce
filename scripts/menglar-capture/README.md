@@ -19,13 +19,6 @@ node scripts/menglar-capture/industry-deep-dive.mjs
 node scripts/menglar-capture/hot-products.mjs
 ```
 
-兼容旧入口：
-
-```bash
-node scripts/menglar-industry-deep-dive.mjs
-node scripts/menglar-mvp.mjs
-```
-
 ## 前置检查输出
 
 前置检查会写入：
