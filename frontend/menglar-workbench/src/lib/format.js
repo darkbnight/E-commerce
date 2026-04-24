@@ -30,5 +30,7 @@ export function formatPercent(value) {
 }
 
 export function formatText(value) {
-  return value == null || value === '' ? '-' : String(value);
+  if (value == null || value === '') return '-';
+  const text = String(value);
+  return text.toLowerCase() === 'null' ? '-' : text;
 }

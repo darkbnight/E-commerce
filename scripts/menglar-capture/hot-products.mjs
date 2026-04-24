@@ -287,9 +287,13 @@ async function ensureDb() {
       platform TEXT NOT NULL DEFAULT 'ozon',
       platform_product_id TEXT NOT NULL,
       product_url TEXT,
+      product_image_url TEXT,
+      shop_id TEXT,
+      shop_name TEXT,
       product_type TEXT,
       brand TEXT,
       title TEXT,
+      product_created_date TEXT,
       category_level_1 TEXT,
       category_level_2 TEXT,
       category_level_3 TEXT,
@@ -297,11 +301,15 @@ async function ensureDb() {
       sales_growth REAL,
       potential_index REAL,
       sales_amount REAL,
+      sales_amount_cny REAL,
+      avg_price_rub REAL,
+      avg_price_cny REAL,
       add_to_cart_rate REAL,
       impressions REAL,
       clicks REAL,
       view_rate REAL,
       ad_cost REAL,
+      ad_cost_cny REAL,
       ad_cost_rate REAL,
       order_conversion_rate REAL,
       estimated_gross_margin REAL,
@@ -351,7 +359,36 @@ async function ensureDb() {
     ON product_content_assets(platform, platform_product_id);
   `);
   ensureSourceJobsSchema(db);
+  ensureProductBusinessSnapshotSchema(db);
   return db;
+}
+
+function ensureProductBusinessSnapshotSchema(db) {
+  const table = db.prepare(`
+    SELECT name
+    FROM sqlite_master
+    WHERE type = 'table' AND name = 'product_business_snapshots'
+  `).get();
+  if (!table) return;
+
+  const columns = db.prepare('PRAGMA table_info(product_business_snapshots)').all();
+  const names = new Set(columns.map((column) => column.name));
+  const additions = [
+    ['product_image_url', 'TEXT'],
+    ['shop_id', 'TEXT'],
+    ['shop_name', 'TEXT'],
+    ['product_created_date', 'TEXT'],
+    ['sales_amount_cny', 'REAL'],
+    ['avg_price_rub', 'REAL'],
+    ['avg_price_cny', 'REAL'],
+    ['ad_cost_cny', 'REAL'],
+  ];
+
+  for (const [name, definition] of additions) {
+    if (!names.has(name)) {
+      db.exec(`ALTER TABLE product_business_snapshots ADD COLUMN ${name} ${definition}`);
+    }
+  }
 }
 
 function isLockedSqlite(name) {
@@ -617,6 +654,12 @@ function normalizeCandidate(payload) {
 
   return {
     ozon_product_id: String(rawId),
+    product_url: payload.product_url ?? payload.productUrl ?? payload.url ?? null,
+    product_image_url: payload.product_image_url ?? payload.productImageUrl ?? payload.skuImg ?? payload.imageUrl ?? null,
+    shop_id: payload.shop_id ?? payload.shopId ?? payload.sellerId ?? null,
+    shop_name: payload.shop_name ?? payload.shopName ?? payload.sellerName ?? null,
+    title: payload.title ?? payload.skuName ?? payload.name ?? null,
+    product_created_date: payload.product_created_date ?? payload.productCreatedDate ?? payload.createDt ?? null,
     product_type:
       payload.product_type ??
       payload.productType ??
@@ -632,11 +675,15 @@ function normalizeCandidate(payload) {
     sales_growth: toNumber(payload.sales_growth ?? payload.salesGrowth ?? payload.saleGrowth ?? payload.monthSalesRatio),
     potential_index: toNumber(payload.potential_index ?? payload.potentialIndex ?? payload.chanceExp),
     revenue: toNumber(payload.revenue ?? payload.salesAmount ?? payload.amount ?? payload.monthGmv),
+    revenue_cny: toNumber(payload.revenue_cny ?? payload.salesAmountCny ?? payload.amountRmb ?? payload.monthGmvRmb),
+    avg_price_rub: toNumber(payload.avg_price_rub ?? payload.avgPriceRub ?? payload.avgPrice),
+    avg_price_cny: toNumber(payload.avg_price_cny ?? payload.avgPriceCny ?? payload.avgPriceRmb),
     add_to_cart_rate: toNumber(payload.add_to_cart_rate ?? payload.addCartRate ?? payload.convTocartPdp),
     impressions: toNumber(payload.impressions ?? payload.exposure ?? payload.exposureCount ?? payload.views),
     clicks: toNumber(payload.clicks ?? payload.clickCount ?? payload.sessionCount),
     view_rate: toNumber(payload.view_rate ?? payload.clickRate ?? payload.ctr ?? payload.clickRatio),
     ad_cost: toNumber(payload.ad_cost ?? payload.adCost ?? payload.adsales),
+    ad_cost_cny: toNumber(payload.ad_cost_cny ?? payload.adCostCny ?? payload.adsalesRmb),
     ad_cost_rate: toNumber(payload.ad_cost_rate ?? payload.adCostRate ?? payload.drr),
     order_conversion_rate: toNumber(
       payload.order_conversion_rate ?? payload.orderConversionRate ?? payload.conversionRate ?? payload.convViewToOrder
@@ -936,12 +983,14 @@ async function main() {
     `);
     const businessSnapshotInsert = db.prepare(`
       INSERT OR IGNORE INTO product_business_snapshots (
-        job_id, raw_record_id, platform, platform_product_id, product_type, brand,
+        job_id, raw_record_id, platform, platform_product_id, product_url, product_image_url, shop_id, shop_name,
+        product_type, brand, title, product_created_date,
         category_level_1, category_level_2, category_level_3,
-        sales_volume, sales_growth, potential_index, sales_amount, add_to_cart_rate, impressions, clicks, view_rate,
-        ad_cost, ad_cost_rate, order_conversion_rate, estimated_gross_margin, shipping_mode, delivery_time,
+        sales_volume, sales_growth, potential_index, sales_amount, sales_amount_cny, avg_price_rub, avg_price_cny,
+        add_to_cart_rate, impressions, clicks, view_rate,
+        ad_cost, ad_cost_cny, ad_cost_rate, order_conversion_rate, estimated_gross_margin, shipping_mode, delivery_time,
         average_sales_amount, length_cm, width_cm, height_cm, weight_g, parse_status, captured_at, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const hotResponses = capturedJson.filter((response) => response.url.includes(HOT_PAGE_API_PATH));
@@ -972,8 +1021,14 @@ async function main() {
           rawRecordId || null,
           'ozon',
           record.normalized.ozon_product_id,
+          record.normalized.product_url,
+          record.normalized.product_image_url,
+          record.normalized.shop_id,
+          record.normalized.shop_name,
           record.normalized.product_type,
           record.normalized.brand,
+          record.normalized.title,
+          record.normalized.product_created_date,
           record.normalized.category_level_1,
           record.normalized.category_level_2,
           record.normalized.category_level_3,
@@ -981,11 +1036,15 @@ async function main() {
           record.normalized.sales_growth,
           record.normalized.potential_index,
           record.normalized.revenue,
+          record.normalized.revenue_cny,
+          record.normalized.avg_price_rub,
+          record.normalized.avg_price_cny,
           record.normalized.add_to_cart_rate,
           record.normalized.impressions,
           record.normalized.clicks,
           record.normalized.view_rate,
           record.normalized.ad_cost,
+          record.normalized.ad_cost_cny,
           record.normalized.ad_cost_rate,
           record.normalized.order_conversion_rate,
           record.normalized.estimated_gross_margin,

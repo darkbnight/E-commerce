@@ -24,8 +24,15 @@ try {
     'job_id',
     'platform',
     'platform_product_id',
+    'product_image_url',
+    'shop_name',
+    'product_created_date',
     'sales_volume',
     'sales_amount',
+    'sales_amount_cny',
+    'avg_price_rub',
+    'avg_price_cny',
+    'ad_cost_cny',
     'captured_at',
   ]);
   assertColumns(db, 'product_content_assets', [
@@ -97,6 +104,12 @@ try {
   assert.ok(productsBody.items[0].platform_product_id);
   assert.ok(productsBody.items[0].sales_volume != null);
   assert.ok(productsBody.items[0].sales_amount != null);
+  assert.ok('product_image_url' in productsBody.items[0]);
+  assert.ok('shop_name' in productsBody.items[0]);
+  assert.ok('avg_price_rub' in productsBody.items[0]);
+  assert.ok('avg_price_cny' in productsBody.items[0]);
+  assert.ok('ad_cost_cny' in productsBody.items[0]);
+  assert.ok('product_created_date' in productsBody.items[0]);
   assert.equal(productsBody.items[0].ozon_product_id, undefined);
   assert.equal(productsBody.items[0].sales, undefined);
   assert.equal(productsBody.items[0].revenue, undefined);

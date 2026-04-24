@@ -26,10 +26,14 @@ CREATE TABLE IF NOT EXISTS product_business_snapshots (
   platform TEXT NOT NULL DEFAULT 'ozon',
   platform_product_id TEXT NOT NULL,
   product_url TEXT,
+  product_image_url TEXT,
+  shop_id TEXT,
+  shop_name TEXT,
 
   product_type TEXT,
   brand TEXT,
   title TEXT,
+  product_created_date TEXT,
 
   category_level_1 TEXT,
   category_level_2 TEXT,
@@ -39,12 +43,16 @@ CREATE TABLE IF NOT EXISTS product_business_snapshots (
   sales_growth REAL,
   potential_index REAL,
   sales_amount REAL,
+  sales_amount_cny REAL,
+  avg_price_rub REAL,
+  avg_price_cny REAL,
 
   add_to_cart_rate REAL,
   impressions REAL,
   clicks REAL,
   view_rate REAL,
   ad_cost REAL,
+  ad_cost_cny REAL,
   ad_cost_rate REAL,
   order_conversion_rate REAL,
 
@@ -92,21 +100,29 @@ ON product_business_snapshots(captured_at);
 | `platform` | text | 是 | 平台标识，如 `ozon` |
 | `platform_product_id` | text | 是 | 平台商品 ID |
 | `product_url` | text | 否 | 商品链接 |
+| `product_image_url` | text | 否 | 商品主图链接，来源如萌拉 `skuImg` |
+| `shop_id` | text | 否 | 店铺 ID，来源如萌拉 `shopId` |
+| `shop_name` | text | 否 | 店铺名称，来源如萌拉 `shopName` |
 | `product_type` | text | 否 | 商品类型，如本土、跨境等 |
 | `brand` | text | 否 | 品牌 |
 | `title` | text | 否 | 采集时商品标题 |
+| `product_created_date` | text | 否 | 商品卡创建日期，来源如萌拉 `createDt` |
 | `category_level_1` | text | 否 | 一级类目 |
 | `category_level_2` | text | 否 | 二级类目 |
 | `category_level_3` | text | 否 | 三级类目 |
 | `sales_volume` | real | 否 | 销量 |
 | `sales_growth` | real | 否 | 销量增长率 |
 | `potential_index` | real | 否 | 潜力指数 |
-| `sales_amount` | real | 否 | 销售额 |
+| `sales_amount` | real | 否 | 销售额，默认保存萌拉返回的卢布口径 |
+| `sales_amount_cny` | real | 否 | 销售额人民币口径，来源如萌拉 `monthGmvRmb` |
+| `avg_price_rub` | real | 否 | 平均单价卢布口径，来源如萌拉 `avgPrice` |
+| `avg_price_cny` | real | 否 | 平均单价人民币口径，来源如萌拉 `avgPriceRmb` |
 | `add_to_cart_rate` | real | 否 | 加购率 |
 | `impressions` | real | 否 | 曝光数 |
 | `clicks` | real | 否 | 点击数 |
 | `view_rate` | real | 否 | 浏览率 |
 | `ad_cost` | real | 否 | 广告费用 |
+| `ad_cost_cny` | real | 否 | 广告费用人民币口径，来源如萌拉 `adsalesRmb` |
 | `ad_cost_rate` | real | 否 | 广告费占比 |
 | `order_conversion_rate` | real | 否 | 订单转化率 |
 | `estimated_gross_margin` | real | 否 | 预估毛利率 |

@@ -24,6 +24,7 @@ import {
   handleProductDataPrepRoute,
   isProductDataPrepRoute,
 } from './modules/product-data-prep/route.mjs';
+import { checkMenglarLoginHealth } from '../../scripts/menglar-capture/lib/login-health.mjs';
 
 const ROOT = import.meta.dirname;
 const PORT = Number(process.env.PORT || 4186);
@@ -92,6 +93,34 @@ function ensureSourceJobsMetricsColumns(db) {
   for (const [name, definition] of additions) {
     if (!names.has(name)) {
       db.exec(`ALTER TABLE source_jobs ADD COLUMN ${name} ${definition}`);
+    }
+  }
+}
+
+function ensureProductBusinessSnapshotColumns(db) {
+  const table = db.prepare(`
+    SELECT name
+    FROM sqlite_master
+    WHERE type = 'table' AND name = 'product_business_snapshots'
+  `).get();
+  if (!table) return;
+
+  const columns = db.prepare('PRAGMA table_info(product_business_snapshots)').all();
+  const names = new Set(columns.map((column) => column.name));
+  const additions = [
+    ['product_image_url', 'TEXT'],
+    ['shop_id', 'TEXT'],
+    ['shop_name', 'TEXT'],
+    ['product_created_date', 'TEXT'],
+    ['sales_amount_cny', 'REAL'],
+    ['avg_price_rub', 'REAL'],
+    ['avg_price_cny', 'REAL'],
+    ['ad_cost_cny', 'REAL'],
+  ];
+
+  for (const [name, definition] of additions) {
+    if (!names.has(name)) {
+      db.exec(`ALTER TABLE product_business_snapshots ADD COLUMN ${name} ${definition}`);
     }
   }
 }
@@ -173,13 +202,15 @@ function buildProductsQuery(searchParams, resolvedJobId) {
   if (keyword) {
     conditions.push(`(
       platform_product_id LIKE ?
+      OR title LIKE ?
       OR brand LIKE ?
+      OR shop_name LIKE ?
       OR category_level_1 LIKE ?
       OR category_level_2 LIKE ?
       OR category_level_3 LIKE ?
     )`);
     const likeKeyword = `%${keyword}%`;
-    values.push(likeKeyword, likeKeyword, likeKeyword, likeKeyword, likeKeyword);
+    values.push(likeKeyword, likeKeyword, likeKeyword, likeKeyword, likeKeyword, likeKeyword, likeKeyword);
   }
 
   const productType = searchParams.get('productType')?.trim();
@@ -330,6 +361,7 @@ function handleApiProducts(req, res) {
   const pageSize = Math.min(Math.max(parseInteger(url.searchParams.get('pageSize'), 20), 1), 100);
 
   const payload = withDb((db) => {
+    ensureProductBusinessSnapshotColumns(db);
     const latestJobId = getLatestJobId(db);
     if (!latestJobId) {
       return {
@@ -354,11 +386,13 @@ function handleApiProducts(req, res) {
     `).get(...values);
 
     const items = db.prepare(`
-      SELECT id, job_id, platform, platform_product_id, product_url, product_type, brand, title,
+      SELECT id, job_id, platform, platform_product_id, product_url, product_image_url,
+             shop_id, shop_name, product_type, brand, title, product_created_date,
              category_level_1, category_level_2, category_level_3,
-             sales_volume, sales_growth, potential_index, sales_amount,
+             sales_volume, sales_growth, potential_index, sales_amount, sales_amount_cny,
+             avg_price_rub, avg_price_cny,
              add_to_cart_rate, impressions, clicks, view_rate,
-             ad_cost, ad_cost_rate, order_conversion_rate, estimated_gross_margin,
+             ad_cost, ad_cost_cny, ad_cost_rate, order_conversion_rate, estimated_gross_margin,
              shipping_mode, delivery_time, average_sales_amount,
              length_cm, width_cm, height_cm, weight_g, captured_at, created_at, updated_at
       FROM product_business_snapshots
@@ -372,8 +406,10 @@ function handleApiProducts(req, res) {
         COUNT(*) AS total_products,
         MAX(sales_volume) AS max_sales,
         MAX(sales_amount) AS max_revenue,
+        MAX(sales_amount_cny) AS max_revenue_cny,
         AVG(sales_volume) AS avg_sales,
         AVG(sales_amount) AS avg_revenue,
+        AVG(sales_amount_cny) AS avg_revenue_cny,
         AVG(estimated_gross_margin) AS avg_margin
       FROM product_business_snapshots
       WHERE job_id = ?
@@ -455,6 +491,21 @@ async function handleApiShippingCalculate(req, res) {
     sendJson(res, 200, result);
   } catch (error) {
     sendError(res, error.status || 500, error.message, error.details || null);
+  }
+}
+
+async function handleApiMenglarLoginHealth(req, res) {
+  try {
+    const body = req.method === 'POST' ? await readJsonBody(req) : {};
+    const result = await checkMenglarLoginHealth({
+      target: body.target || 'hot_products',
+      refresh: Boolean(body.refresh),
+      headless: body.headless !== false,
+      writeResult: true,
+    });
+    sendJson(res, 200, result);
+  } catch (error) {
+    sendError(res, 500, error.message);
   }
 }
 
@@ -637,6 +688,11 @@ export function createWorkbenchServer() {
 
     if ((req.url || '').startsWith('/api/products')) {
       handleApiProducts(req, res);
+      return;
+    }
+
+    if ((req.url || '').startsWith('/api/menglar/login-health')) {
+      await handleApiMenglarLoginHealth(req, res);
       return;
     }
 

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { Panel } from '../components/Panel';
 import { fetchProducts, fetchResultJobs } from '../lib/api';
-import { formatMoney, formatNumber, formatPercent, formatText } from '../lib/format';
+import { formatCurrency, formatNumber, formatPercent, formatText } from '../lib/format';
 
 const defaultFilters = {
   keyword: '',
@@ -184,7 +184,10 @@ export function ResultsPage() {
         <MetricCard label="商品数" value={formatNumber(data?.summary?.total_products || 0)} />
         <MetricCard label="当前命中" value={formatNumber(data?.total || 0)} />
         <MetricCard label="最高销售量" value={formatNumber(data?.summary?.max_sales || 0)} />
-        <MetricCard label="最高销售金额" value={formatMoney(data?.summary?.max_revenue || 0)} />
+        <MetricCard
+          label="最高销售金额"
+          value={`${formatCurrency(data?.summary?.max_revenue || 0, 'RUB')} / ${formatCurrency(data?.summary?.max_revenue_cny || 0, 'CNY')}`}
+        />
         <MetricCard label="平均毛利率" value={formatPercent(data?.summary?.avg_margin || 0)} />
       </div>
 
@@ -376,15 +379,17 @@ function ProductTable({ items, mode, screeningState, setItemScreeningStatus }) {
         <thead>
           <tr>
             {isScreening ? <th>状态</th> : null}
-            <th>平台商品ID</th>
-            <th>品牌 / 类型</th>
+            <th>商品信息</th>
+            <th>品牌 / 店铺</th>
             <th>类目</th>
             <th className="num">销售量</th>
             <th className="num">销售量增长</th>
+            <th className="num">均价</th>
             <th className="num">潜力指数</th>
             <th className="num">销售金额</th>
-            <th className="num">曝光 / 点击</th>
+            <th className="num">曝光 / 点击率</th>
             <th className="num">转化 / 毛利</th>
+            <th className="num">广告</th>
             <th>物流 / 时效</th>
             <th>尺寸 / 重量</th>
             {isScreening ? <th>操作</th> : null}
@@ -400,12 +405,25 @@ function ProductTable({ items, mode, screeningState, setItemScreeningStatus }) {
                     <span className={`screening-state-pill is-${status}`}>{screeningStatusLabels[status]}</span>
                   </td>
                 ) : null}
-                <td className="mono">
-                  <div className="cell-main">{item.platform_product_id}</div>
-                  <div className="cell-sub">{formatText(item.platform)}</div>
+                <td>
+                  <div className="product-info-cell">
+                    {item.product_image_url ? (
+                      <img src={item.product_image_url} alt="" loading="lazy" />
+                    ) : (
+                      <span className="product-image-placeholder" />
+                    )}
+                    <div>
+                      <div className="cell-main product-title">{formatText(item.title)}</div>
+                      <div className="cell-sub mono">{item.product_url ? (
+                        <a href={item.product_url} target="_blank" rel="noreferrer">{item.platform_product_id}</a>
+                      ) : item.platform_product_id}</div>
+                      <div className="cell-sub">创建 {formatText(item.product_created_date)}</div>
+                    </div>
+                  </div>
                 </td>
                 <td>
                   <div className="cell-main">{formatText(item.brand)}</div>
+                  <div className="cell-sub">{formatText(item.shop_name)}</div>
                   <div className="cell-sub">{formatText(item.product_type)}</div>
                 </td>
                 <td>
@@ -414,12 +432,27 @@ function ProductTable({ items, mode, screeningState, setItemScreeningStatus }) {
                 </td>
                 <td className="num">{formatNumber(item.sales_volume)}</td>
                 <td className="num">{formatPercent(item.sales_growth)}</td>
+                <td className="num">
+                  <div>{formatCurrency(item.avg_price_rub, 'RUB')}</div>
+                  <div className="cell-sub">{formatCurrency(item.avg_price_cny, 'CNY')}</div>
+                </td>
                 <td className="num">{formatNumber(item.potential_index, 2)}</td>
-                <td className="num">{formatMoney(item.sales_amount)}</td>
-                <td className="num">{formatNumber(item.impressions)} / {formatNumber(item.clicks)}</td>
+                <td className="num">
+                  <div>{formatCurrency(item.sales_amount, 'RUB')}</div>
+                  <div className="cell-sub">{formatCurrency(item.sales_amount_cny, 'CNY')}</div>
+                </td>
+                <td className="num">
+                  <div>{formatNumber(item.impressions)} / {formatNumber(item.clicks)}</div>
+                  <div className="cell-sub">点击率 {formatPercent(item.view_rate)}</div>
+                </td>
                 <td className="num">
                   <div className={Number(item.estimated_gross_margin) >= 0 ? 'good' : 'danger'}>{formatPercent(item.order_conversion_rate)}</div>
                   <div className="cell-sub">毛利 {formatPercent(item.estimated_gross_margin)}</div>
+                </td>
+                <td className="num">
+                  <div>{formatCurrency(item.ad_cost, 'RUB')}</div>
+                  <div className="cell-sub">{formatCurrency(item.ad_cost_cny, 'CNY')}</div>
+                  <div className="cell-sub">占比 {formatPercent(item.ad_cost_rate)}</div>
                 </td>
                 <td>
                   <div className="cell-main">{formatText(item.shipping_mode)}</div>
@@ -439,7 +472,7 @@ function ProductTable({ items, mode, screeningState, setItemScreeningStatus }) {
             );
           }) : (
             <tr>
-              <td colSpan={isScreening ? 13 : 11} className="wb-empty-cell">当前没有匹配数据</td>
+              <td colSpan={isScreening ? 15 : 13} className="wb-empty-cell">当前没有匹配数据</td>
             </tr>
           )}
         </tbody>

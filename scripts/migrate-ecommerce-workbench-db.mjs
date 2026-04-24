@@ -25,9 +25,13 @@ function createTargetTables(db) {
       platform TEXT NOT NULL DEFAULT 'ozon',
       platform_product_id TEXT NOT NULL,
       product_url TEXT,
+      product_image_url TEXT,
+      shop_id TEXT,
+      shop_name TEXT,
       product_type TEXT,
       brand TEXT,
       title TEXT,
+      product_created_date TEXT,
       category_level_1 TEXT,
       category_level_2 TEXT,
       category_level_3 TEXT,
@@ -35,11 +39,15 @@ function createTargetTables(db) {
       sales_growth REAL,
       potential_index REAL,
       sales_amount REAL,
+      sales_amount_cny REAL,
+      avg_price_rub REAL,
+      avg_price_cny REAL,
       add_to_cart_rate REAL,
       impressions REAL,
       clicks REAL,
       view_rate REAL,
       ad_cost REAL,
+      ad_cost_cny REAL,
       ad_cost_rate REAL,
       order_conversion_rate REAL,
       estimated_gross_margin REAL,
@@ -144,6 +152,94 @@ function createTargetTables(db) {
     CREATE INDEX IF NOT EXISTS idx_product_content_result_status
     ON product_content_result(result_status);
   `);
+  ensureProductBusinessSnapshotColumns(db);
+}
+
+function ensureProductBusinessSnapshotColumns(db) {
+  if (!tableExists(db, 'product_business_snapshots')) return;
+
+  const columns = db.prepare('PRAGMA table_info(product_business_snapshots)').all();
+  const names = new Set(columns.map((column) => column.name));
+  const additions = [
+    ['product_image_url', 'TEXT'],
+    ['shop_id', 'TEXT'],
+    ['shop_name', 'TEXT'],
+    ['product_created_date', 'TEXT'],
+    ['sales_amount_cny', 'REAL'],
+    ['avg_price_rub', 'REAL'],
+    ['avg_price_cny', 'REAL'],
+    ['ad_cost_cny', 'REAL'],
+  ];
+
+  for (const [name, definition] of additions) {
+    if (!names.has(name)) {
+      db.exec(`ALTER TABLE product_business_snapshots ADD COLUMN ${name} ${definition}`);
+    }
+  }
+}
+
+function toNumber(value) {
+  if (value == null || value === '') return null;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  const parsed = Number(String(value).replace(/[,%\s]/g, ''));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function backfillSnapshotExtendedFields(db) {
+  if (!tableExists(db, 'products_raw') || !tableExists(db, 'product_business_snapshots')) {
+    return { updatedExtendedFields: 0 };
+  }
+
+  const rows = db.prepare(`
+    SELECT
+      product_business_snapshots.id,
+      products_raw.raw_payload
+    FROM product_business_snapshots
+    JOIN products_raw ON products_raw.id = product_business_snapshots.raw_record_id
+    WHERE product_business_snapshots.raw_record_id IS NOT NULL
+  `).all();
+
+  const update = db.prepare(`
+    UPDATE product_business_snapshots
+    SET product_url = COALESCE(product_url, ?),
+        product_image_url = COALESCE(product_image_url, ?),
+        shop_id = COALESCE(shop_id, ?),
+        shop_name = COALESCE(shop_name, ?),
+        title = COALESCE(title, ?),
+        product_created_date = COALESCE(product_created_date, ?),
+        sales_amount_cny = COALESCE(sales_amount_cny, ?),
+        avg_price_rub = COALESCE(avg_price_rub, ?),
+        avg_price_cny = COALESCE(avg_price_cny, ?),
+        ad_cost_cny = COALESCE(ad_cost_cny, ?)
+    WHERE id = ?
+  `);
+
+  let updated = 0;
+  for (const row of rows) {
+    let payload;
+    try {
+      payload = JSON.parse(row.raw_payload);
+    } catch {
+      continue;
+    }
+
+    const result = update.run(
+      payload.url ?? null,
+      payload.skuImg ?? payload.imageUrl ?? null,
+      payload.shopId == null ? null : String(payload.shopId),
+      payload.shopName ?? payload.sellerName ?? null,
+      payload.skuName ?? payload.title ?? payload.name ?? null,
+      payload.createDt ?? null,
+      toNumber(payload.monthGmvRmb),
+      toNumber(payload.avgPrice),
+      toNumber(payload.avgPriceRmb),
+      toNumber(payload.adsalesRmb),
+      row.id,
+    );
+    updated += result.changes;
+  }
+
+  return { updatedExtendedFields: updated };
 }
 
 function migrateProductsNormalized(db) {
@@ -242,11 +338,13 @@ const db = new DatabaseSync(NEW_DB_PATH);
 try {
   createTargetTables(db);
   const result = migrateProductsNormalized(db);
+  const backfillResult = backfillSnapshotExtendedFields(db);
   console.log(JSON.stringify({
     ok: true,
     database: NEW_DB_PATH,
     copiedFromOld,
     ...result,
+    ...backfillResult,
   }, null, 2));
 } finally {
   db.close();
