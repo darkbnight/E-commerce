@@ -32,6 +32,12 @@ const ERROR_TYPE_ACTIONS = {
   unknown: '查看错误详情并按日志定位',
 };
 
+const JOB_STATUS_LABELS = {
+  running: '运行中',
+  success: '成功',
+  failed: '失败',
+};
+
 const FILTERS = [
   { key: 'all', label: '全部' },
   { key: 'running', label: '运行中' },
@@ -59,6 +65,10 @@ function formatTaskType(type) {
 
 function formatErrorType(type) {
   return ERROR_TYPE_LABELS[type] || formatText(type);
+}
+
+function formatJobStatus(status) {
+  return JOB_STATUS_LABELS[status] || formatText(status);
 }
 
 function getErrorAction(type) {
@@ -117,6 +127,33 @@ function getErrorSummary(errorMessage) {
   const compact = String(errorMessage).replace(/\s+/g, ' ').trim();
   if (!compact) return '-';
   return compact.length > 96 ? `${compact.slice(0, 96)}...` : compact;
+}
+
+function getJobMetrics(job) {
+  if (job.page_type === 'industry_general') {
+    return [
+      { label: '请求数', value: formatNumber(job.request_count) },
+      { label: '成功数', value: formatNumber(job.success_count) },
+      { label: '记录数', value: formatNumber(job.record_count) },
+      { label: '警告数', value: formatNumber(job.warning_count) },
+    ];
+  }
+
+  if (job.page_type === 'hot_products') {
+    return [
+      { label: '原始记录', value: formatNumber(job.raw_count) },
+      { label: '标准化', value: formatNumber(job.normalized_count) },
+      { label: '记录数', value: formatNumber(job.record_count) },
+      { label: '警告数', value: formatNumber(job.warning_count) },
+    ];
+  }
+
+  return [
+    { label: '请求数', value: formatNumber(job.request_count) },
+    { label: '成功数', value: formatNumber(job.success_count) },
+    { label: '记录数', value: formatNumber(job.record_count) },
+    { label: '警告数', value: formatNumber(job.warning_count) },
+  ];
 }
 
 export function TasksPage() {
@@ -299,15 +336,13 @@ export function TasksPage() {
                     </td>
                     <td>
                       <div className="task-row-actions">
-                        {job.error_message ? (
-                          <button
-                            type="button"
-                            className="wb-button ghost"
-                            onClick={() => setExpandedJobId(expandedJobId === job.id ? null : job.id)}
-                          >
-                            {expandedJobId === job.id ? '收起' : '详情'}
-                          </button>
-                        ) : null}
+                        <button
+                          type="button"
+                          className="wb-button ghost"
+                          onClick={() => setExpandedJobId(expandedJobId === job.id ? null : job.id)}
+                        >
+                          {expandedJobId === job.id ? '收起' : '详情'}
+                        </button>
                         {job.error_message ? (
                           <button
                             type="button"
@@ -325,21 +360,62 @@ export function TasksPage() {
                       <td colSpan="7">
                         <div className="task-detail-card">
                           <div>
-                            <span>页面地址</span>
-                            <p className="mono">{formatText(job.page_url)}</p>
+                            <span>任务类型</span>
+                            <p>{formatTaskType(job.page_type)}</p>
+                          </div>
+                          <div>
+                            <span>任务状态</span>
+                            <p>{formatJobStatus(job.job_status)}</p>
+                          </div>
+                          <div>
+                            <span>开始时间</span>
+                            <p>{formatDateTime(job.started_at)}</p>
+                          </div>
+                          <div>
+                            <span>结束时间 / 耗时</span>
+                            <p>
+                              {formatDateTime(job.finished_at)}
+                              {' / '}
+                              {getDuration(job.started_at, job.finished_at)}
+                            </p>
+                          </div>
+                          <div className="task-detail-span-2 task-detail-link">
+                            <span>目标网页</span>
+                            <p className="mono">
+                              {job.page_url ? (
+                                <a href={job.page_url} target="_blank" rel="noreferrer">
+                                  {job.page_url}
+                                </a>
+                              ) : (
+                                formatText(job.page_url)
+                              )}
+                            </p>
+                          </div>
+                          <div className="task-detail-span-2">
+                            <span>采集统计</span>
+                            <div className="task-detail-metrics">
+                              {getJobMetrics(job).map((metric) => (
+                                <div key={`${job.id}-${metric.label}`} className="task-detail-metric">
+                                  <small>{metric.label}</small>
+                                  <strong>{metric.value}</strong>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                           <div>
                             <span>问题类型</span>
-                            <p>{formatErrorType(job.error_type)}</p>
+                            <p>{job.error_type ? formatErrorType(job.error_type) : '-'}</p>
                           </div>
                           <div>
                             <span>建议处理</span>
-                            <p>{job.error_type ? getErrorAction(job.error_type) : '-'}</p>
+                            <p>{job.error_type ? getErrorAction(job.error_type) : '当前任务无异常，可直接用于复盘采集目标和结果。'}</p>
                           </div>
-                          <div>
-                            <span>错误详情</span>
-                            <pre>{formatText(job.error_message)}</pre>
-                          </div>
+                          {job.error_message ? (
+                            <div className="task-detail-span-2">
+                              <span>错误详情</span>
+                              <pre>{formatText(job.error_message)}</pre>
+                            </div>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
