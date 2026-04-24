@@ -1,7 +1,16 @@
 import { createServer } from 'node:http';
 import assert from 'node:assert/strict';
-import { startWorkbenchServer } from '../backend/menglar-workbench-api/server.mjs';
-import { OzonSellerClient } from './lib/ozon-seller-client.mjs';
+import { mkdtemp, rm } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
+
+const tempDir = await mkdtemp(path.join(os.tmpdir(), 'ozon-workbench-api-'));
+const tempDbPath = path.join(tempDir, 'ecommerce-workbench.sqlite');
+process.env.ECOMMERCE_WORKBENCH_DB_PATH = tempDbPath;
+
+const { startWorkbenchServer } = await import('../backend/menglar-workbench-api/server.mjs');
+const { OzonSellerClient } = await import('./lib/ozon-seller-client.mjs');
 
 const requests = {
   uploadCalls: [],
@@ -254,6 +263,125 @@ try {
   assert.equal(Array.isArray(payload.items), true);
   assert.equal(payload.items.length <= 1, true);
   assert.equal(['db/ecommerce-workbench.sqlite', 'module-mock-fallback'].includes(payload.meta.source), true);
+  assert.equal(payload.items.length, 1);
+
+  const candidate = payload.items[0];
+
+  response = await fetch(`${workbenchBaseUrl}/api/product-data-prep/drafts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ candidateId: candidate.id }),
+  });
+  payload = await readJson(response);
+  assert.equal(response.status, 201);
+  assert.ok(payload.item.id);
+  assert.equal(payload.item.sourceJobId, candidate.sourceJobId);
+  const draftId = payload.item.id;
+
+  response = await fetch(`${workbenchBaseUrl}/api/product-data-prep/drafts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ candidateId: candidate.id }),
+  });
+  payload = await readJson(response);
+  assert.equal(response.status, 201);
+  assert.equal(payload.item.id, draftId);
+
+  response = await fetch(`${workbenchBaseUrl}/api/product-data-prep/drafts/${draftId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      offerId: '',
+      name: 'Incomplete draft',
+      price: '',
+      images: [],
+      attributes: [],
+      draftStatus: 'ready',
+      resultStatus: 'ready',
+    }),
+  });
+  payload = await readJson(response);
+  assert.equal(response.status, 200);
+  assert.equal(payload.item.resultStatus, 'invalid');
+  assert.equal(payload.issues.some((issue) => issue.field === 'images' && issue.level === 'error'), true);
+  assert.equal(payload.issues.some((issue) => issue.field === 'attributes' && issue.level === 'error'), true);
+
+  const readyDraftPatch = {
+    offerId: 'SKU-TEST-READY',
+    name: 'Ready Draft Test',
+    description: 'Reusable cleaning cloth for validation coverage.',
+    descriptionCategoryId: 17031663,
+    typeId: 100001234,
+    vendor: 'Generic',
+    modelName: 'RD-30X40',
+    barcode: '2000000000099',
+    price: '199',
+    oldPrice: '259',
+    premiumPrice: '189',
+    minPrice: '179',
+    currencyCode: 'CNY',
+    vat: '0',
+    packageDepthMm: 30,
+    packageWidthMm: 200,
+    packageHeightMm: 300,
+    packageWeightG: 120,
+    warehouseId: '123456789',
+    stock: 12,
+    images: [{ url: 'https://cdn.ozon.test/cloth-main.jpg', sortOrder: 1, isMain: true }],
+    attributes: [{ attributeId: 85, complexId: 0, values: [{ value: 'Generic' }] }],
+    draftStatus: 'ready',
+    resultStatus: 'ready',
+  };
+
+  response = await fetch(`${workbenchBaseUrl}/api/product-data-prep/drafts/${draftId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(readyDraftPatch),
+  });
+  payload = await readJson(response);
+  assert.equal(response.status, 200);
+  assert.equal(payload.item.resultStatus, 'ready');
+  assert.equal(payload.issues.some((issue) => issue.level === 'error'), false);
+  assert.equal(payload.ozonImportItem.offer_id, 'SKU-TEST-READY');
+  assert.equal(payload.ozonImportItem.attributes[0].id, 85);
+
+  const db = new DatabaseSync(tempDbPath, { open: true });
+  try {
+    const row = db.prepare(`
+      SELECT offer_id, result_status, images_json, attributes_json, raw_draft_json, ozon_import_item_json
+      FROM product_content_result
+      WHERE id = ?
+    `).get(draftId);
+    assert.equal(row.offer_id, 'SKU-TEST-READY');
+    assert.equal(row.result_status, 'ready');
+    assert.equal(JSON.parse(row.raw_draft_json).warehouseId, '123456789');
+    assert.equal(JSON.parse(row.images_json)[0].url, 'https://cdn.ozon.test/cloth-main.jpg');
+    assert.equal(JSON.parse(row.attributes_json)[0].attributeId, 85);
+    assert.equal(JSON.parse(row.ozon_import_item_json).offer_id, 'SKU-TEST-READY');
+  } finally {
+    db.close();
+  }
+
+  response = await fetch(`${workbenchBaseUrl}/api/product-data-prep/drafts/${draftId}`);
+  payload = await readJson(response);
+  assert.equal(response.status, 200);
+  assert.equal(payload.item.offerId, 'SKU-TEST-READY');
+
+  response = await fetch(`${workbenchBaseUrl}/api/product-data-prep/drafts/${draftId}/validate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  });
+  payload = await readJson(response);
+  assert.equal(response.status, 200);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.suggestedStatus, 'ready');
+  assert.equal(payload.item.resultStatus, 'ready');
+
+  response = await fetch(`${workbenchBaseUrl}/api/product-data-prep/drafts?draftStatus=ready&limit=50`);
+  payload = await readJson(response);
+  assert.equal(response.status, 200);
+  assert.equal(payload.items.some((item) => item.id === draftId), true);
 
   console.log('ozon-workbench-api 测试通过');
   const ozonClient = new OzonSellerClient({ ...demoCredentials });
@@ -269,4 +397,5 @@ try {
 } finally {
   await new Promise((resolve) => workbench.close(resolve));
   await new Promise((resolve) => ozonMock.close(resolve));
+  await rm(tempDir, { recursive: true, force: true });
 }

@@ -2,7 +2,8 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-const DEFAULT_DB_PATH = path.resolve(import.meta.dirname, '..', '..', '..', '..', 'db', 'ecommerce-workbench.sqlite');
+const DEFAULT_DB_PATH = process.env.ECOMMERCE_WORKBENCH_DB_PATH ||
+  path.resolve(import.meta.dirname, '..', '..', '..', '..', 'db', 'ecommerce-workbench.sqlite');
 const DEFAULT_CANDIDATE_LIMIT = 20;
 
 function clone(value) {
@@ -240,6 +241,63 @@ function toJson(value, fallbackValue) {
   return JSON.stringify(value ?? fallbackValue);
 }
 
+function parseJson(raw, fallbackValue) {
+  if (raw == null || raw === '') return clone(fallbackValue);
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return clone(fallbackValue);
+  }
+}
+
+function parseJsonArray(raw) {
+  const parsed = parseJson(raw, []);
+  return Array.isArray(parsed) ? parsed : [];
+}
+
+function normalizeImage(image, index) {
+  if (typeof image === 'string') {
+    return {
+      url: image,
+      sortOrder: index + 1,
+      isMain: index === 0,
+    };
+  }
+
+  return {
+    url: image?.url || image?.image_url || '',
+    sortOrder: toNumberOrNull(image?.sortOrder ?? image?.sort_order) ?? index + 1,
+    isMain: Boolean(image?.isMain ?? image?.is_main),
+  };
+}
+
+function normalizeAttributeValue(value) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return {
+      value: value.value == null ? '' : String(value.value),
+      dictionaryValueId: toNumberOrNull(value.dictionaryValueId ?? value.dictionary_value_id),
+    };
+  }
+
+  return {
+    value: value == null ? '' : String(value),
+    dictionaryValueId: null,
+  };
+}
+
+function normalizeAttribute(attribute) {
+  const attributeId = toNumberOrNull(attribute?.attributeId ?? attribute?.attribute_id ?? attribute?.id);
+  return {
+    attributeId,
+    id: attributeId,
+    name: attribute?.name || attribute?.attributeName || `Attribute ${attributeId || ''}`.trim(),
+    isRequired: Boolean(attribute?.isRequired ?? attribute?.is_required),
+    dictionaryId: toNumberOrNull(attribute?.dictionaryId ?? attribute?.dictionary_id),
+    complexId: toNumberOrNull(attribute?.complexId ?? attribute?.complex_id) ?? 0,
+    values: (Array.isArray(attribute?.values) ? attribute.values : []).map(normalizeAttributeValue),
+  };
+}
+
 function ensureProductContentResultTable(db) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS product_content_result (
@@ -303,36 +361,46 @@ function buildContentResultKey(draft) {
 }
 
 function mapContentResultRow(row) {
+  const rawDraft = parseJson(row.raw_draft_json, {});
+  const images = parseJsonArray(row.images_json).map(normalizeImage);
+  const attributes = parseJsonArray(row.attributes_json).map(normalizeAttribute);
+  const resultStatus = row.result_status || rawDraft.resultStatus || rawDraft.draftStatus || 'draft';
+
   return {
     id: Number(row.id),
     resultKey: row.result_key,
-    draftId: row.draft_id == null ? null : Number(row.draft_id),
-    sourceJobId: row.source_job_id == null ? null : Number(row.source_job_id),
-    sourceSnapshotId: row.source_snapshot_id == null ? null : Number(row.source_snapshot_id),
-    productNormalizedId: row.product_normalized_id == null ? null : Number(row.product_normalized_id),
-    platform: row.platform,
-    platformProductId: row.platform_product_id || '',
-    offerId: row.offer_id || '',
-    name: row.name || '',
-    description: row.description || '',
-    descriptionCategoryId: row.description_category_id == null ? null : Number(row.description_category_id),
-    typeId: row.type_id == null ? null : Number(row.type_id),
-    vendor: row.vendor || '',
-    modelName: row.model_name || '',
-    barcode: row.barcode || '',
-    price: row.price || '',
-    oldPrice: row.old_price || '',
-    premiumPrice: row.premium_price || '',
-    minPrice: row.min_price || '',
-    currencyCode: row.currency_code || '',
-    vat: row.vat || '',
-    warehouseId: row.warehouse_id || '',
-    stock: row.stock == null ? null : Number(row.stock),
-    packageDepthMm: row.package_depth_mm == null ? null : Number(row.package_depth_mm),
-    packageWidthMm: row.package_width_mm == null ? null : Number(row.package_width_mm),
-    packageHeightMm: row.package_height_mm == null ? null : Number(row.package_height_mm),
-    packageWeightG: row.package_weight_g == null ? null : Number(row.package_weight_g),
-    resultStatus: row.result_status,
+    draftId: row.draft_id == null ? (rawDraft.draftId ?? null) : Number(row.draft_id),
+    sourceJobId: row.source_job_id == null ? (rawDraft.sourceJobId ?? null) : Number(row.source_job_id),
+    sourceSnapshotId: row.source_snapshot_id == null ? (rawDraft.sourceSnapshotId ?? null) : Number(row.source_snapshot_id),
+    productNormalizedId: row.product_normalized_id == null ? (rawDraft.productNormalizedId ?? null) : Number(row.product_normalized_id),
+    platform: row.platform || rawDraft.platform || 'ozon',
+    platformProductId: row.platform_product_id ?? rawDraft.platformProductId ?? '',
+    ozonProductId: rawDraft.ozonProductId || row.platform_product_id || '',
+    offerId: row.offer_id ?? rawDraft.offerId ?? '',
+    name: row.name ?? rawDraft.name ?? '',
+    description: row.description ?? rawDraft.description ?? '',
+    descriptionCategoryId: row.description_category_id == null ? (rawDraft.descriptionCategoryId ?? null) : Number(row.description_category_id),
+    typeId: row.type_id == null ? (rawDraft.typeId ?? null) : Number(row.type_id),
+    vendor: row.vendor ?? rawDraft.vendor ?? '',
+    modelName: row.model_name ?? rawDraft.modelName ?? '',
+    barcode: row.barcode ?? rawDraft.barcode ?? '',
+    price: row.price ?? rawDraft.price ?? '',
+    oldPrice: row.old_price ?? rawDraft.oldPrice ?? '',
+    premiumPrice: row.premium_price ?? rawDraft.premiumPrice ?? '',
+    minPrice: row.min_price ?? rawDraft.minPrice ?? '',
+    currencyCode: row.currency_code ?? rawDraft.currencyCode ?? '',
+    vat: row.vat ?? rawDraft.vat ?? '',
+    warehouseId: row.warehouse_id ?? rawDraft.warehouseId ?? '',
+    stock: row.stock == null ? (rawDraft.stock ?? 0) : Number(row.stock),
+    packageDepthMm: row.package_depth_mm == null ? (rawDraft.packageDepthMm ?? null) : Number(row.package_depth_mm),
+    packageWidthMm: row.package_width_mm == null ? (rawDraft.packageWidthMm ?? null) : Number(row.package_width_mm),
+    packageHeightMm: row.package_height_mm == null ? (rawDraft.packageHeightMm ?? null) : Number(row.package_height_mm),
+    packageWeightG: row.package_weight_g == null ? (rawDraft.packageWeightG ?? null) : Number(row.package_weight_g),
+    images,
+    attributes,
+    resultStatus,
+    draftStatus: resultStatus,
+    ozonImportItem: parseJson(row.ozon_import_item_json, {}),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -469,7 +537,7 @@ function saveContentResult({ dbPath, draft, exportItem }) {
     const resultKey = buildContentResultKey(draft);
     const payload = {
       resultKey,
-      draftId: toNumberOrNull(draft.id),
+      draftId: toNumberOrNull(draft.draftId),
       sourceJobId: toNumberOrNull(draft.sourceJobId),
       sourceSnapshotId: toNumberOrNull(draft.sourceSnapshotId ?? draft.productNormalizedId),
       productNormalizedId: toNumberOrNull(draft.productNormalizedId),
@@ -621,6 +689,40 @@ function saveContentResult({ dbPath, draft, exportItem }) {
   });
 }
 
+function readContentResultById({ dbPath, draftId }) {
+  if (!existsSync(dbPath)) return null;
+
+  return withDb(dbPath, (db) => {
+    if (!tableExists(db, 'product_content_result')) return null;
+
+    const row = db.prepare(`
+      SELECT *
+      FROM product_content_result
+      WHERE id = ?
+      LIMIT 1
+    `).get(draftId);
+
+    return row ? mapContentResultRow(row) : null;
+  });
+}
+
+function readContentResultByKey({ dbPath, resultKey }) {
+  if (!existsSync(dbPath)) return null;
+
+  return withDb(dbPath, (db) => {
+    if (!tableExists(db, 'product_content_result')) return null;
+
+    const row = db.prepare(`
+      SELECT *
+      FROM product_content_result
+      WHERE result_key = ?
+      LIMIT 1
+    `).get(resultKey);
+
+    return row ? mapContentResultRow(row) : null;
+  });
+}
+
 function listContentResults({ dbPath, limit }) {
   if (!existsSync(dbPath)) return [];
 
@@ -634,6 +736,32 @@ function listContentResults({ dbPath, limit }) {
       ORDER BY updated_at DESC, id DESC
       LIMIT ?
     `).all(safeLimit);
+
+    return rows.map(mapContentResultRow);
+  });
+}
+
+function listDbDrafts({ dbPath, draftStatus = '', limit = DEFAULT_CANDIDATE_LIMIT } = {}) {
+  if (!existsSync(dbPath)) return null;
+
+  return withDb(dbPath, (db) => {
+    if (!tableExists(db, 'product_content_result')) return null;
+
+    const safeLimit = Math.min(Math.max(parsePositiveInteger(limit, DEFAULT_CANDIDATE_LIMIT), 1), 200);
+    const rows = draftStatus
+      ? db.prepare(`
+        SELECT *
+        FROM product_content_result
+        WHERE result_status = ?
+        ORDER BY updated_at DESC, id DESC
+        LIMIT ?
+      `).all(draftStatus, safeLimit)
+      : db.prepare(`
+        SELECT *
+        FROM product_content_result
+        ORDER BY updated_at DESC, id DESC
+        LIMIT ?
+      `).all(safeLimit);
 
     return rows.map(mapContentResultRow);
   });
@@ -662,7 +790,12 @@ export function createProductDataPrepRepository({ dbPath = DEFAULT_DB_PATH } = {
       return lastCandidateSource;
     },
 
-    listDrafts({ draftStatus = '' } = {}) {
+    listDrafts({ draftStatus = '', limit = DEFAULT_CANDIDATE_LIMIT } = {}) {
+      const dbDrafts = listDbDrafts({ dbPath, draftStatus, limit });
+      if (dbDrafts !== null) {
+        return clone(dbDrafts);
+      }
+
       const items = state.drafts.filter((draft) => (
         !draftStatus || draft.draftStatus === draftStatus
       ));
@@ -670,15 +803,90 @@ export function createProductDataPrepRepository({ dbPath = DEFAULT_DB_PATH } = {
     },
 
     getDraftById(draftId) {
+      const dbDraft = readContentResultById({ dbPath, draftId });
+      if (dbDraft) return clone(dbDraft);
+
       const draft = state.drafts.find((item) => Number(item.id) === Number(draftId));
       return draft ? clone(draft) : null;
     },
 
     createDraftFromCandidate(candidateId) {
-      const mockCandidate = state.candidates.find((item) => Number(item.id) === Number(candidateId));
-      const dbCandidate = mockCandidate ? null : readDbCandidates({ dbPath, limit: 100 })
+      const dbCandidates = readDbCandidates({ dbPath, limit: 100 });
+      const dbCandidate = dbCandidates
         ?.find((item) => Number(item.id) === Number(candidateId));
-      const candidate = mockCandidate || dbCandidate;
+      const mockCandidate = dbCandidates === null
+        ? state.candidates.find((item) => Number(item.id) === Number(candidateId))
+        : null;
+      const candidate = dbCandidate || mockCandidate;
+      if (!candidate) return null;
+
+      const resultKey = buildContentResultKey(candidate);
+      const dbDraft = readContentResultByKey({ dbPath, resultKey });
+      if (dbDraft) return clone(dbDraft);
+
+      const draft = buildDraftFromCandidate(candidate);
+      const persistedDraft = saveContentResult({
+        dbPath,
+        draft: {
+          ...draft,
+          resultStatus: 'draft',
+        },
+        exportItem: {},
+      });
+      return clone(persistedDraft);
+    },
+
+    updateDraft(draftId, patch, exportItem = {}) {
+      const existing = readContentResultById({ dbPath, draftId });
+      if (existing) {
+        const normalizedPatch = clone(patch);
+        const mergedDraft = {
+          ...existing,
+          ...normalizedPatch,
+          id: existing.id,
+          resultKey: existing.resultKey,
+          sourceJobId: existing.sourceJobId,
+          sourceSnapshotId: existing.sourceSnapshotId,
+          productNormalizedId: existing.productNormalizedId,
+          platform: existing.platform || normalizedPatch.platform || 'ozon',
+          platformProductId: existing.platformProductId || normalizedPatch.platformProductId || '',
+          ozonProductId: existing.ozonProductId || normalizedPatch.ozonProductId || existing.platformProductId || '',
+          createdAt: existing.createdAt,
+          updatedAt: nowIso(),
+        };
+        return saveContentResult({ dbPath, draft: mergedDraft, exportItem });
+      }
+
+      const existingMemoryDraft = state.drafts.find((item) => Number(item.id) === Number(draftId));
+      if (!existingMemoryDraft) return null;
+
+      const normalizedPatch = clone(patch);
+      Object.assign(existingMemoryDraft, normalizedPatch, {
+        updatedAt: nowIso(),
+      });
+      return clone(existingMemoryDraft);
+    },
+
+    saveDraft({ draft, exportItem }) {
+      return saveContentResult({ dbPath, draft, exportItem });
+    },
+
+    setDraftStatus(draftId, resultStatus, exportItem = null) {
+      const existing = readContentResultById({ dbPath, draftId });
+      if (!existing) return null;
+      return saveContentResult({
+        dbPath,
+        draft: {
+          ...existing,
+          resultStatus,
+          draftStatus: resultStatus,
+        },
+        exportItem: exportItem ?? existing.ozonImportItem ?? {},
+      });
+    },
+
+    createMemoryDraftFromCandidate(candidateId) {
+      const candidate = state.candidates.find((item) => Number(item.id) === Number(candidateId));
       if (!candidate) return null;
 
       const existing = state.drafts.find((item) => Number(item.productNormalizedId) === Number(candidate.productNormalizedId));
@@ -686,17 +894,6 @@ export function createProductDataPrepRepository({ dbPath = DEFAULT_DB_PATH } = {
 
       const draft = buildDraftFromCandidate(candidate);
       state.drafts.unshift(draft);
-      return clone(draft);
-    },
-
-    updateDraft(draftId, patch) {
-      const draft = state.drafts.find((item) => Number(item.id) === Number(draftId));
-      if (!draft) return null;
-
-      const normalizedPatch = clone(patch);
-      Object.assign(draft, normalizedPatch, {
-        updatedAt: nowIso(),
-      });
       return clone(draft);
     },
 

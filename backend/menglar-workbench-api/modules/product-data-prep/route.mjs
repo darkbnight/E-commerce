@@ -113,12 +113,12 @@ export async function handleProductDataPrepRoute(req, res) {
   if (req.method === 'PATCH' && draftRoute?.action === 'detail') {
     try {
       const body = await readJsonBody(req);
-      const draft = service.updateDraft(draftRoute.draftId, body);
-      if (!draft) {
+      const result = service.updateDraft(draftRoute.draftId, body);
+      if (!result) {
         sendError(res, 404, '草稿不存在');
         return;
       }
-      sendJson(res, 200, { item: draft });
+      sendJson(res, 200, result);
     } catch (error) {
       sendError(res, 400, error.message);
     }

@@ -191,6 +191,38 @@ function buildImportRequest(items = []) {
   };
 }
 
+function collectSaveIssues(draft, exportItem) {
+  return [
+    ...collectDraftIssues(draft),
+    ...collectExportItemIssues(exportItem),
+  ];
+}
+
+function hasBlockingIssue(issues) {
+  return issues.some((issue) => issue.level === 'error');
+}
+
+function resolveSaveStatus({ requestedStatus, issues }) {
+  if (hasBlockingIssue(issues)) return 'invalid';
+  return requestedStatus === 'ready' ? 'ready' : 'draft';
+}
+
+function buildDraftSavePayload({ draft, requestedStatus }) {
+  const exportItem = buildExportItem(draft);
+  const issues = collectSaveIssues(draft, exportItem);
+  const resultStatus = resolveSaveStatus({ requestedStatus, issues });
+
+  return {
+    draft: {
+      ...draft,
+      resultStatus,
+      draftStatus: resultStatus,
+    },
+    exportItem,
+    issues,
+  };
+}
+
 export function createProductDataPrepService({ repository = createProductDataPrepRepository() } = {}) {
   return {
     listCandidates({ searchParams }) {
@@ -211,11 +243,13 @@ export function createProductDataPrepService({ repository = createProductDataPre
 
     listDrafts({ searchParams }) {
       const draftStatus = searchParams.get('draftStatus') || '';
-      const items = repository.listDrafts({ draftStatus });
+      const limit = searchParams.get('limit');
+      const items = repository.listDrafts({ draftStatus, limit });
       return {
         meta: {
-          source: 'module-memory-drafts',
-          note: '当前草稿仍保存在模块内存态，后续可迁移到 product_publish_drafts 表。',
+          source: 'db/ecommerce-workbench.sqlite',
+          table: 'product_content_result',
+          note: '当前草稿持久化在 product_content_result，字段编辑后同步生成 Ozon import item。',
         },
         total: items.length,
         items,
@@ -231,7 +265,37 @@ export function createProductDataPrepService({ repository = createProductDataPre
     },
 
     updateDraft(draftId, patch) {
-      return repository.updateDraft(draftId, patch);
+      const existing = repository.getDraftById(draftId);
+      if (!existing) return null;
+
+      const requestedStatus = patch.resultStatus || patch.draftStatus || existing.resultStatus || existing.draftStatus;
+      const mergedDraft = {
+        ...existing,
+        ...patch,
+        id: existing.id,
+        resultKey: existing.resultKey,
+        sourceJobId: existing.sourceJobId,
+        sourceSnapshotId: existing.sourceSnapshotId,
+        productNormalizedId: existing.productNormalizedId,
+        platform: existing.platform || patch.platform || 'ozon',
+        platformProductId: existing.platformProductId || patch.platformProductId || '',
+        ozonProductId: existing.ozonProductId || patch.ozonProductId || existing.platformProductId || '',
+        createdAt: existing.createdAt,
+      };
+      const payload = buildDraftSavePayload({ draft: mergedDraft, requestedStatus });
+      const item = repository.updateDraft(draftId, payload.draft, payload.exportItem);
+
+      return {
+        meta: {
+          source: 'db/ecommerce-workbench.sqlite',
+          table: 'product_content_result',
+          action: 'update',
+        },
+        item,
+        ozonImportItem: payload.exportItem,
+        ozonImportRequest: buildImportRequest([payload.exportItem]),
+        issues: payload.issues,
+      };
     },
 
     listContentResults({ searchParams }) {
@@ -249,20 +313,11 @@ export function createProductDataPrepService({ repository = createProductDataPre
 
     saveContentResult(input = {}) {
       const draft = input.draft || input;
-      const exportItem = buildExportItem(draft);
-      const issues = [
-        ...collectDraftIssues(draft),
-        ...collectExportItemIssues(exportItem),
-      ];
-      const resultStatus = issues.some((issue) => issue.level === 'error')
-        ? 'invalid'
-        : (draft.draftStatus || 'draft');
+      const requestedStatus = draft.resultStatus || draft.draftStatus;
+      const payload = buildDraftSavePayload({ draft, requestedStatus });
       const item = repository.saveContentResult({
-        draft: {
-          ...draft,
-          resultStatus,
-        },
-        exportItem,
+        draft: payload.draft,
+        exportItem: payload.exportItem,
       });
 
       return {
@@ -272,9 +327,9 @@ export function createProductDataPrepService({ repository = createProductDataPre
           action: 'upsert',
         },
         item,
-        ozonImportItem: exportItem,
-        ozonImportRequest: buildImportRequest([exportItem]),
-        issues,
+        ozonImportItem: payload.exportItem,
+        ozonImportRequest: buildImportRequest([payload.exportItem]),
+        issues: payload.issues,
       };
     },
 
@@ -282,11 +337,18 @@ export function createProductDataPrepService({ repository = createProductDataPre
       const draft = repository.getDraftById(draftId);
       if (!draft) return null;
 
-      const issues = collectDraftIssues(draft);
+      const exportItem = buildExportItem(draft);
+      const issues = collectSaveIssues(draft, exportItem);
+      const resultStatus = hasBlockingIssue(issues) ? 'invalid' : 'ready';
+      const item = repository.setDraftStatus(draftId, resultStatus, exportItem);
+
       return {
         draftId: draft.id,
-        ok: issues.every((issue) => issue.level !== 'error'),
-        suggestedStatus: issues.every((issue) => issue.level !== 'error') ? 'ready' : 'draft',
+        ok: resultStatus === 'ready',
+        suggestedStatus: resultStatus,
+        item,
+        ozonImportItem: exportItem,
+        ozonImportRequest: buildImportRequest([exportItem]),
         issues,
       };
     },
@@ -319,7 +381,8 @@ export function createProductDataPrepService({ repository = createProductDataPre
 
       return {
         meta: {
-          source: 'module-memory-drafts',
+          source: 'db/ecommerce-workbench.sqlite',
+          table: 'product_content_result',
           note: '导出结构已对齐本地 Ozon importer，可作为后续真实导出载荷的基础。',
         },
         itemCount: exportedItems.length,

@@ -33,7 +33,7 @@ export async function fetchProductPrepDrafts(params = {}) {
 export async function fetchProductPrepContentResults(params = {}) {
   const search = buildSearch(params);
   const response = await fetch(`${BASE_PATH}/content-results${search ? `?${search}` : ''}`);
-  return readJson(response, 'read product content result failed');
+  return readJson(response, '读取商品内容结果失败');
 }
 
 export async function fetchProductPrepDraft(draftId) {
@@ -65,7 +65,7 @@ export async function saveProductPrepContentResult(input) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   });
-  return readJson(response, 'save product content result failed');
+  return readJson(response, '保存商品内容结果失败');
 }
 
 export async function validateProductPrepDraft(draftId) {
