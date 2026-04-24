@@ -1,3 +1,4 @@
+import { readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { USER_DATA_DEFAULT_DIR } from './constants.mjs';
 import { safeReadBuffer } from './profile-store.mjs';
@@ -46,13 +47,11 @@ function normalizeBase64Candidate(value) {
 }
 
 export async function extractRuntimeStorage() {
-  const localStorageFiles = [
-    path.join(USER_DATA_DEFAULT_DIR, 'Local Storage', 'leveldb', '024974.ldb'),
-    path.join(USER_DATA_DEFAULT_DIR, 'Local Storage', 'leveldb', '024711.ldb'),
-  ];
-  const sessionStorageFiles = [
-    path.join(USER_DATA_DEFAULT_DIR, 'Local Storage', 'leveldb', '024972.ldb'),
-  ];
+  const localStorageDir = path.join(USER_DATA_DEFAULT_DIR, 'Local Storage', 'leveldb');
+  const sessionStorageDir = path.join(USER_DATA_DEFAULT_DIR, 'Session Storage');
+  const localStorageFiles = await listLevelDbFiles(localStorageDir);
+  const sessionStorageFiles = await listLevelDbFiles(sessionStorageDir);
+  const sessionCandidateFiles = [...new Set([...sessionStorageFiles, ...localStorageFiles])];
 
   const localStorage = {};
   const sessionStorage = {};
@@ -63,7 +62,7 @@ export async function extractRuntimeStorage() {
     const content = decodeLatin1(buffer);
 
     const originStart = content.indexOf('_https://ozon.menglar.com');
-    const originCandidates = filePath.endsWith('024711.ldb') && originStart >= 0
+    const originCandidates = originStart >= 0
       ? [...content.slice(originStart, originStart + 2000).matchAll(/[A-Za-z0-9+/=]{40,}/g)]
           .map((item) => normalizeBase64Candidate(item[0]))
           .filter((item) => item.length >= 40)
@@ -93,17 +92,32 @@ export async function extractRuntimeStorage() {
     }
   }
 
-  for (const filePath of sessionStorageFiles) {
+  for (const filePath of sessionCandidateFiles) {
     const buffer = await safeReadBuffer(filePath);
     if (!buffer) continue;
     const content = decodeLatin1(buffer);
     const sLogin = findStructuredAsciiValues(content, 'sLogin', /^(true|false)$/)[0] ?? null;
-    const token = findStructuredAsciiValues(content, 'token', /^[A-Za-z0-9]{32,256}$/)[0] ?? null;
+    const token =
+      findStructuredAsciiValues(content, 'token', /^[A-Za-z0-9]{16,256}$/)[0] ??
+      findStructuredAsciiValues(content, 'token', /^[A-Za-z0-9+/=_-]{16,512}$/)[0] ??
+      null;
     if (sLogin) sessionStorage.sLogin = sLogin;
     if (token) sessionStorage.token = token;
   }
 
   return { localStorage, sessionStorage };
+}
+
+async function listLevelDbFiles(directoryPath) {
+  try {
+    const entries = await readdir(directoryPath, { withFileTypes: true });
+    return entries
+      .filter((entry) => entry.isFile() && /\.(ldb|log)$/i.test(entry.name))
+      .map((entry) => path.join(directoryPath, entry.name))
+      .sort();
+  } catch {
+    return [];
+  }
 }
 
 export function getPageAuthState(bodyText) {

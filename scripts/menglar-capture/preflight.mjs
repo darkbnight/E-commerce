@@ -1,10 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { ERROR_ACTIONS, PREFLIGHT_DIR, PREFLIGHT_LAST_PATH, getTargetConfig } from './lib/constants.mjs';
-import { getChromeStatus, launchMenglarContext } from './lib/browser-session.mjs';
-import { ensureProfileCopy } from './lib/profile-store.mjs';
-import { extractRuntimeStorage, getPageAuthState } from './lib/preflight-checks.mjs';
+import { checkMenglarLoginHealth } from './lib/login-health.mjs';
 
 function parseArgs(argv) {
   const args = {
@@ -62,131 +59,31 @@ async function writePreflightResult(result, writeResult) {
 export async function runPreflight(options = {}) {
   const target = options.target || 'industry_general';
   const targetConfig = getTargetConfig(target);
-  const browser = getChromeStatus();
-
-  if (!browser.exists) {
-    const result = makeResult({
-      ok: false,
-      target,
-      targetUrl: targetConfig.targetUrl,
-      browser,
-      profile: { ok: false },
-      errorType: 'browser_blocked',
-      message: `未找到 Chrome: ${browser.executablePath}`,
-    });
-    await writePreflightResult(result, options.writeResult !== false);
-    return result;
-  }
-
-  const profile = await ensureProfileCopy({ refresh: Boolean(options.refresh) });
-  if (!profile.ok) {
-    const result = makeResult({
-      ok: false,
-      target,
-      targetUrl: targetConfig.targetUrl,
-      browser,
-      profile,
-      errorType: profile.errorType || 'profile_locked',
-      message: profile.message,
-    });
-    await writePreflightResult(result, options.writeResult !== false);
-    return result;
-  }
-
-  const runtimeStorage = await extractRuntimeStorage();
-  const runtimeStorageLoaded =
-    Object.keys(runtimeStorage.localStorage || {}).length > 0 ||
-    Object.keys(runtimeStorage.sessionStorage || {}).length > 0;
-  const capturedApiHeaders = [];
-  let context;
-
-  try {
-    context = await launchMenglarContext({
-      runtimeStorage,
-      headless: Boolean(options.headless),
-    });
-
-    context.on('request', (request) => {
-      const url = request.url();
-      if (!url.includes('/api/ozon-report-service/v1/')) return;
-      const headers = request.headers();
-      capturedApiHeaders.push({
-        hasAuthorization: Boolean(headers.authorization),
-        keys: Object.keys(headers).sort(),
-      });
-    });
-
-    const page = context.pages()[0] || await context.newPage();
-    await page.goto(targetConfig.targetUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await page.waitForTimeout(8000);
-
-    const bodyText = await page.locator('body').innerText({ timeout: 5000 }).catch(() => '');
-    const pageAuthState = getPageAuthState(bodyText);
-    const latestAuthorized = [...capturedApiHeaders].reverse().find((item) => item.hasAuthorization);
-    const auth = {
-      runtimeStorageLoaded,
-      authorizationCaptured: Boolean(latestAuthorized),
-      capturedHeaderKeys: latestAuthorized?.keys?.filter((key) => key !== 'authorization') || [],
-      requestCount: capturedApiHeaders.length,
-    };
-
-    if (!pageAuthState.ok) {
-      const result = makeResult({
-        ok: false,
-        target,
-        targetUrl: targetConfig.targetUrl,
-        browser,
-        profile,
-        auth,
-        errorType: pageAuthState.errorType,
-        message: pageAuthState.message,
-      });
-      await writePreflightResult(result, options.writeResult !== false);
-      return result;
-    }
-
-    if (!auth.authorizationCaptured) {
-      const result = makeResult({
-        ok: false,
-        target,
-        targetUrl: targetConfig.targetUrl,
-        browser,
-        profile,
-        auth,
-        errorType: 'api_auth_missing',
-        message: '未捕获到萌拉业务接口 Authorization',
-      });
-      await writePreflightResult(result, options.writeResult !== false);
-      return result;
-    }
-
-    const result = makeResult({
-      ok: true,
-      target,
-      targetUrl: targetConfig.targetUrl,
-      browser,
-      profile,
-      auth,
-      message: '采集环境可用',
-    });
-    await writePreflightResult(result, options.writeResult !== false);
-    return result;
-  } catch (error) {
-    const errorType = error.errorType || (existsSync(browser.executablePath) ? 'unknown' : 'browser_blocked');
-    const result = makeResult({
-      ok: false,
-      target,
-      targetUrl: targetConfig.targetUrl,
-      browser,
-      profile,
-      errorType,
-      message: error.message,
-    });
-    await writePreflightResult(result, options.writeResult !== false);
-    return result;
-  } finally {
-    if (context) await context.close().catch(() => {});
-  }
+  const loginHealth = await checkMenglarLoginHealth({
+    target,
+    refresh: Boolean(options.refresh),
+    headless: Boolean(options.headless),
+    writeResult: true,
+  });
+  const result = makeResult({
+    ok: loginHealth.ok,
+    target,
+    targetUrl: targetConfig.targetUrl,
+    browser: loginHealth.browser,
+    profile: loginHealth.profile,
+    auth: {
+      runtimeStorageLoaded: loginHealth.storage.runtimeStorageLoaded,
+      authorizationCaptured: loginHealth.api.authorizedRequestCount > 0 && loginHealth.api.unauthorizedResponseCount === 0,
+      capturedHeaderKeys: loginHealth.api.capturedHeaderKeys,
+      requestCount: loginHealth.api.requestCount,
+      unauthorizedResponseCount: loginHealth.api.unauthorizedResponseCount,
+    },
+    errorType: loginHealth.errorType,
+    message: loginHealth.message || (loginHealth.ok ? '采集环境可用' : null),
+    nextAction: loginHealth.nextAction,
+  });
+  await writePreflightResult(result, options.writeResult !== false);
+  return result;
 }
 
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;

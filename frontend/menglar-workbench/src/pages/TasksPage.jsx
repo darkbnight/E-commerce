@@ -1,8 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Fragment, useMemo, useState } from 'react';
 import { Panel } from '../components/Panel';
 import { StatusBadge } from '../components/StatusBadge';
-import { fetchJobs } from '../lib/api';
+import { checkMenglarLoginHealth, fetchJobs } from '../lib/api';
 import { formatNumber, formatText } from '../lib/format';
 
 const TASK_TYPE_LABELS = {
@@ -16,6 +16,7 @@ const ERROR_TYPE_LABELS = {
   profile_locked: 'Profile 占用',
   browser_blocked: '浏览器异常',
   api_auth_missing: '接口鉴权缺失',
+  api_unauthorized: '接口未授权',
   db_error: '数据库异常',
   unknown: '未知异常',
 };
@@ -26,6 +27,7 @@ const ERROR_TYPE_ACTIONS = {
   profile_locked: '关闭占用紫鸟 Profile 的浏览器，必要时刷新 Profile 副本',
   browser_blocked: '检查 Chrome 路径、权限和残留浏览器进程',
   api_auth_missing: '先打开目标页，确认业务接口正常加载',
+  api_unauthorized: '重新登录萌拉，关闭紫鸟窗口让登录态落盘后，刷新 Profile 再检查',
   db_error: '检查本地数据库路径与写入权限',
   unknown: '查看错误详情并按日志定位',
 };
@@ -120,6 +122,7 @@ function getErrorSummary(errorMessage) {
 export function TasksPage() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [expandedJobId, setExpandedJobId] = useState(null);
+  const [loginHealth, setLoginHealth] = useState(null);
 
   const jobsQuery = useQuery({
     queryKey: ['jobs'],
@@ -128,6 +131,10 @@ export function TasksPage() {
   });
 
   const jobs = jobsQuery.data?.jobs || [];
+  const loginHealthMutation = useMutation({
+    mutationFn: checkMenglarLoginHealth,
+    onSuccess: setLoginHealth,
+  });
   const filteredJobs = useMemo(() => {
     if (activeFilter === 'all') return jobs;
     return jobs.filter((job) => job.job_status === activeFilter);
@@ -154,8 +161,47 @@ export function TasksPage() {
     await navigator.clipboard.writeText(message);
   };
 
+  const runLoginHealth = (refresh = false) => {
+    loginHealthMutation.mutate({
+      target: 'hot_products',
+      refresh,
+      headless: true,
+    });
+  };
+
   return (
     <div className="wb-page">
+      <Panel
+        title="采集可用性检查"
+        subtitle="正式采集前先确认萌拉登录态和业务接口授权是否可用"
+        actions={
+          <div className="wb-inline-actions wb-wrap-actions">
+            <button
+              type="button"
+              className="wb-button wb-button-primary"
+              onClick={() => runLoginHealth(false)}
+              disabled={loginHealthMutation.isPending}
+            >
+              {loginHealthMutation.isPending ? '检查中' : '检查是否可采'}
+            </button>
+            <button
+              type="button"
+              className="wb-button ghost"
+              onClick={() => runLoginHealth(true)}
+              disabled={loginHealthMutation.isPending}
+            >
+              刷新 Profile 后检查
+            </button>
+          </div>
+        }
+      >
+        <LoginHealthPanel
+          result={loginHealth}
+          error={loginHealthMutation.error}
+          isPending={loginHealthMutation.isPending}
+        />
+      </Panel>
+
       <div className="task-summary-grid">
         <div className="task-summary-card">
           <span>最近任务</span>
@@ -312,6 +358,62 @@ export function TasksPage() {
           </table>
         </div>
       </Panel>
+    </div>
+  );
+}
+
+function LoginHealthPanel({ result, error, isPending }) {
+  if (error) {
+    return <div className="wb-feedback is-error">登录态检查失败：{error.message}</div>;
+  }
+
+  if (!result && !isPending) {
+    return (
+      <div className="login-health-empty">
+        <strong>尚未检查</strong>
+        <span>点击检查后，会验证 profile、页面状态、Authorization 和 401/403 响应。</span>
+      </div>
+    );
+  }
+
+  if (isPending) {
+    return <div className="wb-feedback is-busy">正在打开目标页并检查萌拉业务接口授权...</div>;
+  }
+
+  const ok = Boolean(result?.ok);
+  const errorType = result?.errorType;
+  return (
+    <div className={ok ? 'login-health-card is-ready' : 'login-health-card is-blocked'}>
+      <div className="login-health-status">
+        <span>{ok ? '可正常采集' : '暂不可采集'}</span>
+        <strong>{ok ? 'Ready' : formatErrorType(errorType)}</strong>
+      </div>
+      <div className="login-health-grid">
+        <div>
+          <span>检查时间</span>
+          <strong>{formatDateTime(result?.checkedAt)}</strong>
+        </div>
+        <div>
+          <span>实际页面</span>
+          <strong>{formatText(result?.page?.url)}</strong>
+        </div>
+        <div>
+          <span>本地缓存</span>
+          <strong>{result?.storage?.runtimeStorageLoaded ? '已读取' : '未读取'}</strong>
+        </div>
+        <div>
+          <span>授权请求</span>
+          <strong>{formatNumber(result?.api?.authorizedRequestCount || 0)} / {formatNumber(result?.api?.requestCount || 0)}</strong>
+        </div>
+        <div>
+          <span>401/403</span>
+          <strong>{formatNumber(result?.api?.unauthorizedResponseCount || 0)}</strong>
+        </div>
+        <div>
+          <span>建议处理</span>
+          <strong>{formatText(result?.nextAction)}</strong>
+        </div>
+      </div>
     </div>
   );
 }

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "capture:hot-products": "node scripts/menglar-capture/hot-products.mjs",
+    "menglar:login-health": "node scripts/menglar-capture/login-health.mjs",
     "db:migrate": "node scripts/migrate-ecommerce-workbench-db.mjs",
     "db:inspect": "node scripts/inspect-menglar-db.mjs",
     "db:migration:test": "node scripts/test-ecommerce-db-migration.mjs",

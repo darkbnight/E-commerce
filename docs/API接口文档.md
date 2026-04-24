@@ -2,6 +2,36 @@
 
 ## 萌拉采集结果展示页
 
+### POST /api/menglar/login-health
+#### 说明
+检查萌拉登录态和业务接口授权是否可用于正式采集。该接口只执行检查，不创建采集任务，不写入业务数据库；检查结果会写入 `.cache/menglar-capture/login-health-last.json`。
+
+#### 请求体字段
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `target` | string | 否 | 检查目标，支持 `hot_products`、`industry_general`，默认 `hot_products` |
+| `refresh` | boolean | 否 | 是否强制刷新紫鸟 profile 副本，默认 `false` |
+| `headless` | boolean | 否 | 是否无头检查，默认 `true` |
+
+#### 返回字段
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `ok` | boolean | 是否可进入正式采集 |
+| `status` | string | `ready` 或 `blocked` |
+| `target` | string | 检查目标 |
+| `targetUrl` | string | 检查页面 |
+| `browser` | object | 浏览器可用性 |
+| `profile` | object | 紫鸟 profile 副本状态 |
+| `storage.runtimeStorageLoaded` | boolean | 是否读取到本地登录缓存 |
+| `page.title` | string\|null | 实际页面标题 |
+| `page.url` | string\|null | 实际页面 URL |
+| `api.requestCount` | number | 捕获到的萌拉业务接口请求数 |
+| `api.authorizedRequestCount` | number | 带 Authorization 的业务接口请求数 |
+| `api.unauthorizedResponseCount` | number | 401/403 响应数 |
+| `errorType` | string\|null | 阻塞类型，如 `login_required`、`guest_blocked`、`api_auth_missing`、`api_unauthorized` |
+| `message` | string\|null | 检查说明 |
+| `nextAction` | string\|null | 下一步处理建议 |
+
 ### GET /api/jobs
 #### 说明
 返回最近 20 条萌拉采集任务记录。
@@ -36,7 +66,7 @@
 | `jobId` | number | 否 | 指定任务ID，默认最新有商品经营快照的成功任务 |
 | `page` | number | 否 | 页码，默认 `1` |
 | `pageSize` | number | 否 | 每页条数，默认 `20`，最大 `100` |
-| `keyword` | string | 否 | 关键词，匹配平台商品 ID / 品牌 / 类目 |
+| `keyword` | string | 否 | 关键词，匹配平台商品 ID / 标题 / 品牌 / 店铺 / 类目 |
 | `productType` | string | 否 | 商品类型 |
 | `categoryLevel1` | string | 否 | 一级类目 |
 | `minSales` | number | 否 | 最低销售量，对应 `sales_volume` |
@@ -53,6 +83,31 @@
 | `items` | array | 当前页商品列表 |
 | `total` | number | 匹配总数 |
 | `actualProductCount` | number | 当前任务实际关联的商品经营快照总数，不受筛选条件影响 |
+
+#### `items[]` 关键字段
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `platform_product_id` | string | 平台商品 ID |
+| `product_url` | string\|null | 商品链接 |
+| `product_image_url` | string\|null | 商品主图链接 |
+| `title` | string\|null | 商品标题 |
+| `brand` | string\|null | 品牌 |
+| `shop_id` | string\|null | 店铺 ID |
+| `shop_name` | string\|null | 店铺名称 |
+| `product_type` | string\|null | 商品类型 |
+| `product_created_date` | string\|null | 商品卡创建日期 |
+| `sales_volume` | number\|null | 销量 |
+| `sales_growth` | number\|null | 销量增长率 |
+| `sales_amount` | number\|null | 销售额卢布口径 |
+| `sales_amount_cny` | number\|null | 销售额人民币口径，优先使用萌拉返回值 |
+| `avg_price_rub` | number\|null | 平均单价卢布口径 |
+| `avg_price_cny` | number\|null | 平均单价人民币口径，优先使用萌拉返回值 |
+| `impressions` | number\|null | 曝光量 |
+| `clicks` | number\|null | 点击或访问数 |
+| `view_rate` | number\|null | 点击率 |
+| `ad_cost` | number\|null | 广告费卢布口径 |
+| `ad_cost_cny` | number\|null | 广告费人民币口径 |
+| `ad_cost_rate` | number\|null | 广告费占比 |
 
 ### GET /api/result-jobs
 #### 说明

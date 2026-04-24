@@ -6,6 +6,7 @@
 
 | 文件 | 用途 |
 | --- | --- |
+| `login-health.mjs` | 萌拉登录态稳定性检查：独立判断 profile、页面登录态、业务接口授权和 401/403 |
 | `preflight.mjs` | 采集前置检查：Chrome、profile 副本、登录态、业务接口 Authorization |
 | `industry-deep-dive.mjs` | 行业数据二次分析采集，采到 3 级类目层级 |
 | `hot-products.mjs` | 热销商品采集，保留原始商品和经营快照入库 |
@@ -14,11 +15,47 @@
 ## 常用命令
 
 ```bash
+node scripts/menglar-capture/login-health.mjs --target hot_products --json
+node scripts/menglar-capture/login-health.mjs --target hot_products --refresh --json
 node scripts/menglar-capture/preflight.mjs --target industry_general --json
 node scripts/menglar-capture/preflight.mjs --target hot_products --json
 node scripts/menglar-capture/industry-deep-dive.mjs
 node scripts/menglar-capture/hot-products.mjs
 ```
+
+## 登录态稳定性检查
+
+正式采集前先问登录态模块，不直接启动采集：
+
+```bash
+node scripts/menglar-capture/login-health.mjs --target hot_products --json
+```
+
+如果你刚在紫鸟里重新登录过，先关闭紫鸟窗口让登录态落盘，再强制刷新 profile 副本：
+
+```bash
+node scripts/menglar-capture/login-health.mjs --target hot_products --refresh --json
+```
+
+检查结果会写入：
+
+```text
+.cache/menglar-capture/login-health-last.json
+```
+
+核心判断口径：
+
+| 字段 | 说明 |
+| --- | --- |
+| `ok` | 是否可以进入正式采集 |
+| `storage.runtimeStorageLoaded` | 是否从紫鸟 profile 读到本地登录缓存 |
+| `api.authorizedRequestCount` | 是否捕获到带 Authorization 的业务接口请求 |
+| `api.unauthorizedResponseCount` | 业务接口是否返回 401/403 |
+| `page.url` | 检查时实际停留页面；如果是 `/workbench/login`，说明登录态不可采 |
+| `errorType` | 阻塞类型，如 `login_required`、`guest_blocked`、`api_unauthorized` |
+| `nextAction` | 下一步处理建议 |
+
+采集脚本后续只应该依赖这个模块的 `ok=true` 结果。`ok=false` 时不进入正式采集，避免出现“任务成功但入库 0 条”的误判。
 
 ## 热销商品标准采集
 
@@ -80,6 +117,7 @@ node scripts/menglar-capture/hot-products.mjs
 | `profile_locked` | Profile 副本不可用或源 profile 被占用 | 关闭占用浏览器，必要时加 `MENGLAR_REFRESH_PROFILE=1` |
 | `browser_blocked` | Chrome 路径缺失或启动失败 | 检查 Chrome 路径、权限、残留进程 |
 | `api_auth_missing` | 页面可打开，但没有出现带 Authorization 的业务接口请求 | 手动打开目标页确认接口正常加载 |
+| `api_unauthorized` | 已出现业务接口请求，但接口返回 401/403 | 重新登录萌拉，关闭紫鸟窗口让登录态落盘后，执行 `login-health --refresh` |
 | `db_error` | 数据库不可写或迁移失败 | 检查 `db/ecommerce-workbench.sqlite` |
 
 ## 入库位置

@@ -38,6 +38,15 @@ export async function fetchProducts(params = {}) {
   return response.json();
 }
 
+export async function checkMenglarLoginHealth(input = {}) {
+  const response = await fetch('/api/menglar/login-health', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  return readJson(response, '登录态检查失败');
+}
+
 async function readJson(response, fallbackMessage) {
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
