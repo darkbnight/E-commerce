@@ -9,13 +9,6 @@ const NO_BRAND_DICTIONARY_VALUE = {
   value: 'Нет бренда',
 };
 
-function formatValue(value) {
-  if (!value) return '待填写';
-  const text = value.value || '';
-  const dictionaryId = value.dictionaryValueId ? `#${value.dictionaryValueId}` : '';
-  return [text, dictionaryId].filter(Boolean).join(' ');
-}
-
 function getCurrentValues({ attribute, draftAttributes, formValues }) {
   const formEntry = formValues[getAttributeKey(attribute)];
   if (Array.isArray(formEntry?.values) && formEntry.values.length) {
@@ -27,6 +20,71 @@ function getCurrentValues({ attribute, draftAttributes, formValues }) {
 function getAttributeTypeLabel(attribute) {
   if (attribute.dictionaryId) return `字典值 dictionary_id: ${attribute.dictionaryId}`;
   return attribute.type ? `自由填写 value，类型: ${attribute.type}` : '自由填写 value';
+}
+
+function buildAttributeTooltip(attribute, dictionaryValues, valueQuery) {
+  const dictionaryState = attribute.dictionaryId
+    ? (
+        valueQuery?.isLoading || valueQuery?.isFetching
+          ? '字典值：读取中'
+          : valueQuery?.isError
+            ? `字典值：读取失败 - ${valueQuery.error.message}`
+            : `字典值：已加载 ${dictionaryValues.length} 个候选值`
+      )
+    : '取值方式：自由填写';
+  return [
+    attribute.description || 'Ozon 未返回填写说明',
+    `id: ${attribute.id}`,
+    `complex_id: ${attribute.complexId}`,
+    attribute.groupName ? `group: ${attribute.groupName}` : '',
+    getAttributeTypeLabel(attribute),
+    attribute.isCollection ? '支持多值' : '单值',
+    `max: ${attribute.maxValueCount || '不限'}`,
+    attribute.isAspect ? '影响筛选/搜索' : '',
+    dictionaryState,
+  ].filter(Boolean).join('\n');
+}
+
+function InfoIcon({ label }) {
+  return (
+    <span className="product-prep-icon product-prep-info-icon" data-tooltip={label} aria-label={label} tabIndex={0}>
+      i
+    </span>
+  );
+}
+
+function AttributeStatusIcons({ attribute, isFilled, dictionaryValues, valueQuery }) {
+  const dictionaryTitle = valueQuery?.isLoading || valueQuery?.isFetching
+    ? '字典值读取中'
+    : valueQuery?.isError
+      ? `字典值读取失败：${valueQuery.error.message}`
+      : dictionaryValues.length
+        ? `已加载 ${dictionaryValues.length} 个候选字典值`
+        : '该属性没有已加载的候选字典值';
+
+  return (
+    <div className="product-prep-attribute-icons" aria-label="字段状态">
+      {attribute.isRequired ? (
+        <span className="product-prep-icon is-required" title="必填" aria-label="必填">!</span>
+      ) : null}
+      <span
+        className={`product-prep-icon ${isFilled ? 'is-filled' : 'is-empty'}`}
+        title={isFilled ? '已填写' : '待填写'}
+        aria-label={isFilled ? '已填写' : '待填写'}
+      />
+      {attribute.dictionaryId ? (
+        <span
+          className={`product-prep-icon is-dictionary ${
+            valueQuery?.isLoading || valueQuery?.isFetching ? 'is-loading' : ''
+          } ${valueQuery?.isError ? 'is-error' : ''}`}
+          title={dictionaryTitle}
+          aria-label={dictionaryTitle}
+        >
+          D
+        </span>
+      ) : null}
+    </div>
+  );
 }
 
 function isBrandDictionaryAttribute(attribute) {
@@ -69,8 +127,8 @@ function AttributeValueEditor({
       : dictionaryValues;
     return (
       <div className="product-prep-attribute-fill">
-        <span>填写值</span>
         <select
+          aria-label={`${attribute.name} 的值`}
           multiple={canHaveMultiple}
           size={canHaveMultiple ? Math.min(Math.max(selectDictionaryValues.length, 3), 6) : undefined}
           value={selectValue}
@@ -104,7 +162,7 @@ function AttributeValueEditor({
               });
             }}
           >
-            填入无品牌（Нет бренда #{NO_BRAND_DICTIONARY_VALUE.dictionaryValueId}）
+            无品牌
           </button>
         ) : null}
       </div>
@@ -114,8 +172,8 @@ function AttributeValueEditor({
   if (canHaveMultiple) {
     return (
       <label className="product-prep-attribute-fill">
-        <span>填写值</span>
         <textarea
+          aria-label={`${attribute.name} 的值`}
           rows={3}
           value={currentText}
           placeholder="每行一个 value"
@@ -134,8 +192,8 @@ function AttributeValueEditor({
 
   return (
     <label className="product-prep-attribute-fill">
-      <span>填写值</span>
       <input
+        aria-label={`${attribute.name} 的值`}
         value={currentText}
         placeholder="请输入 value"
         onChange={(event) => onFormValueChange(attributeKey, {
@@ -156,40 +214,22 @@ function AttributeCard({
 }) {
   const currentValues = getCurrentValues({ attribute, draftAttributes, formValues });
   const isFilled = currentValues.some((value) => value?.value || value?.dictionaryValueId);
+  const tooltip = buildAttributeTooltip(attribute, dictionaryValues, valueQuery);
 
   return (
     <article className={`product-prep-attribute-card ${attribute.isRequired ? 'is-required' : ''}`}>
       <div className="product-prep-attribute-card-head">
-        <div>
+        <div className="product-prep-attribute-title">
           <strong>{attribute.name}</strong>
-          <span>{attribute.description || 'Ozon 未返回填写说明'}</span>
+          <InfoIcon label={tooltip} />
         </div>
-        <em className={attribute.isRequired ? 'is-required' : ''}>
-          {attribute.isRequired ? '必填' : '可选'}
-        </em>
+        <AttributeStatusIcons
+          attribute={attribute}
+          isFilled={isFilled}
+          dictionaryValues={dictionaryValues}
+          valueQuery={valueQuery}
+        />
       </div>
-
-      <div className="product-prep-attribute-meta">
-        <code>id: {attribute.id}</code>
-        <code>complex_id: {attribute.complexId}</code>
-        {attribute.groupName ? <code>group: {attribute.groupName}</code> : null}
-        <code>{getAttributeTypeLabel(attribute)}</code>
-        <code>{attribute.isCollection ? '支持多值' : '单值'}</code>
-        <code>max: {attribute.maxValueCount || '不限'}</code>
-        {attribute.isAspect ? <code>影响筛选/搜索</code> : null}
-      </div>
-
-      {attribute.dictionaryId ? (
-        <div className="product-prep-attribute-values">
-          {valueQuery?.isLoading || valueQuery?.isFetching ? '正在读取字典值...' : null}
-          {valueQuery?.isError ? `字典值读取失败：${valueQuery.error.message}` : null}
-          {!valueQuery?.isLoading && !valueQuery?.isError ? (
-            dictionaryValues.length
-              ? `已加载 ${dictionaryValues.length} 个候选字典值，实际可继续分页读取更多。`
-              : '该字典属性尚未返回候选值，需要继续查询或人工确认。'
-          ) : null}
-        </div>
-      ) : null}
 
       <AttributeValueEditor
         attribute={attribute}
@@ -198,11 +238,6 @@ function AttributeCard({
         formValues={formValues}
         onFormValueChange={onFormValueChange}
       />
-
-      <div className={`product-prep-attribute-current ${isFilled ? 'is-filled' : ''}`}>
-        <span>当前将下发：</span>
-        <strong>{isFilled ? currentValues.map(formatValue).join(' / ') : '待填写'}</strong>
-      </div>
     </article>
   );
 }
@@ -261,27 +296,8 @@ export function ProductPrepAttributePanel({
 
   const requiredAttributes = attributes.filter((attribute) => attribute.isRequired);
   const optionalAttributes = attributes.filter((attribute) => !attribute.isRequired);
-  const dictionaryAttributes = attributes.filter((attribute) => attribute.dictionaryId);
-  const filledRequiredCount = requiredAttributes.filter((attribute) => {
-    const values = getCurrentValues({ attribute, draftAttributes, formValues });
-    return values.some((value) => value?.value || value?.dictionaryValueId);
-  }).length;
-
   return (
     <div className="product-prep-attribute-panel">
-      <div className="product-prep-attribute-summary">
-        <span>属性总数 <strong>{attributes.length}</strong></span>
-        <span>必填 <strong>{requiredAttributes.length}</strong></span>
-        <span>字典属性 <strong>{dictionaryAttributes.length}</strong></span>
-        <span>必填已填 <strong>{filledRequiredCount}/{requiredAttributes.length}</strong></span>
-      </div>
-
-      <div className="product-prep-attribute-context">
-        <code>description_category_id: {selection.descriptionCategoryId}</code>
-        <code>type_id: {selection.typeId}</code>
-        <code>接口: /v1/description-category/attribute</code>
-      </div>
-
       <div className="product-prep-attribute-list">
         <h4>必须填写的属性</h4>
         {requiredAttributes.map((attribute) => {
@@ -305,10 +321,9 @@ export function ProductPrepAttributePanel({
           <h4>可选属性，也展示出来供你判断是否要补</h4>
           <div className="product-prep-attribute-optional-grid">
             {optionalAttributes.map((attribute) => (
-              <span key={getAttributeKey(attribute)}>
-                {attribute.name}
-                <code>id: {attribute.id}</code>
-                {attribute.dictionaryId ? <code>dict: {attribute.dictionaryId}</code> : null}
+              <span key={getAttributeKey(attribute)} className="product-prep-optional-attribute-chip">
+                <span>{attribute.name}</span>
+                <InfoIcon label={buildAttributeTooltip(attribute, [], null)} />
               </span>
             ))}
           </div>
