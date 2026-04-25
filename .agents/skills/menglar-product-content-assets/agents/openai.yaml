@@ -1,0 +1,4 @@
+﻿interface:
+  display_name: "萌啦商品内容资产采集"
+  short_description: "复用萌啦商品内容资产采集、字段归一化与查库验收流程。"
+  default_prompt: "Use $menglar-product-content-assets to capture Menglar product content assets for a given product ID and verify the stored result."
