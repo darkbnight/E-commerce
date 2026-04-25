@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { startWorkbenchServer } from '../backend/menglar-workbench-api/server.mjs';
+await import('./migrate-ecommerce-workbench-db.mjs');
 
 const ROOT = process.cwd();
 const DB_PATH = process.env.ECOMMERCE_WORKBENCH_DB_PATH ||
@@ -51,6 +52,17 @@ try {
     'type_id',
     'attributes_json',
     'ozon_import_item_json',
+  ]);
+  assertColumns(db, 'product_selection_items', [
+    'source_job_id',
+    'source_snapshot_id',
+    'source_platform',
+    'source_platform_product_id',
+    'selection_stage',
+    'pricing_decision',
+    'supply_match_status',
+    'competitor_packet_status',
+    'transfer_to_prep_at',
   ]);
 
   const oldTableCount = db.prepare(`
