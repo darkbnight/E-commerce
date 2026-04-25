@@ -109,6 +109,82 @@
 | `ad_cost_cny` | number\|null | 广告费人民币口径 |
 | `ad_cost_rate` | number\|null | 广告费占比 |
 
+### GET /api/product-selection/items
+#### 说明
+读取当前已进入“商品筛选”工作台的商品列表。返回结果会合并来源批次和原始经营快照字段，用于前端直接展示“全部 / 待初筛 / 待测价 / 待找供应链 / 待整理竞品 / 可流转”工作区。
+
+#### 返回结构
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `items` | array | 商品筛选工作台条目列表 |
+| `total` | number | 当前工作台总条数 |
+
+#### `items[]` 关键字段
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | number | 筛选工作台条目 ID |
+| `stage` | string | 当前阶段，如 `pool_pending`、`pricing_pending`、`source_pending`、`prep_ready` |
+| `sourceJobId` | number | 来源任务 ID |
+| `sourcePageType` | string | 来源任务类型 |
+| `sourceFinishedAt` | string\|null | 来源任务完成时间 |
+| `pricingDecision` | string | 测价结论：`pending`、`continue`、`reject` |
+| `supplyMatchStatus` | string | 供应链状态：`pending`、`matched` |
+| `competitorPacketStatus` | string | 竞品整理状态：`pending`、`ready` |
+| `transferToPrepAt` | string\|null | 流转到商品数据整理的时间 |
+| `item` | object | 来源经营快照对象，字段结构兼容 `GET /api/products` 的单条商品结果 |
+
+### POST /api/product-selection/items
+#### 说明
+把来源商品加入“商品筛选”工作台。支持当前页批量加入，也支持单个商品加入。
+
+#### 请求体字段
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `items` | array | 是 | 待加入商品数组 |
+| `items[].sourceSnapshotId` | number | 是 | 来源经营快照 ID，对应 `product_business_snapshots.id` |
+
+#### 返回结构
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `insertedCount` | number | 本次成功新增条数 |
+| `duplicateCount` | number | 已存在未重复加入条数 |
+| `skippedCount` | number | 未找到来源快照的跳过条数 |
+| `items` | array | 加入后的完整工作台列表 |
+
+### PATCH /api/product-selection/items/:id
+#### 说明
+更新商品筛选工作台中的单条商品状态，可用于推进阶段、写入测价结果、利润判断、供应链信息和竞品整理状态。
+
+#### 请求体字段
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `stage` | string | 否 | 当前阶段，支持 `pool_pending`、`screening_rejected`、`pricing_pending`、`pricing_rejected`、`source_pending`、`competitor_pending`、`prep_ready` |
+| `selectionNote` | string | 否 | 备注 |
+| `initialCostPrice` | number | 否 | 初步成本价 |
+| `initialDeliveryCost` | number | 否 | 初步物流成本 |
+| `initialTargetPrice` | number | 否 | 初步预估售价 |
+| `initialProfitRate` | number | 否 | 初步利润率 |
+| `pricingDecision` | string | 否 | 测价结论，支持 `pending`、`continue`、`reject` |
+| `supplyMatchStatus` | string | 否 | 供应链状态，支持 `pending`、`matched` |
+| `supplyReferenceUrl` | string | 否 | 货源链接 |
+| `supplyVendorName` | string | 否 | 供应商名称 |
+| `competitorPacketStatus` | string | 否 | 竞品整理状态，支持 `pending`、`ready` |
+| `transferToPrepAt` | string\|null | 否 | 流转时间，通常由服务端在流转接口中写入 |
+
+#### 返回结构
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `item` | object\|null | 更新后的筛选工作台条目 |
+
+### POST /api/product-selection/items/:id/transfer-to-prep
+#### 说明
+将单条筛选工作台商品标记为“可流转商品数据整理”，并写入流转时间。
+
+#### 返回结构
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `item` | object\|null | 流转后的筛选工作台条目 |
+
 ### GET /api/result-jobs
 #### 说明
 返回结果工作台可选择的数据批次。默认只返回成功且实际商品数大于 0 的批次，用于避免行业数据或空商品批次抢占结果页。
