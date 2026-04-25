@@ -38,6 +38,37 @@ export async function fetchProducts(params = {}) {
   return response.json();
 }
 
+export async function fetchProductSelectionItems() {
+  const response = await fetch('/api/product-selection/items');
+  return readJson(response, '读取商品筛选工作台失败');
+}
+
+export async function createProductSelectionItems(input) {
+  const response = await fetch('/api/product-selection/items', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  return readJson(response, '加入商品筛选工作台失败');
+}
+
+export async function updateProductSelectionItem(id, input) {
+  const response = await fetch(`/api/product-selection/items/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  return readJson(response, '更新商品筛选工作台失败');
+}
+
+export async function transferProductSelectionItemToPrep(id) {
+  const response = await fetch(`/api/product-selection/items/${id}/transfer-to-prep`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  return readJson(response, '流转商品数据整理失败');
+}
+
 export async function checkMenglarLoginHealth(input = {}) {
   const response = await fetch('/api/menglar/login-health', {
     method: 'POST',

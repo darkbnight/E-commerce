@@ -31,6 +31,18 @@ const PORT = Number(process.env.PORT || 4186);
 const DB_PATH = process.env.ECOMMERCE_WORKBENCH_DB_PATH ||
   path.resolve(ROOT, '..', '..', 'db', 'ecommerce-workbench.sqlite');
 const WORKBENCH_DIST = path.resolve(ROOT, '..', '..', 'frontend', 'menglar-workbench', 'dist');
+const PRODUCT_SELECTION_STAGE_VALUES = new Set([
+  'pool_pending',
+  'screening_rejected',
+  'pricing_pending',
+  'pricing_rejected',
+  'source_pending',
+  'competitor_pending',
+  'prep_ready',
+]);
+const PRODUCT_SELECTION_PRICING_DECISION_VALUES = new Set(['pending', 'continue', 'reject']);
+const PRODUCT_SELECTION_SUPPLY_STATUS_VALUES = new Set(['pending', 'matched']);
+const PRODUCT_SELECTION_COMPETITOR_STATUS_VALUES = new Set(['pending', 'ready']);
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -53,6 +65,10 @@ function sendError(res, statusCode, message, details = null) {
     error: message,
     details,
   });
+}
+
+function nowIso() {
+  return new Date().toISOString();
 }
 
 function safePath(urlPath) {
@@ -125,6 +141,46 @@ function ensureProductBusinessSnapshotColumns(db) {
   }
 }
 
+function ensureProductSelectionItemsTable(db) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS product_selection_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      source_job_id INTEGER NOT NULL,
+      source_snapshot_id INTEGER NOT NULL,
+      source_platform TEXT NOT NULL DEFAULT 'ozon',
+      source_platform_product_id TEXT NOT NULL,
+      selection_stage TEXT NOT NULL DEFAULT 'pool_pending',
+      selection_result TEXT,
+      selection_note TEXT,
+      initial_cost_price REAL,
+      initial_delivery_cost REAL,
+      initial_target_price REAL,
+      initial_profit_rate REAL,
+      pricing_decision TEXT NOT NULL DEFAULT 'pending',
+      supply_match_status TEXT NOT NULL DEFAULT 'pending',
+      supply_reference_url TEXT,
+      supply_vendor_name TEXT,
+      competitor_packet_status TEXT NOT NULL DEFAULT 'pending',
+      transfer_to_prep_at TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(source_job_id, source_platform, source_platform_product_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_product_selection_items_job
+    ON product_selection_items(source_job_id);
+
+    CREATE INDEX IF NOT EXISTS idx_product_selection_items_snapshot
+    ON product_selection_items(source_snapshot_id);
+
+    CREATE INDEX IF NOT EXISTS idx_product_selection_items_stage
+    ON product_selection_items(selection_stage);
+
+    CREATE INDEX IF NOT EXISTS idx_product_selection_items_product
+    ON product_selection_items(source_platform, source_platform_product_id);
+  `);
+}
+
 function parseInteger(value, fallback) {
   const parsed = Number.parseInt(value ?? '', 10);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -133,6 +189,27 @@ function parseInteger(value, fallback) {
 function parseBoolean(value, fallback = false) {
   if (value == null || value === '') return fallback;
   return ['1', 'true', 'yes', 'on'].includes(String(value).toLowerCase());
+}
+
+function toNullableText(value) {
+  if (value == null) return null;
+  const text = String(value).trim();
+  return text || null;
+}
+
+function toNullableNumber(value) {
+  if (value == null || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function expectEnumValue(value, enumSet, fieldName) {
+  if (value == null) return null;
+  const text = String(value);
+  if (!enumSet.has(text)) {
+    throw new Error(`${fieldName} 非法`);
+  }
+  return text;
 }
 
 async function readJsonBody(req) {
@@ -151,6 +228,145 @@ async function readJsonBody(req) {
   } catch {
     throw new Error('请求体不是合法 JSON');
   }
+}
+
+function deriveSelectionResult(stage, pricingDecision) {
+  if (stage === 'screening_rejected' || stage === 'pricing_rejected' || pricingDecision === 'reject') {
+    return 'rejected';
+  }
+  if (stage === 'prep_ready') {
+    return 'ready_for_prep';
+  }
+  if (stage === 'source_pending' || stage === 'competitor_pending' || pricingDecision === 'continue') {
+    return 'active';
+  }
+  return 'pending';
+}
+
+function mapSelectionItemRow(row) {
+  return {
+    id: Number(row.id),
+    item: {
+      id: Number(row.source_snapshot_id),
+      job_id: Number(row.source_job_id),
+      platform: row.platform,
+      platform_product_id: row.platform_product_id,
+      product_url: row.product_url,
+      product_image_url: row.product_image_url,
+      shop_id: row.shop_id,
+      shop_name: row.shop_name,
+      product_type: row.product_type,
+      brand: row.brand,
+      title: row.title,
+      product_created_date: row.product_created_date,
+      category_level_1: row.category_level_1,
+      category_level_2: row.category_level_2,
+      category_level_3: row.category_level_3,
+      sales_volume: row.sales_volume,
+      sales_growth: row.sales_growth,
+      potential_index: row.potential_index,
+      sales_amount: row.sales_amount,
+      sales_amount_cny: row.sales_amount_cny,
+      avg_price_rub: row.avg_price_rub,
+      avg_price_cny: row.avg_price_cny,
+      add_to_cart_rate: row.add_to_cart_rate,
+      impressions: row.impressions,
+      clicks: row.clicks,
+      view_rate: row.view_rate,
+      ad_cost: row.ad_cost,
+      ad_cost_cny: row.ad_cost_cny,
+      ad_cost_rate: row.ad_cost_rate,
+      order_conversion_rate: row.order_conversion_rate,
+      estimated_gross_margin: row.estimated_gross_margin,
+      shipping_mode: row.shipping_mode,
+      delivery_time: row.delivery_time,
+      average_sales_amount: row.average_sales_amount,
+      length_cm: row.length_cm,
+      width_cm: row.width_cm,
+      height_cm: row.height_cm,
+      weight_g: row.weight_g,
+    },
+    stage: row.selection_stage,
+    sourceJobId: Number(row.source_job_id),
+    sourcePageType: row.page_type || '',
+    sourceFinishedAt: row.finished_at || '',
+    selectionNote: row.selection_note || '',
+    initialCostPrice: row.initial_cost_price,
+    initialDeliveryCost: row.initial_delivery_cost,
+    initialTargetPrice: row.initial_target_price,
+    initialProfitRate: row.initial_profit_rate,
+    pricingDecision: row.pricing_decision,
+    supplyMatchStatus: row.supply_match_status,
+    supplyReferenceUrl: row.supply_reference_url || '',
+    supplyVendorName: row.supply_vendor_name || '',
+    competitorPacketStatus: row.competitor_packet_status,
+    transferToPrepAt: row.transfer_to_prep_at || '',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function listProductSelectionItems(db) {
+  ensureProductSelectionItemsTable(db);
+  if (!db.prepare(`
+    SELECT name
+    FROM sqlite_master
+    WHERE type = 'table' AND name = 'product_business_snapshots'
+    LIMIT 1
+  `).get()) {
+    return [];
+  }
+  ensureProductBusinessSnapshotColumns(db);
+
+  const rows = db.prepare(`
+    SELECT product_selection_items.*,
+           source_jobs.page_type,
+           source_jobs.finished_at,
+           product_business_snapshots.platform,
+           product_business_snapshots.platform_product_id,
+           product_business_snapshots.product_url,
+           product_business_snapshots.product_image_url,
+           product_business_snapshots.shop_id,
+           product_business_snapshots.shop_name,
+           product_business_snapshots.product_type,
+           product_business_snapshots.brand,
+           product_business_snapshots.title,
+           product_business_snapshots.product_created_date,
+           product_business_snapshots.category_level_1,
+           product_business_snapshots.category_level_2,
+           product_business_snapshots.category_level_3,
+           product_business_snapshots.sales_volume,
+           product_business_snapshots.sales_growth,
+           product_business_snapshots.potential_index,
+           product_business_snapshots.sales_amount,
+           product_business_snapshots.sales_amount_cny,
+           product_business_snapshots.avg_price_rub,
+           product_business_snapshots.avg_price_cny,
+           product_business_snapshots.add_to_cart_rate,
+           product_business_snapshots.impressions,
+           product_business_snapshots.clicks,
+           product_business_snapshots.view_rate,
+           product_business_snapshots.ad_cost,
+           product_business_snapshots.ad_cost_cny,
+           product_business_snapshots.ad_cost_rate,
+           product_business_snapshots.order_conversion_rate,
+           product_business_snapshots.estimated_gross_margin,
+           product_business_snapshots.shipping_mode,
+           product_business_snapshots.delivery_time,
+           product_business_snapshots.average_sales_amount,
+           product_business_snapshots.length_cm,
+           product_business_snapshots.width_cm,
+           product_business_snapshots.height_cm,
+           product_business_snapshots.weight_g
+    FROM product_selection_items
+    JOIN product_business_snapshots
+      ON product_business_snapshots.id = product_selection_items.source_snapshot_id
+    LEFT JOIN source_jobs
+      ON source_jobs.id = product_selection_items.source_job_id
+    ORDER BY product_selection_items.updated_at DESC, product_selection_items.id DESC
+  `).all();
+
+  return rows.map(mapSelectionItemRow);
 }
 
 function getOzonValidation(mode, items) {
@@ -468,6 +684,263 @@ function handleApiProducts(req, res) {
   sendJson(res, 200, payload);
 }
 
+function handleApiProductSelectionItems(req, res) {
+  if (!existsSync(DB_PATH)) {
+    sendJson(res, 200, { items: [], total: 0 });
+    return;
+  }
+
+  const payload = withDb((db) => ({
+    items: listProductSelectionItems(db),
+    total: (() => {
+      ensureProductSelectionItemsTable(db);
+      return db.prepare('SELECT COUNT(*) AS total FROM product_selection_items').get()?.total || 0;
+    })(),
+  }));
+
+  sendJson(res, 200, payload);
+}
+
+async function handleApiProductSelectionItemsCreate(req, res) {
+  if (!existsSync(DB_PATH)) {
+    sendError(res, 400, '数据库不存在，无法加入商品筛选工作台');
+    return;
+  }
+
+  try {
+    const body = await readJsonBody(req);
+    const items = Array.isArray(body.items) ? body.items : [];
+    if (!items.length) {
+      sendError(res, 400, 'items 不能为空');
+      return;
+    }
+
+    const payload = withDb((db) => {
+      ensureProductSelectionItemsTable(db);
+      if (!db.prepare(`
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table' AND name = 'product_business_snapshots'
+        LIMIT 1
+      `).get()) {
+        throw new Error('product_business_snapshots 不存在，无法加入商品筛选工作台');
+      }
+      ensureProductBusinessSnapshotColumns(db);
+
+      const selectSnapshot = db.prepare(`
+        SELECT id,
+               job_id,
+               platform,
+               platform_product_id
+        FROM product_business_snapshots
+        WHERE id = ?
+        LIMIT 1
+      `);
+
+      const insert = db.prepare(`
+        INSERT OR IGNORE INTO product_selection_items (
+          source_job_id,
+          source_snapshot_id,
+          source_platform,
+          source_platform_product_id,
+          selection_stage,
+          selection_result,
+          pricing_decision,
+          supply_match_status,
+          competitor_packet_status,
+          created_at,
+          updated_at
+        )
+        VALUES (?, ?, ?, ?, 'pool_pending', 'pending', 'pending', 'pending', 'pending', ?, ?)
+      `);
+
+      let insertedCount = 0;
+      let duplicateCount = 0;
+      let skippedCount = 0;
+
+      for (const item of items) {
+        const sourceSnapshotId = parseInteger(item.sourceSnapshotId ?? item.id, null);
+        if (!sourceSnapshotId) {
+          skippedCount += 1;
+          continue;
+        }
+
+        const snapshot = selectSnapshot.get(sourceSnapshotId);
+        if (!snapshot) {
+          skippedCount += 1;
+          continue;
+        }
+
+        const timestamp = nowIso();
+        const result = insert.run(
+          snapshot.job_id,
+          snapshot.id,
+          snapshot.platform || 'ozon',
+          snapshot.platform_product_id,
+          timestamp,
+          timestamp,
+        );
+
+        if (result.changes > 0) {
+          insertedCount += 1;
+        } else {
+          duplicateCount += 1;
+        }
+      }
+
+      return {
+        insertedCount,
+        duplicateCount,
+        skippedCount,
+        items: listProductSelectionItems(db),
+      };
+    });
+
+    sendJson(res, 200, payload);
+  } catch (error) {
+    sendError(res, 400, error.message);
+  }
+}
+
+async function handleApiProductSelectionItemPatch(req, res, selectionItemId) {
+  if (!existsSync(DB_PATH)) {
+    sendError(res, 400, '数据库不存在，无法更新商品筛选工作台');
+    return;
+  }
+
+  try {
+    const body = await readJsonBody(req);
+    const payload = withDb((db) => {
+      ensureProductSelectionItemsTable(db);
+
+      const existing = db.prepare(`
+        SELECT *
+        FROM product_selection_items
+        WHERE id = ?
+        LIMIT 1
+      `).get(selectionItemId);
+
+      if (!existing) {
+        return null;
+      }
+
+      const stage = expectEnumValue(body.stage, PRODUCT_SELECTION_STAGE_VALUES, 'stage') || existing.selection_stage;
+      const pricingDecision =
+        expectEnumValue(body.pricingDecision, PRODUCT_SELECTION_PRICING_DECISION_VALUES, 'pricingDecision') ||
+        existing.pricing_decision;
+      const supplyMatchStatus =
+        expectEnumValue(body.supplyMatchStatus, PRODUCT_SELECTION_SUPPLY_STATUS_VALUES, 'supplyMatchStatus') ||
+        existing.supply_match_status;
+      const competitorPacketStatus =
+        expectEnumValue(body.competitorPacketStatus, PRODUCT_SELECTION_COMPETITOR_STATUS_VALUES, 'competitorPacketStatus') ||
+        existing.competitor_packet_status;
+
+      const selectionResult = body.selectionResult
+        ? toNullableText(body.selectionResult)
+        : deriveSelectionResult(stage, pricingDecision);
+
+      const transferToPrepAt = body.transferToPrepAt !== undefined
+        ? toNullableText(body.transferToPrepAt)
+        : existing.transfer_to_prep_at;
+
+      db.prepare(`
+        UPDATE product_selection_items
+        SET selection_stage = ?,
+            selection_result = ?,
+            selection_note = ?,
+            initial_cost_price = ?,
+            initial_delivery_cost = ?,
+            initial_target_price = ?,
+            initial_profit_rate = ?,
+            pricing_decision = ?,
+            supply_match_status = ?,
+            supply_reference_url = ?,
+            supply_vendor_name = ?,
+            competitor_packet_status = ?,
+            transfer_to_prep_at = ?,
+            updated_at = ?
+        WHERE id = ?
+      `).run(
+        stage,
+        selectionResult,
+        body.selectionNote !== undefined ? toNullableText(body.selectionNote) : existing.selection_note,
+        body.initialCostPrice !== undefined ? toNullableNumber(body.initialCostPrice) : existing.initial_cost_price,
+        body.initialDeliveryCost !== undefined ? toNullableNumber(body.initialDeliveryCost) : existing.initial_delivery_cost,
+        body.initialTargetPrice !== undefined ? toNullableNumber(body.initialTargetPrice) : existing.initial_target_price,
+        body.initialProfitRate !== undefined ? toNullableNumber(body.initialProfitRate) : existing.initial_profit_rate,
+        pricingDecision,
+        supplyMatchStatus,
+        body.supplyReferenceUrl !== undefined ? toNullableText(body.supplyReferenceUrl) : existing.supply_reference_url,
+        body.supplyVendorName !== undefined ? toNullableText(body.supplyVendorName) : existing.supply_vendor_name,
+        competitorPacketStatus,
+        transferToPrepAt,
+        nowIso(),
+        selectionItemId,
+      );
+
+      return db.prepare(`
+        SELECT id
+        FROM product_selection_items
+        WHERE id = ?
+        LIMIT 1
+      `).get(selectionItemId);
+    });
+
+    if (!payload) {
+      sendError(res, 404, '未找到商品筛选条目');
+      return;
+    }
+
+    const response = withDb((db) => ({
+      item: listProductSelectionItems(db).find((item) => Number(item.id) === Number(selectionItemId)) || null,
+    }));
+    sendJson(res, 200, response);
+  } catch (error) {
+    sendError(res, 400, error.message);
+  }
+}
+
+function handleApiProductSelectionItemTransfer(res, selectionItemId) {
+  if (!existsSync(DB_PATH)) {
+    sendError(res, 400, '数据库不存在，无法流转商品数据整理');
+    return;
+  }
+
+  const payload = withDb((db) => {
+    ensureProductSelectionItemsTable(db);
+    const existing = db.prepare(`
+      SELECT id
+      FROM product_selection_items
+      WHERE id = ?
+      LIMIT 1
+    `).get(selectionItemId);
+
+    if (!existing) {
+      return null;
+    }
+
+    db.prepare(`
+      UPDATE product_selection_items
+      SET selection_stage = 'prep_ready',
+          selection_result = 'ready_for_prep',
+          transfer_to_prep_at = COALESCE(transfer_to_prep_at, ?),
+          updated_at = ?
+      WHERE id = ?
+    `).run(nowIso(), nowIso(), selectionItemId);
+
+    return {
+      item: listProductSelectionItems(db).find((item) => Number(item.id) === Number(selectionItemId)) || null,
+    };
+  });
+
+  if (!payload) {
+    sendError(res, 404, '未找到商品筛选条目');
+    return;
+  }
+
+  sendJson(res, 200, payload);
+}
+
 function handleApiOzonTemplate(req, res) {
   const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
   const kind = url.searchParams.get('kind') || 'products';
@@ -671,8 +1144,32 @@ async function handleApiOzonAttributeValues(req, res) {
 
 export function createWorkbenchServer() {
   return createServer(async (req, res) => {
+    const url = new URL(req.url || '/', `http://127.0.0.1:${PORT}`);
+
     if (isProductDataPrepRoute(req)) {
       await handleProductDataPrepRoute(req, res);
+      return;
+    }
+
+    if (url.pathname === '/api/product-selection/items' && req.method === 'GET') {
+      handleApiProductSelectionItems(req, res);
+      return;
+    }
+
+    if (url.pathname === '/api/product-selection/items' && req.method === 'POST') {
+      await handleApiProductSelectionItemsCreate(req, res);
+      return;
+    }
+
+    const productSelectionPatchMatch = url.pathname.match(/^\/api\/product-selection\/items\/(\d+)$/);
+    if (productSelectionPatchMatch && req.method === 'PATCH') {
+      await handleApiProductSelectionItemPatch(req, res, Number(productSelectionPatchMatch[1]));
+      return;
+    }
+
+    const productSelectionTransferMatch = url.pathname.match(/^\/api\/product-selection\/items\/(\d+)\/transfer-to-prep$/);
+    if (productSelectionTransferMatch && req.method === 'POST') {
+      handleApiProductSelectionItemTransfer(res, Number(productSelectionTransferMatch[1]));
       return;
     }
 

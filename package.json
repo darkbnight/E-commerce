@@ -10,6 +10,8 @@
     "db:inspect": "node scripts/inspect-menglar-db.mjs",
     "db:migration:test": "node scripts/test-ecommerce-db-migration.mjs",
     "db:ui:test": "node scripts/test-ecommerce-db-ui.mjs",
+    "db:ui:screenshots": "node scripts/萌拉结果工作台与商品筛选页优化/ui-screenshots.mjs",
+    "db:selection:test": "node scripts/test-product-selection-api.mjs",
     "mvp:probe": "node scripts/menglar-capture/hot-products.mjs",
     "mvp:db:inspect": "node scripts/inspect-menglar-db.mjs",
     "shipping:validate": "node scripts/validate-shipping-config.mjs",

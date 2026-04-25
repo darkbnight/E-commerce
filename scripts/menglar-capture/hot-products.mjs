@@ -3,9 +3,9 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
-import { chromium } from 'playwright';
 import { ensureSourceJobsSchema } from './lib/job-store.mjs';
 import { runPreflight } from './preflight.mjs';
+import { getBrowserStatus, launchMenglarContext } from './lib/browser-session.mjs';
 
 const ROOT = process.cwd();
 const DATA_DIR = path.join(ROOT, 'data', 'menglar-mvp');
@@ -357,6 +357,42 @@ async function ensureDb() {
 
     CREATE INDEX IF NOT EXISTS idx_product_content_assets_product
     ON product_content_assets(platform, platform_product_id);
+
+    CREATE TABLE IF NOT EXISTS product_selection_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      source_job_id INTEGER NOT NULL,
+      source_snapshot_id INTEGER NOT NULL,
+      source_platform TEXT NOT NULL DEFAULT 'ozon',
+      source_platform_product_id TEXT NOT NULL,
+      selection_stage TEXT NOT NULL DEFAULT 'pool_pending',
+      selection_result TEXT,
+      selection_note TEXT,
+      initial_cost_price REAL,
+      initial_delivery_cost REAL,
+      initial_target_price REAL,
+      initial_profit_rate REAL,
+      pricing_decision TEXT NOT NULL DEFAULT 'pending',
+      supply_match_status TEXT NOT NULL DEFAULT 'pending',
+      supply_reference_url TEXT,
+      supply_vendor_name TEXT,
+      competitor_packet_status TEXT NOT NULL DEFAULT 'pending',
+      transfer_to_prep_at TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(source_job_id, source_platform, source_platform_product_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_product_selection_items_job
+    ON product_selection_items(source_job_id);
+
+    CREATE INDEX IF NOT EXISTS idx_product_selection_items_snapshot
+    ON product_selection_items(source_snapshot_id);
+
+    CREATE INDEX IF NOT EXISTS idx_product_selection_items_stage
+    ON product_selection_items(selection_stage);
+
+    CREATE INDEX IF NOT EXISTS idx_product_selection_items_product
+    ON product_selection_items(source_platform, source_platform_product_id);
   `);
   ensureSourceJobsSchema(db);
   ensureProductBusinessSnapshotSchema(db);
@@ -764,7 +800,7 @@ async function main() {
     throw new Error(`未找到紫鸟用户目录: ${SOURCE_PROFILE}`);
   }
 
-  const preflight = await runPreflight({ target: 'hot_products', writeResult: true });
+  const preflight = await runPreflight({ target: 'hot_products', refresh: true, writeResult: true });
   if (!preflight.ok) {
     console.log(JSON.stringify(preflight, null, 2));
     process.exitCode = 1;
@@ -781,10 +817,10 @@ async function main() {
     jobId,
     startedAt: nowIso(),
     targetUrl: TARGET_URL,
-    executableCandidates: [ZINIAO_EXECUTABLE_PATH, CHROME_EXECUTABLE_PATH],
+    executableCandidates: getBrowserStatus().candidates.map((item) => item.executablePath),
     executablePath: null,
     sourceProfile: SOURCE_PROFILE,
-    copiedProfile: null,
+    copiedProfile: preflight.profile?.profileCopy || null,
     runtimeStorage: null,
     loginDetected: false,
     loginExpiredDetected: false,
@@ -804,36 +840,8 @@ async function main() {
     const runtimeStorage = await extractRuntimeStorage();
     report.runtimeStorage = summarizeRuntimeStorage(runtimeStorage);
 
-    const profileCopy = await resetProfileCopy();
-    report.copiedProfile = profileCopy;
-
-    const candidates = [CHROME_EXECUTABLE_PATH].filter((item) => existsSync(item));
-    if (candidates.length === 0) {
-      throw new Error('未找到可用浏览器内核，紫鸟内核和系统 Chrome 都不可用');
-    }
-
-    let context = null;
-    const launchErrors = [];
-    for (const executablePath of candidates) {
-      try {
-        context = await chromium.launchPersistentContext(profileCopy, {
-          executablePath,
-          headless: false,
-          args: ['--restore-last-session'],
-          viewport: { width: 1440, height: 900 },
-        });
-        report.executablePath = executablePath;
-        break;
-      } catch (error) {
-        launchErrors.push(`${executablePath}: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    }
-
-    if (!context) {
-      throw new Error(`浏览器启动失败: ${launchErrors.join(' | ')}`);
-    }
-
-    await injectRuntimeStorage(context, runtimeStorage);
+    const context = await launchMenglarContext({ runtimeStorage, headless: false });
+    report.executablePath = context.__menglarExecutablePath || getBrowserStatus().executablePath;
 
     const capturedJson = [];
     context.on('request', (request) => {

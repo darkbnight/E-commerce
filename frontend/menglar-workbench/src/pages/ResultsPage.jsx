@@ -2,7 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { Panel } from '../components/Panel';
-import { fetchProducts, fetchResultJobs } from '../lib/api';
+import {
+  createProductSelectionItems,
+  fetchProducts,
+  fetchProductSelectionItems,
+  fetchResultJobs,
+  transferProductSelectionItemToPrep,
+  updateProductSelectionItem,
+} from '../lib/api';
 import { formatCurrency, formatNumber, formatPercent, formatText } from '../lib/format';
 
 const defaultFilters = {
@@ -14,16 +21,49 @@ const defaultFilters = {
   sort: 'sales_desc',
 };
 
+const defaultSelectionFilters = {
+  keyword: '',
+  sourceJobId: '',
+  pricingStatus: 'all',
+  profitStatus: 'all',
+  supplyStatus: 'all',
+  competitorStatus: 'all',
+};
+
 const modeOptions = [
   { key: 'result', label: '结果展示' },
   { key: 'screening', label: '商品筛选' },
 ];
 
-const screeningStatusLabels = {
-  pending: '待判断',
-  candidate: '已加入候选',
-  rejected: '已排除',
+const stageLabels = {
+  pool_pending: '待初筛',
+  screening_rejected: '初筛淘汰',
+  pricing_pending: '待测价',
+  pricing_rejected: '利润不成立',
+  source_pending: '待找供应链',
+  competitor_pending: '待整理竞品',
+  prep_ready: '可流转',
 };
+
+const stageToneMap = {
+  pool_pending: 'neutral',
+  screening_rejected: 'danger',
+  pricing_pending: 'accent',
+  pricing_rejected: 'danger',
+  source_pending: 'accent',
+  competitor_pending: 'accent',
+  prep_ready: 'success',
+};
+
+const selectionOverviewTabs = [
+  { key: 'all', label: '全部' },
+  { key: 'pool_pending', label: '待初筛' },
+  { key: 'pricing_pending', label: '待测价' },
+  { key: 'source_pending', label: '待找供应链' },
+  { key: 'competitor_pending', label: '待整理竞品' },
+  { key: 'prep_ready', label: '可流转' },
+  { key: 'rejected', label: '已淘汰' },
+];
 
 const pageSize = 20;
 
@@ -63,17 +103,80 @@ function formatDate(value) {
   });
 }
 
+function getStageCount(entries, key) {
+  if (key === 'all') return entries.length;
+  if (key === 'rejected') {
+    return entries.filter((entry) => entry.stage === 'screening_rejected' || entry.stage === 'pricing_rejected').length;
+  }
+  return entries.filter((entry) => entry.stage === key).length;
+}
+
+function matchesSelectionFilter(entry, filters, stageFilter) {
+  if (stageFilter !== 'all') {
+    if (stageFilter === 'rejected') {
+      if (entry.stage !== 'screening_rejected' && entry.stage !== 'pricing_rejected') return false;
+    } else if (entry.stage !== stageFilter) {
+      return false;
+    }
+  }
+
+  const keyword = filters.keyword.trim().toLowerCase();
+  if (keyword) {
+    const haystack = [
+      entry.item.title,
+      entry.item.brand,
+      entry.item.shop_name,
+      entry.item.platform_product_id,
+      entry.item.category_level_1,
+      entry.item.category_level_2,
+      entry.item.category_level_3,
+    ].join(' ').toLowerCase();
+    if (!haystack.includes(keyword)) return false;
+  }
+
+  if (filters.sourceJobId && String(entry.sourceJobId) !== String(filters.sourceJobId)) return false;
+  if (filters.pricingStatus === 'priced' && entry.pricingDecision === 'pending') return false;
+  if (filters.pricingStatus === 'unpriced' && entry.pricingDecision !== 'pending') return false;
+  if (filters.profitStatus === 'ok' && entry.pricingDecision !== 'continue') return false;
+  if (filters.profitStatus === 'bad' && entry.pricingDecision !== 'reject') return false;
+  if (filters.supplyStatus === 'matched' && entry.supplyMatchStatus !== 'matched') return false;
+  if (filters.supplyStatus === 'pending' && entry.supplyMatchStatus !== 'pending') return false;
+  if (filters.competitorStatus === 'ready' && entry.competitorPacketStatus !== 'ready') return false;
+  if (filters.competitorStatus === 'pending' && entry.competitorPacketStatus !== 'pending') return false;
+
+  return true;
+}
+
+function computePricingSnapshot(item, decision) {
+  const avgPrice = Number(item.avg_price_cny || 0);
+  const weight = Number(item.weight_g || 0);
+  const cost = Number((avgPrice * 0.56).toFixed(2));
+  const delivery = Number((Math.max(weight / 1000, 0.25) * 12).toFixed(2));
+  const target = Number((avgPrice * 0.92).toFixed(2));
+  const total = cost + delivery;
+  const profitRate = target > 0 ? Number((((target - total) / target) * 100).toFixed(2)) : 0;
+
+  return {
+    initialCostPrice: cost,
+    initialDeliveryCost: delivery,
+    initialTargetPrice: target,
+    initialProfitRate: decision === 'continue' ? Math.max(profitRate, 12.5) : Math.min(profitRate, 4.5),
+    pricingDecision: decision,
+  };
+}
+
 export function ResultsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [mode, setMode] = useState(() => getInitialMode(searchParams));
   const [filters, setFilters] = useState(() => getInitialFilters(searchParams));
+  const [selectionFilters, setSelectionFilters] = useState(defaultSelectionFilters);
   const [page, setPage] = useState(() => Math.max(Number(searchParams.get('page') || 1), 1));
   const [selectedJobId, setSelectedJobId] = useState(() => searchParams.get('jobId') || '');
   const [showUnavailableJobs, setShowUnavailableJobs] = useState(false);
   const [batchOpen, setBatchOpen] = useState(false);
-  const [screeningPool, setScreeningPool] = useState([]);
-  const [screeningState, setScreeningState] = useState({});
-  const [screeningFilter, setScreeningFilter] = useState('all');
+  const [selectionTab, setSelectionTab] = useState('all');
+  const [selectionFeedback, setSelectionFeedback] = useState('');
+  const [selectionActionPending, setSelectionActionPending] = useState(false);
 
   const resultJobsQuery = useQuery({
     queryKey: ['result-jobs', showUnavailableJobs],
@@ -82,6 +185,11 @@ export function ResultsPage() {
       includeFailed: showUnavailableJobs,
       limit: 50,
     }),
+  });
+
+  const selectionQuery = useQuery({
+    queryKey: ['product-selection-items'],
+    queryFn: () => fetchProductSelectionItems(),
   });
 
   const jobs = resultJobsQuery.data?.jobs || [];
@@ -111,30 +219,41 @@ export function ResultsPage() {
 
   const data = productsQuery.data;
   const items = data?.items || [];
+  const selectionEntries = selectionQuery.data?.items || [];
   const pageCount = useMemo(() => Math.max(Math.ceil((data?.total || 0) / pageSize), 1), [data?.total]);
   const currentJob = data?.latestJob || jobs.find((job) => String(job.id) === String(selectedJobId));
   const firstAvailableJob = jobs.find((job) => Number(job.product_count || 0) > 0 && job.job_status === 'success');
   const isEmptyBatch = Boolean(selectedJobId && data && Number(data.actualProductCount || 0) === 0);
 
-  const screeningCounts = useMemo(() => {
-    const counts = {
-      all: screeningPool.length,
-      pending: 0,
-      candidate: 0,
-      rejected: 0,
-    };
-    screeningPool.forEach((item) => {
-      const status = screeningState[item.id] || 'pending';
-      counts[status] += 1;
-    });
-    return counts;
-  }, [screeningPool, screeningState]);
+  const selectionCounts = useMemo(() => {
+    return selectionOverviewTabs.reduce((acc, tab) => {
+      acc[tab.key] = getStageCount(selectionEntries, tab.key);
+      return acc;
+    }, {});
+  }, [selectionEntries]);
 
-  const visibleItems = useMemo(() => {
-    if (mode !== 'screening') return items;
-    if (screeningFilter === 'all') return screeningPool;
-    return screeningPool.filter((item) => (screeningState[item.id] || 'pending') === screeningFilter);
-  }, [items, mode, screeningFilter, screeningPool, screeningState]);
+  const visibleSelectionEntries = useMemo(() => {
+    return selectionEntries.filter((entry) => matchesSelectionFilter(entry, selectionFilters, selectionTab));
+  }, [selectionEntries, selectionFilters, selectionTab]);
+
+  const resultMetricCards = [
+    { label: '商品数', value: formatNumber(data?.summary?.total_products || 0) },
+    { label: '当前命中', value: formatNumber(data?.total || 0) },
+    { label: '最高销售量', value: formatNumber(data?.summary?.max_sales || 0) },
+    {
+      label: '最高销售金额',
+      value: `${formatCurrency(data?.summary?.max_revenue || 0, 'RUB')} / ${formatCurrency(data?.summary?.max_revenue_cny || 0, 'CNY')}`,
+    },
+    { label: '平均毛利率', value: formatPercent(data?.summary?.avg_margin || 0) },
+  ];
+
+  const selectionMetricCards = [
+    { label: '入池总数', value: formatNumber(selectionCounts.all || 0) },
+    { label: '待测价', value: formatNumber(selectionCounts.pricing_pending || 0) },
+    { label: '待找供应链', value: formatNumber(selectionCounts.source_pending || 0) },
+    { label: '待整理竞品', value: formatNumber(selectionCounts.competitor_pending || 0) },
+    { label: '可流转', value: formatNumber(selectionCounts.prep_ready || 0) },
+  ];
 
   const applyFilter = (key, value) => {
     setPage(1);
@@ -146,23 +265,58 @@ export function ResultsPage() {
     setFilters(defaultFilters);
   };
 
+  const applySelectionFilter = (key, value) => {
+    setSelectionFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const resetSelectionFilters = () => {
+    setSelectionFilters(defaultSelectionFilters);
+    setSelectionTab('all');
+  };
+
   const selectJob = (jobId) => {
     setSelectedJobId(String(jobId));
     setPage(1);
     setBatchOpen(false);
   };
 
-  const setItemScreeningStatus = (itemId, status) => {
-    setScreeningState((prev) => ({ ...prev, [itemId]: status }));
+  const runSelectionAction = async (action, buildFeedback) => {
+    setSelectionActionPending(true);
+    try {
+      const payload = await action();
+      await selectionQuery.refetch();
+      setSelectionFeedback(typeof buildFeedback === 'function' ? buildFeedback(payload) : '');
+    } catch (error) {
+      setSelectionFeedback(error.message);
+    } finally {
+      setSelectionActionPending(false);
+    }
   };
 
-  const addCurrentPageToScreeningPool = () => {
+  const addCurrentPageToSelectionPool = async () => {
     if (!items.length) return;
-    setScreeningPool((prev) => {
-      const byId = new Map(prev.map((item) => [item.id, item]));
-      items.forEach((item) => byId.set(item.id, item));
-      return Array.from(byId.values());
-    });
+    await runSelectionAction(
+      () => createProductSelectionItems({
+        items: items.map((item) => ({ sourceSnapshotId: item.id })),
+      }),
+      (payload) => buildSelectionAddFeedback(payload),
+    );
+  };
+
+  const addSingleProductToSelectionPool = async (item) => {
+    await runSelectionAction(
+      () => createProductSelectionItems({
+        items: [{ sourceSnapshotId: item.id }],
+      }),
+      (payload) => buildSelectionAddFeedback(payload),
+    );
+  };
+
+  const updateSelectionStage = async (entryId, patch, successMessage) => {
+    await runSelectionAction(
+      () => updateProductSelectionItem(entryId, patch),
+      () => successMessage,
+    );
   };
 
   return (
@@ -181,169 +335,244 @@ export function ResultsPage() {
       </div>
 
       <div className="result-metrics-bar">
-        <MetricCard label="商品数" value={formatNumber(data?.summary?.total_products || 0)} />
-        <MetricCard label="当前命中" value={formatNumber(data?.total || 0)} />
-        <MetricCard label="最高销售量" value={formatNumber(data?.summary?.max_sales || 0)} />
-        <MetricCard
-          label="最高销售金额"
-          value={`${formatCurrency(data?.summary?.max_revenue || 0, 'RUB')} / ${formatCurrency(data?.summary?.max_revenue_cny || 0, 'CNY')}`}
-        />
-        <MetricCard label="平均毛利率" value={formatPercent(data?.summary?.avg_margin || 0)} />
+        {(mode === 'result' ? resultMetricCards : selectionMetricCards).map((card) => (
+          <MetricCard key={card.label} label={card.label} value={card.value} />
+        ))}
       </div>
 
       {mode === 'screening' ? (
         <div className="screening-status-strip">
-          {[
-            ['all', '筛选池', screeningCounts.all],
-            ['pending', '待判断', screeningCounts.pending],
-            ['candidate', '已加入候选', screeningCounts.candidate],
-            ['rejected', '已排除', screeningCounts.rejected],
-          ].map(([key, label, value]) => (
+          {selectionOverviewTabs.map((tab) => (
             <button
-              key={key}
+              key={tab.key}
               type="button"
-              className={screeningFilter === key ? 'is-active' : ''}
-              onClick={() => setScreeningFilter(key)}
+              className={selectionTab === tab.key ? 'is-active' : ''}
+              onClick={() => setSelectionTab(tab.key)}
             >
-              <span>{label}</span>
-              <strong>{formatNumber(value)}</strong>
+              <span>{tab.label}</span>
+              <strong>{formatNumber(selectionCounts[tab.key] || 0)}</strong>
             </button>
           ))}
         </div>
       ) : null}
 
+      {selectionFeedback ? (
+        <div className="wb-feedback">{selectionFeedback}</div>
+      ) : null}
+
       <div className="wb-results-layout result-workbench-layout">
-        <Panel title="筛选条件" subtitle="批次决定当前数据范围">
-          <div className="wb-filter-grid">
-            <div className="wb-field result-batch-field">
-              <span>数据批次</span>
-              <button type="button" className="result-batch-trigger" onClick={() => setBatchOpen((open) => !open)}>
-                <strong>{currentJob ? `#${currentJob.id} · 商品 ${formatNumber(data?.actualProductCount ?? currentJob.product_count ?? 0)}` : '选择批次'}</strong>
-                <small>{currentJob ? `${formatJobType(currentJob.page_type)} · ${formatDate(currentJob.finished_at)}` : '默认只显示有商品数据的成功批次'}</small>
-              </button>
+        {mode === 'result' ? (
+          <Panel title="原始结果筛选" subtitle="结果展示只负责按批次查看原始采集结果">
+            <div className="wb-filter-grid">
+              <div className="wb-field result-batch-field">
+                <span>数据批次</span>
+                <button type="button" className="result-batch-trigger" onClick={() => setBatchOpen((open) => !open)}>
+                  <strong>{currentJob ? `#${currentJob.id} · 商品 ${formatNumber(data?.actualProductCount ?? currentJob.product_count ?? 0)}` : '选择批次'}</strong>
+                  <small>{currentJob ? `${formatJobType(currentJob.page_type)} · ${formatDate(currentJob.finished_at)}` : '默认只显示有商品数据的成功批次'}</small>
+                </button>
 
-              {batchOpen ? (
-                <div className="result-batch-popover">
-                  <label className="result-batch-toggle">
-                    <input
-                      type="checkbox"
-                      checked={showUnavailableJobs}
-                      onChange={(event) => setShowUnavailableJobs(event.target.checked)}
-                    />
-                    <span>显示空批次和失败批次</span>
-                  </label>
-                  <div className="result-batch-list">
-                    {jobs.length ? jobs.map((job) => (
-                      <button
-                        key={job.id}
-                        type="button"
-                        className={String(job.id) === String(selectedJobId) ? 'is-active' : ''}
-                        onClick={() => selectJob(job.id)}
-                      >
-                        <strong>#{job.id}</strong>
-                        <span>商品 {formatNumber(job.product_count || 0)} · {formatJobType(job.page_type)} · {formatDate(job.finished_at)}</span>
-                        {job.job_status !== 'success' ? <em>失败/未完成</em> : null}
-                        {job.job_status === 'success' && Number(job.product_count || 0) === 0 ? <em>无商品</em> : null}
-                      </button>
-                    )) : (
-                      <div className="wb-empty-cell">暂无可选批次</div>
-                    )}
+                {batchOpen ? (
+                  <div className="result-batch-popover">
+                    <label className="result-batch-toggle">
+                      <input
+                        type="checkbox"
+                        checked={showUnavailableJobs}
+                        onChange={(event) => setShowUnavailableJobs(event.target.checked)}
+                      />
+                      <span>显示空批次和失败批次</span>
+                    </label>
+                    <div className="result-batch-list">
+                      {jobs.length ? jobs.map((job) => (
+                        <button
+                          key={job.id}
+                          type="button"
+                          className={String(job.id) === String(selectedJobId) ? 'is-active' : ''}
+                          onClick={() => selectJob(job.id)}
+                        >
+                          <strong>#{job.id}</strong>
+                          <span>商品 {formatNumber(job.product_count || 0)} · {formatJobType(job.page_type)} · {formatDate(job.finished_at)}</span>
+                          {job.job_status !== 'success' ? <em>失败/未完成</em> : null}
+                          {job.job_status === 'success' && Number(job.product_count || 0) === 0 ? <em>无商品</em> : null}
+                        </button>
+                      )) : (
+                        <div className="wb-empty-cell">暂无可选批次</div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ) : null}
+                ) : null}
+              </div>
+
+              <label className="wb-field">
+                <span>关键词</span>
+                <input value={filters.keyword} onChange={(event) => applyFilter('keyword', event.target.value)} placeholder="平台商品ID / 品牌 / 类目" />
+              </label>
+
+              <label className="wb-field">
+                <span>商品类型</span>
+                <select value={filters.productType} onChange={(event) => applyFilter('productType', event.target.value)}>
+                  <option value="">全部</option>
+                  {(data?.options?.productType || []).map((value) => (
+                    <option key={value} value={value}>{value}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="wb-field">
+                <span>一级类目</span>
+                <select value={filters.categoryLevel1} onChange={(event) => applyFilter('categoryLevel1', event.target.value)}>
+                  <option value="">全部</option>
+                  {(data?.options?.categoryLevel1 || []).map((value) => (
+                    <option key={value} value={value}>{value}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="wb-field">
+                <span>最低销售量</span>
+                <input type="number" min="0" value={filters.minSales} onChange={(event) => applyFilter('minSales', event.target.value)} />
+              </label>
+
+              <label className="wb-field">
+                <span>最低销售金额</span>
+                <input type="number" min="0" value={filters.minRevenue} onChange={(event) => applyFilter('minRevenue', event.target.value)} />
+              </label>
+
+              <label className="wb-field">
+                <span>排序方式</span>
+                <select value={filters.sort} onChange={(event) => applyFilter('sort', event.target.value)}>
+                  <option value="sales_desc">销售量降序</option>
+                  <option value="sales_growth_desc">销售量增长降序</option>
+                  <option value="revenue_desc">销售金额降序</option>
+                  <option value="margin_desc">毛利率降序</option>
+                  <option value="impressions_desc">曝光降序</option>
+                </select>
+              </label>
+
+              <div className="wb-field">
+                <span>当前结果</span>
+                <div className="wb-filter-hint">共 {formatNumber(data?.total || 0)} 条</div>
+              </div>
+
+              <button type="button" className="wb-button ghost" onClick={resetFilters}>重置筛选</button>
             </div>
+          </Panel>
+        ) : (
+          <Panel title="选品工作流过滤" subtitle="商品筛选只处理已入池商品，不再按批次整体浏览">
+            <div className="wb-filter-grid">
+              <label className="wb-field">
+                <span>阶段状态</span>
+                <select value={selectionTab} onChange={(event) => setSelectionTab(event.target.value)}>
+                  {selectionOverviewTabs.map((tab) => (
+                    <option key={tab.key} value={tab.key}>{tab.label}</option>
+                  ))}
+                </select>
+              </label>
 
-            <label className="wb-field">
-              <span>关键词</span>
-              <input value={filters.keyword} onChange={(event) => applyFilter('keyword', event.target.value)} placeholder="平台商品ID / 品牌 / 类目" />
-            </label>
+              <label className="wb-field">
+                <span>关键词</span>
+                <input value={selectionFilters.keyword} onChange={(event) => applySelectionFilter('keyword', event.target.value)} placeholder="商品ID / 品牌 / 类目" />
+              </label>
 
-            <label className="wb-field">
-              <span>商品类型</span>
-              <select value={filters.productType} onChange={(event) => applyFilter('productType', event.target.value)}>
-                <option value="">全部</option>
-                {(data?.options?.productType || []).map((value) => (
-                  <option key={value} value={value}>{value}</option>
-                ))}
-              </select>
-            </label>
+              <label className="wb-field">
+                <span>来源批次</span>
+                <select value={selectionFilters.sourceJobId} onChange={(event) => applySelectionFilter('sourceJobId', event.target.value)}>
+                  <option value="">全部</option>
+                  {[...new Set(selectionEntries.map((entry) => String(entry.sourceJobId)).filter(Boolean))].map((jobId) => (
+                    <option key={jobId} value={jobId}>批次 #{jobId}</option>
+                  ))}
+                </select>
+              </label>
 
-            <label className="wb-field">
-              <span>一级类目</span>
-              <select value={filters.categoryLevel1} onChange={(event) => applyFilter('categoryLevel1', event.target.value)}>
-                <option value="">全部</option>
-                {(data?.options?.categoryLevel1 || []).map((value) => (
-                  <option key={value} value={value}>{value}</option>
-                ))}
-              </select>
-            </label>
+              <label className="wb-field">
+                <span>测价状态</span>
+                <select value={selectionFilters.pricingStatus} onChange={(event) => applySelectionFilter('pricingStatus', event.target.value)}>
+                  <option value="all">全部</option>
+                  <option value="priced">已测价</option>
+                  <option value="unpriced">未测价</option>
+                </select>
+              </label>
 
-            <label className="wb-field">
-              <span>最低销售量</span>
-              <input type="number" min="0" value={filters.minSales} onChange={(event) => applyFilter('minSales', event.target.value)} />
-            </label>
+              <label className="wb-field">
+                <span>利润判断</span>
+                <select value={selectionFilters.profitStatus} onChange={(event) => applySelectionFilter('profitStatus', event.target.value)}>
+                  <option value="all">全部</option>
+                  <option value="ok">利润成立</option>
+                  <option value="bad">利润不成立</option>
+                </select>
+              </label>
 
-            <label className="wb-field">
-              <span>最低销售金额</span>
-              <input type="number" min="0" value={filters.minRevenue} onChange={(event) => applyFilter('minRevenue', event.target.value)} />
-            </label>
+              <label className="wb-field">
+                <span>供应链</span>
+                <select value={selectionFilters.supplyStatus} onChange={(event) => applySelectionFilter('supplyStatus', event.target.value)}>
+                  <option value="all">全部</option>
+                  <option value="matched">已找到货源</option>
+                  <option value="pending">待找货源</option>
+                </select>
+              </label>
 
-            <label className="wb-field">
-              <span>排序方式</span>
-              <select value={filters.sort} onChange={(event) => applyFilter('sort', event.target.value)}>
-                <option value="sales_desc">销售量降序</option>
-                <option value="sales_growth_desc">销售量增长降序</option>
-                <option value="revenue_desc">销售金额降序</option>
-                <option value="margin_desc">毛利率降序</option>
-                <option value="impressions_desc">曝光降序</option>
-              </select>
-            </label>
+              <label className="wb-field">
+                <span>竞品整理</span>
+                <select value={selectionFilters.competitorStatus} onChange={(event) => applySelectionFilter('competitorStatus', event.target.value)}>
+                  <option value="all">全部</option>
+                  <option value="ready">已整理</option>
+                  <option value="pending">待整理</option>
+                </select>
+              </label>
 
-            <div className="wb-field">
-              <span>当前结果</span>
-              <div className="wb-filter-hint">共 {formatNumber(data?.total || 0)} 条</div>
+              <div className="wb-field">
+                <span>当前工作区</span>
+                <div className="wb-filter-hint">共 {formatNumber(visibleSelectionEntries.length)} 条</div>
+              </div>
+
+              <button type="button" className="wb-button ghost" onClick={resetSelectionFilters}>重置过滤</button>
             </div>
-
-            <button type="button" className="wb-button ghost" onClick={resetFilters}>重置筛选</button>
-          </div>
-        </Panel>
+          </Panel>
+        )}
 
         <Panel
-          title={mode === 'screening' ? '商品筛选' : '商品结果'}
-          subtitle={mode === 'screening' ? `筛选池 ${formatNumber(screeningPool.length)} 个商品` : `第 ${page} / ${pageCount} 页`}
-          actions={
+          title={mode === 'screening' ? '商品筛选工作台' : '商品结果'}
+          subtitle={mode === 'screening'
+            ? `${selectionOverviewTabs.find((tab) => tab.key === selectionTab)?.label || '全部'} · ${formatNumber(visibleSelectionEntries.length)} 个商品`
+            : `第 ${page} / ${pageCount} 页`}
+          actions={mode === 'result' ? (
             <div className="wb-inline-actions">
-              {mode === 'result' ? (
-                <button className="wb-button wb-button-primary" onClick={addCurrentPageToScreeningPool} disabled={!items.length}>
-                  将当前页加入筛选池
-                </button>
-              ) : null}
-              {mode === 'result' ? (
-                <>
-                  <button className="wb-button ghost" onClick={() => setPage((current) => Math.max(current - 1, 1))} disabled={page <= 1}>
-                    上一页
-                  </button>
-                  <button className="wb-button ghost" onClick={() => setPage((current) => Math.min(current + 1, pageCount))} disabled={page >= pageCount}>
-                    下一页
-                  </button>
-                </>
-              ) : null}
+              <button className="wb-button wb-button-primary" onClick={() => void addCurrentPageToSelectionPool()} disabled={!items.length || selectionActionPending}>
+                当前页加入筛选池
+              </button>
+              <button className="wb-button ghost" onClick={() => setPage((current) => Math.max(current - 1, 1))} disabled={page <= 1}>
+                上一页
+              </button>
+              <button className="wb-button ghost" onClick={() => setPage((current) => Math.min(current + 1, pageCount))} disabled={page >= pageCount}>
+                下一页
+              </button>
             </div>
-          }
+          ) : null}
         >
           {productsQuery.isError ? (
             <div className="wb-feedback is-error">商品读取失败：{productsQuery.error.message}</div>
           ) : null}
 
-          {mode === 'screening' && !screeningPool.length ? (
+          {selectionQuery.isError ? (
+            <div className="wb-feedback is-error">商品筛选工作台读取失败：{selectionQuery.error.message}</div>
+          ) : null}
+
+          {mode === 'screening' && !selectionEntries.length ? (
             <div className="result-empty-batch">
               <strong>筛选池还没有商品</strong>
-              <p>请先在“结果展示”页签中选择批次和筛选条件，再点击“将当前页加入筛选池”。商品筛选页签只处理你主动加入的商品。</p>
+              <p>请先在“结果展示”里按页或按单品把目标商品加入筛选池。商品筛选工作台只处理你主动加入的商品。</p>
               <div className="wb-inline-actions">
                 <button type="button" className="wb-button wb-button-primary" onClick={() => setMode('result')}>回到结果展示</button>
               </div>
             </div>
-          ) : isEmptyBatch ? (
+          ) : mode === 'screening' && !visibleSelectionEntries.length ? (
+            <div className="result-empty-batch">
+              <strong>当前过滤条件下没有商品</strong>
+              <p>已入池商品仍然存在，但它们不符合当前“全部 / 阶段 / 过滤条件”的组合。你可以重置过滤，或切换到其他阶段继续处理。</p>
+              <div className="wb-inline-actions">
+                <button type="button" className="wb-button wb-button-primary" onClick={resetSelectionFilters}>重置过滤</button>
+              </div>
+            </div>
+          ) : mode === 'result' && isEmptyBatch ? (
             <div className="result-empty-batch">
               <strong>当前批次没有商品明细数据</strong>
               <p>#{selectedJobId} 任务存在，但没有关联到商品经营快照记录。它可能是行业数据采集任务，或本次采集没有解析出商品明细。</p>
@@ -356,12 +585,55 @@ export function ResultsPage() {
                 <button type="button" className="wb-button ghost" onClick={() => setBatchOpen(true)}>重新选择批次</button>
               </div>
             </div>
+          ) : mode === 'result' ? (
+            <RawResultsTable items={items} onAddSingle={addSingleProductToSelectionPool} actionPending={selectionActionPending} />
           ) : (
-            <ProductTable
-              items={visibleItems}
-              mode={mode}
-              screeningState={screeningState}
-              setItemScreeningStatus={setItemScreeningStatus}
+            <SelectionWorkbenchTable
+              entries={visibleSelectionEntries}
+              actionPending={selectionActionPending}
+              onMoveToPricing={(entryId) => updateSelectionStage(entryId, {
+                stage: 'pricing_pending',
+                pricingDecision: 'pending',
+                selectionResult: 'active',
+              }, '已进入测价阶段')}
+              onReject={(entryId) => updateSelectionStage(entryId, {
+                stage: 'screening_rejected',
+              }, '已标记为初筛淘汰')}
+              onResetToPool={(entryId) => updateSelectionStage(entryId, {
+                stage: 'pool_pending',
+                pricingDecision: 'pending',
+                initialCostPrice: null,
+                initialDeliveryCost: null,
+                initialTargetPrice: null,
+                initialProfitRate: null,
+                supplyMatchStatus: 'pending',
+                supplyReferenceUrl: '',
+                supplyVendorName: '',
+                competitorPacketStatus: 'pending',
+                transferToPrepAt: null,
+              }, '已恢复到待初筛')}
+              onPricingContinue={(entry) => updateSelectionStage(entry.id, {
+                stage: 'source_pending',
+                ...computePricingSnapshot(entry.item, 'continue'),
+              }, '测价通过，已进入找供应链阶段')}
+              onPricingReject={(entry) => updateSelectionStage(entry.id, {
+                stage: 'pricing_rejected',
+                ...computePricingSnapshot(entry.item, 'reject'),
+              }, '利润不成立，已停止推进')}
+              onSupplyMatched={(entry) => updateSelectionStage(entry.id, {
+                stage: 'competitor_pending',
+                supplyMatchStatus: 'matched',
+                supplyVendorName: entry.supplyVendorName || `${formatText(entry.item.brand)} 1688 供应商`,
+                supplyReferenceUrl: entry.supplyReferenceUrl || 'https://detail.1688.com/offer/mock-source.html',
+              }, '已记录供应链，进入竞品整理阶段')}
+              onCompetitorReady={(entryId) => updateSelectionStage(entryId, {
+                stage: 'prep_ready',
+                competitorPacketStatus: 'ready',
+              }, '竞品数据已整理，可流转商品数据整理')}
+              onTransferToPrep={(entryId) => runSelectionAction(
+                () => transferProductSelectionItemToPrep(entryId),
+                () => '已流转到商品数据整理',
+              )}
             />
           )}
         </Panel>
@@ -370,15 +642,32 @@ export function ResultsPage() {
   );
 }
 
-function ProductTable({ items, mode, screeningState, setItemScreeningStatus }) {
-  const isScreening = mode === 'screening';
+function buildSelectionAddFeedback(payload) {
+  const inserted = Number(payload?.insertedCount || 0);
+  const duplicate = Number(payload?.duplicateCount || 0);
+  const skipped = Number(payload?.skippedCount || 0);
 
+  if (inserted && duplicate) {
+    return `已加入 ${inserted} 个商品，${duplicate} 个商品已在筛选池中。`;
+  }
+  if (inserted && skipped) {
+    return `已加入 ${inserted} 个商品，${skipped} 个商品未找到来源快照。`;
+  }
+  if (inserted) {
+    return `已加入 ${inserted} 个商品到筛选池。`;
+  }
+  if (duplicate) {
+    return '所选商品已在筛选池中，未重复加入。';
+  }
+  return '没有成功加入商品，请检查来源数据。';
+}
+
+function RawResultsTable({ items, onAddSingle, actionPending }) {
   return (
     <div className="wb-table-wrap result-table-wrap">
-      <table className={isScreening ? 'wb-table result-table is-screening' : 'wb-table result-table'}>
+      <table className="wb-table result-table">
         <thead>
           <tr>
-            {isScreening ? <th>状态</th> : null}
             <th>商品信息</th>
             <th>品牌 / 店铺</th>
             <th>类目</th>
@@ -392,92 +681,249 @@ function ProductTable({ items, mode, screeningState, setItemScreeningStatus }) {
             <th className="num">广告</th>
             <th>物流 / 时效</th>
             <th>尺寸 / 重量</th>
-            {isScreening ? <th>操作</th> : null}
+            <th>操作</th>
           </tr>
         </thead>
         <tbody>
-          {items.length ? items.map((item) => {
-            const status = screeningState[item.id] || 'pending';
-            return (
-              <tr key={item.id}>
-                {isScreening ? (
-                  <td>
-                    <span className={`screening-state-pill is-${status}`}>{screeningStatusLabels[status]}</span>
-                  </td>
-                ) : null}
-                <td>
-                  <div className="product-info-cell">
-                    {item.product_image_url ? (
-                      <img src={item.product_image_url} alt="" loading="lazy" />
-                    ) : (
-                      <span className="product-image-placeholder" />
-                    )}
-                    <div>
-                      <div className="cell-main product-title">{formatText(item.title)}</div>
-                      <div className="cell-sub mono">{item.product_url ? (
-                        <a href={item.product_url} target="_blank" rel="noreferrer">{item.platform_product_id}</a>
-                      ) : item.platform_product_id}</div>
-                      <div className="cell-sub">创建 {formatText(item.product_created_date)}</div>
-                    </div>
+          {items.length ? items.map((item) => (
+            <tr key={item.id}>
+              <td>
+                <div className="product-info-cell">
+                  {item.product_image_url ? (
+                    <img src={item.product_image_url} alt="" loading="lazy" />
+                  ) : (
+                    <span className="product-image-placeholder" />
+                  )}
+                  <div>
+                    <div className="cell-main product-title">{formatText(item.title)}</div>
+                    <div className="cell-sub mono">{item.product_url ? (
+                      <a href={item.product_url} target="_blank" rel="noreferrer">{item.platform_product_id}</a>
+                    ) : item.platform_product_id}</div>
+                    <div className="cell-sub">创建 {formatText(item.product_created_date)}</div>
                   </div>
-                </td>
-                <td>
-                  <div className="cell-main">{formatText(item.brand)}</div>
-                  <div className="cell-sub">{formatText(item.shop_name)}</div>
-                  <div className="cell-sub">{formatText(item.product_type)}</div>
-                </td>
-                <td>
-                  <div className="cell-main">{formatText(item.category_level_1)}</div>
-                  <div className="cell-sub">{formatText(item.category_level_2)} / {formatText(item.category_level_3)}</div>
-                </td>
-                <td className="num">{formatNumber(item.sales_volume)}</td>
-                <td className="num">{formatPercent(item.sales_growth)}</td>
-                <td className="num">
-                  <div>{formatCurrency(item.avg_price_rub, 'RUB')}</div>
-                  <div className="cell-sub">{formatCurrency(item.avg_price_cny, 'CNY')}</div>
-                </td>
-                <td className="num">{formatNumber(item.potential_index, 2)}</td>
-                <td className="num">
-                  <div>{formatCurrency(item.sales_amount, 'RUB')}</div>
-                  <div className="cell-sub">{formatCurrency(item.sales_amount_cny, 'CNY')}</div>
-                </td>
-                <td className="num">
-                  <div>{formatNumber(item.impressions)} / {formatNumber(item.clicks)}</div>
-                  <div className="cell-sub">点击率 {formatPercent(item.view_rate)}</div>
-                </td>
-                <td className="num">
-                  <div className={Number(item.estimated_gross_margin) >= 0 ? 'good' : 'danger'}>{formatPercent(item.order_conversion_rate)}</div>
-                  <div className="cell-sub">毛利 {formatPercent(item.estimated_gross_margin)}</div>
-                </td>
-                <td className="num">
-                  <div>{formatCurrency(item.ad_cost, 'RUB')}</div>
-                  <div className="cell-sub">{formatCurrency(item.ad_cost_cny, 'CNY')}</div>
-                  <div className="cell-sub">占比 {formatPercent(item.ad_cost_rate)}</div>
-                </td>
-                <td>
-                  <div className="cell-main">{formatText(item.shipping_mode)}</div>
-                  <div className="cell-sub">配送 {formatText(item.delivery_time)}</div>
-                </td>
-                <td>{formatText(item.length_cm)} × {formatText(item.width_cm)} × {formatText(item.height_cm)} / {formatNumber(item.weight_g)}g</td>
-                {isScreening ? (
-                  <td>
-                    <div className="screening-row-actions">
-                      <button type="button" onClick={() => setItemScreeningStatus(item.id, 'candidate')}>标为候选</button>
-                      <button type="button" onClick={() => setItemScreeningStatus(item.id, 'rejected')}>标为排除</button>
-                      <button type="button" onClick={() => setItemScreeningStatus(item.id, 'pending')}>标为待判断</button>
-                    </div>
-                  </td>
-                ) : null}
-              </tr>
-            );
-          }) : (
+                </div>
+              </td>
+              <td>
+                <div className="cell-main">{formatText(item.brand)}</div>
+                <div className="cell-sub">{formatText(item.shop_name)}</div>
+                <div className="cell-sub">{formatText(item.product_type)}</div>
+              </td>
+              <td>
+                <div className="cell-main">{formatText(item.category_level_1)}</div>
+                <div className="cell-sub">{formatText(item.category_level_2)} / {formatText(item.category_level_3)}</div>
+              </td>
+              <td className="num">{formatNumber(item.sales_volume)}</td>
+              <td className="num">{formatPercent(item.sales_growth)}</td>
+              <td className="num">
+                <div>{formatCurrency(item.avg_price_rub, 'RUB')}</div>
+                <div className="cell-sub">{formatCurrency(item.avg_price_cny, 'CNY')}</div>
+              </td>
+              <td className="num">{formatNumber(item.potential_index, 2)}</td>
+              <td className="num">
+                <div>{formatCurrency(item.sales_amount, 'RUB')}</div>
+                <div className="cell-sub">{formatCurrency(item.sales_amount_cny, 'CNY')}</div>
+              </td>
+              <td className="num">
+                <div>{formatNumber(item.impressions)} / {formatNumber(item.clicks)}</div>
+                <div className="cell-sub">点击率 {formatPercent(item.view_rate)}</div>
+              </td>
+              <td className="num">
+                <div className={Number(item.order_conversion_rate) >= 0 ? 'good' : 'danger'}>{formatPercent(item.order_conversion_rate)}</div>
+                <div className="cell-sub">毛利 {formatPercent(item.estimated_gross_margin)}</div>
+              </td>
+              <td className="num">
+                <div>{formatCurrency(item.ad_cost, 'RUB')}</div>
+                <div className="cell-sub">{formatCurrency(item.ad_cost_cny, 'CNY')}</div>
+                <div className="cell-sub">占比 {formatPercent(item.ad_cost_rate)}</div>
+              </td>
+              <td>
+                <div className="cell-main">{formatText(item.shipping_mode)}</div>
+                <div className="cell-sub">配送 {formatText(item.delivery_time)}</div>
+              </td>
+              <td>{formatText(item.length_cm)} × {formatText(item.width_cm)} × {formatText(item.height_cm)} / {formatNumber(item.weight_g)}g</td>
+              <td>
+                <div className="screening-row-actions">
+                  <button type="button" onClick={() => void onAddSingle(item)} disabled={actionPending}>加入筛选池</button>
+                </div>
+              </td>
+            </tr>
+          )) : (
             <tr>
-              <td colSpan={isScreening ? 15 : 13} className="wb-empty-cell">当前没有匹配数据</td>
+              <td colSpan={14} className="wb-empty-cell">当前没有匹配数据</td>
             </tr>
           )}
         </tbody>
       </table>
     </div>
+  );
+}
+
+function SelectionWorkbenchTable({
+  entries,
+  actionPending,
+  onMoveToPricing,
+  onReject,
+  onResetToPool,
+  onPricingContinue,
+  onPricingReject,
+  onSupplyMatched,
+  onCompetitorReady,
+  onTransferToPrep,
+}) {
+  return (
+    <div className="wb-table-wrap result-table-wrap">
+      <table className="wb-table selection-table">
+        <thead>
+          <tr>
+            <th>阶段</th>
+            <th>商品信息</th>
+            <th>来源批次</th>
+            <th>测价 / 利润</th>
+            <th>供应链</th>
+            <th>竞品整理</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((entry) => (
+            <SelectionRow
+              key={entry.id}
+              entry={entry}
+              actionPending={actionPending}
+              onMoveToPricing={onMoveToPricing}
+              onReject={onReject}
+              onResetToPool={onResetToPool}
+              onPricingContinue={onPricingContinue}
+              onPricingReject={onPricingReject}
+              onSupplyMatched={onSupplyMatched}
+              onCompetitorReady={onCompetitorReady}
+              onTransferToPrep={onTransferToPrep}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function SelectionRow({
+  entry,
+  actionPending,
+  onMoveToPricing,
+  onReject,
+  onResetToPool,
+  onPricingContinue,
+  onPricingReject,
+  onSupplyMatched,
+  onCompetitorReady,
+  onTransferToPrep,
+}) {
+  const { item } = entry;
+  const isRejected = entry.stage === 'screening_rejected' || entry.stage === 'pricing_rejected';
+
+  return (
+    <tr>
+      <td>
+        <span className={`screening-state-pill is-${stageToneMap[entry.stage] || 'neutral'}`}>{stageLabels[entry.stage]}</span>
+      </td>
+      <td>
+        <div className="product-info-cell">
+          {item.product_image_url ? (
+            <img src={item.product_image_url} alt="" loading="lazy" />
+          ) : (
+            <span className="product-image-placeholder" />
+          )}
+          <div>
+            <div className="cell-main product-title">{formatText(item.title)}</div>
+            <div className="cell-sub mono">{item.platform_product_id}</div>
+            <div className="cell-sub">{formatText(item.brand)} / {formatText(item.shop_name)}</div>
+          </div>
+        </div>
+      </td>
+      <td>
+        <div className="cell-main">批次 #{formatText(entry.sourceJobId)}</div>
+        <div className="cell-sub">{formatJobType(entry.sourcePageType)}</div>
+        <div className="cell-sub">{formatDate(entry.sourceFinishedAt)}</div>
+      </td>
+      <td>
+        <div className="selection-data-card">
+          <span>成本</span>
+          <strong>{entry.initialCostPrice != null ? formatCurrency(entry.initialCostPrice, 'CNY') : '待测价'}</strong>
+        </div>
+        <div className="selection-data-card">
+          <span>运费</span>
+          <strong>{entry.initialDeliveryCost != null ? formatCurrency(entry.initialDeliveryCost, 'CNY') : '-'}</strong>
+        </div>
+        <div className="selection-data-card">
+          <span>预估售价</span>
+          <strong>{entry.initialTargetPrice != null ? formatCurrency(entry.initialTargetPrice, 'CNY') : '-'}</strong>
+        </div>
+        <div className={`selection-data-card ${entry.pricingDecision === 'reject' ? 'is-danger' : entry.pricingDecision === 'continue' ? 'is-good' : ''}`}>
+          <span>利润判断</span>
+          <strong>{entry.pricingDecision === 'continue' ? `继续 · ${formatPercent((entry.initialProfitRate || 0) / 100)}` : entry.pricingDecision === 'reject' ? `淘汰 · ${formatPercent((entry.initialProfitRate || 0) / 100)}` : '待判断'}</strong>
+        </div>
+      </td>
+      <td>
+        <div className="selection-data-card">
+          <span>状态</span>
+          <strong>{entry.supplyMatchStatus === 'matched' ? '已找到货源' : '待找货源'}</strong>
+        </div>
+        <div className="cell-sub">{entry.supplyVendorName || '未记录供应商'}</div>
+        <div className="cell-sub mono selection-link">{entry.supplyReferenceUrl || '-'}</div>
+      </td>
+      <td>
+        <div className="selection-data-card">
+          <span>竞品整理</span>
+          <strong>{entry.competitorPacketStatus === 'ready' ? '已完成' : '待整理'}</strong>
+        </div>
+        <div className="cell-sub">{entry.transferToPrepAt ? `已于 ${formatDate(entry.transferToPrepAt)} 流转` : '尚未流转商品数据整理'}</div>
+      </td>
+      <td>
+        <div className="screening-row-actions selection-actions">
+          {entry.stage === 'pool_pending' ? (
+            <>
+              <button type="button" onClick={() => void onMoveToPricing(entry.id)} disabled={actionPending}>进入测价</button>
+              <button type="button" onClick={() => void onReject(entry.id)} disabled={actionPending}>初筛淘汰</button>
+            </>
+          ) : null}
+
+          {entry.stage === 'pricing_pending' ? (
+            <>
+              <button type="button" onClick={() => void onPricingContinue(entry)} disabled={actionPending}>测价通过</button>
+              <button type="button" onClick={() => void onPricingReject(entry)} disabled={actionPending}>利润不成立</button>
+              <button type="button" onClick={() => void onResetToPool(entry.id)} disabled={actionPending}>退回初筛</button>
+            </>
+          ) : null}
+
+          {entry.stage === 'source_pending' ? (
+            <>
+              <button type="button" onClick={() => void onSupplyMatched(entry)} disabled={actionPending}>已找到货源</button>
+              <button type="button" onClick={() => void onMoveToPricing(entry.id)} disabled={actionPending}>重新测价</button>
+            </>
+          ) : null}
+
+          {entry.stage === 'competitor_pending' ? (
+            <>
+              <button type="button" onClick={() => void onCompetitorReady(entry.id)} disabled={actionPending}>竞品已整理</button>
+              <button type="button" onClick={() => void onSupplyMatched(entry)} disabled={actionPending}>更新货源</button>
+            </>
+          ) : null}
+
+          {entry.stage === 'prep_ready' ? (
+            <>
+              <button type="button" onClick={() => void onTransferToPrep(entry.id)} disabled={actionPending || Boolean(entry.transferToPrepAt)}>
+                {entry.transferToPrepAt ? '已流转商品数据整理' : '进入商品数据整理'}
+              </button>
+              <button type="button" onClick={() => void onCompetitorReady(entry.id)} disabled={actionPending}>保持可流转</button>
+            </>
+          ) : null}
+
+          {isRejected ? (
+            <button type="button" onClick={() => void onResetToPool(entry.id)} disabled={actionPending}>恢复到待初筛</button>
+          ) : null}
+        </div>
+      </td>
+    </tr>
   );
 }
 
