@@ -10,6 +10,7 @@
 | `preflight.mjs` | 采集前置检查：Chrome、profile 副本、登录态、业务接口 Authorization |
 | `industry-deep-dive.mjs` | 行业数据二次分析采集，采到 3 级类目层级 |
 | `hot-products.mjs` | 热销商品采集，保留原始商品和经营快照入库 |
+| `content-assets.mjs` | 单商品内容资产采集：按商品 ID 定位采集箱记录，拉取编辑详情并写入 `product_content_assets / product_content_skus` |
 | `lib/` | Profile、浏览器、数据库任务记录等公共能力 |
 
 ## 常用命令
@@ -21,6 +22,7 @@ node scripts/menglar-capture/preflight.mjs --target industry_general --json
 node scripts/menglar-capture/preflight.mjs --target hot_products --json
 node scripts/menglar-capture/industry-deep-dive.mjs
 node scripts/menglar-capture/hot-products.mjs
+node scripts/menglar-capture/content-assets.mjs --product-id 2755299450 --json
 ```
 
 ## 登录态稳定性检查
@@ -130,6 +132,29 @@ node scripts/menglar-capture/hot-products.mjs
 | `products_raw` | 原始商品 JSON |
 | `product_business_snapshots` | 标准化商品经营快照 |
 | `product_content_assets` | 商品内容资产表，当前热销采集不主动写入 |
+| `product_content_skus` | 商品内容资产版本下的 SKU 集合 |
+
+## 商品内容资产采集
+
+用于稳定拉取采集箱中某个商品的标题、描述、主题标签、包装尺寸、重量和 SKU 图片集合，并写入内容资产表：
+
+```bash
+node scripts/menglar-capture/content-assets.mjs --product-id 2755299450 --json
+```
+
+脚本流程：
+
+1. 先执行登录态检查，确认萌拉业务授权可用。
+2. 打开采集箱页面并复用授权请求头。
+3. 调用 `productLibrary/pageQuery` 定位商品库记录。
+4. 调用 `improveEditing/{id}` 获取商品编辑详情。
+5. 标准化后写入 `product_content_assets / product_content_skus`。
+
+最近一次执行结果会写入：
+
+```text
+.cache/menglar-capture/content-assets-last.json
+```
 
 任务记录统计口径：
 

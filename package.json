@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "capture:hot-products": "node scripts/menglar-capture/hot-products.mjs",
+    "capture:content-assets": "node scripts/menglar-capture/content-assets.mjs",
     "menglar:login-health": "node scripts/menglar-capture/login-health.mjs",
+    "menglar:content-assets:test": "node scripts/test-menglar-content-assets.mjs",
     "db:migrate": "node scripts/migrate-ecommerce-workbench-db.mjs",
     "db:inspect": "node scripts/inspect-menglar-db.mjs",
     "db:migration:test": "node scripts/test-ecommerce-db-migration.mjs",
@@ -28,7 +30,10 @@
     "ozon:tool:test": "node scripts/test-ozon-batch-tool.mjs",
     "ozon:store:export": "node scripts/export-ozon-store-products.mjs",
     "ozon:api:test": "node scripts/test-ozon-workbench-api.mjs",
-    "ozon:page:test": "node scripts/test-ozon-upload-page.mjs"
+    "ozon:page:test": "node scripts/test-ozon-upload-page.mjs",
+    "product-content:api:test": "node scripts/商品内容资产页面/api-and-db-test.mjs",
+    "product-content:page:test": "node scripts/商品内容资产页面/page-e2e.mjs",
+    "product-content:seed-demo": "node scripts/商品内容资产页面/seed-demo-data.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.5",
