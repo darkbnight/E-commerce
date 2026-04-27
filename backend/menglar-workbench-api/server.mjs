@@ -181,6 +181,105 @@ function ensureProductSelectionItemsTable(db) {
   `);
 }
 
+function ensureProductContentTables(db) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS product_content_assets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      source_job_id INTEGER,
+      platform TEXT NOT NULL DEFAULT 'ozon',
+      platform_product_id TEXT NOT NULL,
+      product_url TEXT,
+      title TEXT,
+      description TEXT,
+      tags_json TEXT,
+      main_image_url TEXT,
+      image_urls_json TEXT,
+      content_hash TEXT NOT NULL,
+      captured_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(platform, platform_product_id, content_hash)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_product_content_assets_product
+    ON product_content_assets(platform, platform_product_id);
+
+    CREATE INDEX IF NOT EXISTS idx_product_content_assets_source_job
+    ON product_content_assets(source_job_id);
+
+    CREATE INDEX IF NOT EXISTS idx_product_content_assets_captured_at
+    ON product_content_assets(captured_at);
+
+    CREATE TABLE IF NOT EXISTS product_content_skus (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      content_asset_id INTEGER NOT NULL,
+      source_job_id INTEGER,
+      platform TEXT NOT NULL DEFAULT 'ozon',
+      platform_product_id TEXT NOT NULL,
+      platform_sku_id TEXT NOT NULL,
+      sku_name TEXT,
+      price REAL,
+      currency_code TEXT,
+      images_json TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      captured_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(content_asset_id, platform_sku_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_product_content_skus_content_asset
+    ON product_content_skus(content_asset_id);
+
+    CREATE INDEX IF NOT EXISTS idx_product_content_skus_product
+    ON product_content_skus(platform, platform_product_id);
+
+    CREATE INDEX IF NOT EXISTS idx_product_content_skus_source_job
+    ON product_content_skus(source_job_id);
+  `);
+
+  const assetColumns = new Set(db.prepare('PRAGMA table_info(product_content_assets)').all().map((column) => column.name));
+  const assetAdditions = [
+    ['source_job_id', 'INTEGER'],
+    ['platform', "TEXT NOT NULL DEFAULT 'ozon'"],
+    ['product_url', 'TEXT'],
+    ['title', 'TEXT'],
+    ['description', 'TEXT'],
+    ['tags_json', 'TEXT'],
+    ['main_image_url', 'TEXT'],
+    ['image_urls_json', 'TEXT'],
+    ['content_hash', "TEXT NOT NULL DEFAULT ''"],
+    ['captured_at', "TEXT NOT NULL DEFAULT ''"],
+    ['created_at', "TEXT NOT NULL DEFAULT ''"],
+    ['updated_at', "TEXT NOT NULL DEFAULT ''"],
+  ];
+  for (const [name, definition] of assetAdditions) {
+    if (!assetColumns.has(name)) {
+      db.exec(`ALTER TABLE product_content_assets ADD COLUMN ${name} ${definition}`);
+    }
+  }
+
+  const skuColumns = new Set(db.prepare('PRAGMA table_info(product_content_skus)').all().map((column) => column.name));
+  const skuAdditions = [
+    ['source_job_id', 'INTEGER'],
+    ['platform', "TEXT NOT NULL DEFAULT 'ozon'"],
+    ['platform_product_id', "TEXT NOT NULL DEFAULT ''"],
+    ['sku_name', 'TEXT'],
+    ['price', 'REAL'],
+    ['currency_code', 'TEXT'],
+    ['images_json', 'TEXT'],
+    ['sort_order', 'INTEGER NOT NULL DEFAULT 0'],
+    ['captured_at', "TEXT NOT NULL DEFAULT ''"],
+    ['created_at', "TEXT NOT NULL DEFAULT ''"],
+    ['updated_at', "TEXT NOT NULL DEFAULT ''"],
+  ];
+  for (const [name, definition] of skuAdditions) {
+    if (!skuColumns.has(name)) {
+      db.exec(`ALTER TABLE product_content_skus ADD COLUMN ${name} ${definition}`);
+    }
+  }
+}
+
 function parseInteger(value, fallback) {
   const parsed = Number.parseInt(value ?? '', 10);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -201,6 +300,15 @@ function toNullableNumber(value) {
   if (value == null || value === '') return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseJsonText(value, fallback) {
+  if (value == null || value === '') return fallback;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
 }
 
 function expectEnumValue(value, enumSet, fieldName) {
@@ -678,6 +786,250 @@ function handleApiProducts(req, res) {
       items,
       total: Number(totalRow.total || 0),
       actualProductCount: Number(actualProductCount.total || 0),
+    };
+  });
+
+  sendJson(res, 200, payload);
+}
+
+function mapProductContentAssetRow(row) {
+  if (!row) return null;
+  return {
+    id: Number(row.id),
+    source_job_id: row.source_job_id == null ? null : Number(row.source_job_id),
+    platform: row.platform,
+    platform_product_id: row.platform_product_id,
+    product_url: row.product_url,
+    title: row.title,
+    description: row.description,
+    tags: parseJsonText(row.tags_json, []),
+    main_image_url: row.main_image_url,
+    image_urls: parseJsonText(row.image_urls_json, []),
+    content_hash: row.content_hash,
+    captured_at: row.captured_at,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    sku_count: row.sku_count == null ? undefined : Number(row.sku_count),
+  };
+}
+
+function mapProductContentSkuRow(row) {
+  return {
+    id: Number(row.id),
+    content_asset_id: Number(row.content_asset_id),
+    source_job_id: row.source_job_id == null ? null : Number(row.source_job_id),
+    platform: row.platform,
+    platform_product_id: row.platform_product_id,
+    platform_sku_id: row.platform_sku_id,
+    sku_name: row.sku_name,
+    price: row.price == null ? null : Number(row.price),
+    currency_code: row.currency_code,
+    images: parseJsonText(row.images_json, []),
+    sort_order: Number(row.sort_order || 0),
+    captured_at: row.captured_at,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+function mapProductBusinessSnapshotRow(row) {
+  if (!row) return null;
+  return {
+    id: Number(row.id),
+    job_id: Number(row.job_id),
+    platform: row.platform,
+    platform_product_id: row.platform_product_id,
+    product_url: row.product_url,
+    product_image_url: row.product_image_url,
+    shop_name: row.shop_name,
+    brand: row.brand,
+    title: row.title,
+    sales_volume: row.sales_volume == null ? null : Number(row.sales_volume),
+    sales_amount: row.sales_amount == null ? null : Number(row.sales_amount),
+    sales_amount_cny: row.sales_amount_cny == null ? null : Number(row.sales_amount_cny),
+    avg_price_rub: row.avg_price_rub == null ? null : Number(row.avg_price_rub),
+    avg_price_cny: row.avg_price_cny == null ? null : Number(row.avg_price_cny),
+    impressions: row.impressions == null ? null : Number(row.impressions),
+    clicks: row.clicks == null ? null : Number(row.clicks),
+    order_conversion_rate: row.order_conversion_rate == null ? null : Number(row.order_conversion_rate),
+    estimated_gross_margin: row.estimated_gross_margin == null ? null : Number(row.estimated_gross_margin),
+    shipping_mode: row.shipping_mode,
+    delivery_time: row.delivery_time,
+    captured_at: row.captured_at,
+    source_finished_at: row.source_finished_at || null,
+  };
+}
+
+function handleApiProductBusinessLatest(req, res) {
+  if (!existsSync(DB_PATH)) {
+    sendJson(res, 200, { query: {}, item: null });
+    return;
+  }
+
+  const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
+  const platform = toNullableText(url.searchParams.get('platform')) || 'ozon';
+  const productId = toNullableText(url.searchParams.get('productId'));
+
+  if (!productId) {
+    sendError(res, 400, 'productId 不能为空');
+    return;
+  }
+
+  const payload = withDb((db) => {
+    if (!db.prepare(`
+      SELECT name
+      FROM sqlite_master
+      WHERE type = 'table' AND name = 'product_business_snapshots'
+      LIMIT 1
+    `).get()) {
+      return {
+        query: { platform, productId },
+        item: null,
+      };
+    }
+
+    ensureProductBusinessSnapshotColumns(db);
+    const hasSourceJobs = Boolean(db.prepare(`
+      SELECT name
+      FROM sqlite_master
+      WHERE type = 'table' AND name = 'source_jobs'
+      LIMIT 1
+    `).get());
+
+    const row = hasSourceJobs
+      ? db.prepare(`
+        SELECT
+          product_business_snapshots.*,
+          source_jobs.finished_at AS source_finished_at
+        FROM product_business_snapshots
+        LEFT JOIN source_jobs
+          ON source_jobs.id = product_business_snapshots.job_id
+        WHERE product_business_snapshots.platform = ?
+          AND product_business_snapshots.platform_product_id = ?
+        ORDER BY product_business_snapshots.captured_at DESC, product_business_snapshots.id DESC
+        LIMIT 1
+      `).get(platform, productId)
+      : db.prepare(`
+        SELECT product_business_snapshots.*
+        FROM product_business_snapshots
+        WHERE product_business_snapshots.platform = ?
+          AND product_business_snapshots.platform_product_id = ?
+        ORDER BY product_business_snapshots.captured_at DESC, product_business_snapshots.id DESC
+        LIMIT 1
+      `).get(platform, productId);
+
+    return {
+      query: { platform, productId },
+      item: mapProductBusinessSnapshotRow(row),
+    };
+  });
+
+  sendJson(res, 200, payload);
+}
+
+function handleApiProductContent(req, res) {
+  if (!existsSync(DB_PATH)) {
+    sendJson(res, 200, { query: {}, item: null, skus: [], items: [], total: 0 });
+    return;
+  }
+
+  const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
+  const platform = toNullableText(url.searchParams.get('platform')) || 'ozon';
+  const productId = toNullableText(url.searchParams.get('productId'));
+  const latest = parseBoolean(url.searchParams.get('latest'), true);
+
+  if (!productId) {
+    sendError(res, 400, 'productId 不能为空');
+    return;
+  }
+
+  const payload = withDb((db) => {
+    ensureProductContentTables(db);
+
+    if (latest) {
+      const row = db.prepare(`
+        SELECT *
+        FROM product_content_assets
+        WHERE platform = ? AND platform_product_id = ?
+        ORDER BY captured_at DESC, id DESC
+        LIMIT 1
+      `).get(platform, productId);
+
+      if (!row) {
+        return {
+          query: { platform, productId, latest: true },
+          item: null,
+          skus: [],
+        };
+      }
+
+      const skuRows = db.prepare(`
+        SELECT *
+        FROM product_content_skus
+        WHERE content_asset_id = ?
+        ORDER BY sort_order ASC, id ASC
+      `).all(row.id);
+
+      return {
+        query: { platform, productId, latest: true },
+        item: mapProductContentAssetRow(row),
+        skus: skuRows.map(mapProductContentSkuRow),
+      };
+    }
+
+    const rows = db.prepare(`
+      SELECT
+        product_content_assets.*,
+        COUNT(product_content_skus.id) AS sku_count
+      FROM product_content_assets
+      LEFT JOIN product_content_skus
+        ON product_content_skus.content_asset_id = product_content_assets.id
+      WHERE product_content_assets.platform = ?
+        AND product_content_assets.platform_product_id = ?
+      GROUP BY product_content_assets.id
+      ORDER BY product_content_assets.captured_at DESC, product_content_assets.id DESC
+    `).all(platform, productId);
+
+    return {
+      query: { platform, productId, latest: false },
+      items: rows.map(mapProductContentAssetRow),
+      total: rows.length,
+    };
+  });
+
+  sendJson(res, 200, payload);
+}
+
+function handleApiProductContentSkus(res, contentAssetId) {
+  if (!existsSync(DB_PATH)) {
+    sendJson(res, 200, { item: null, skus: [] });
+    return;
+  }
+
+  const payload = withDb((db) => {
+    ensureProductContentTables(db);
+
+    const row = db.prepare(`
+      SELECT *
+      FROM product_content_assets
+      WHERE id = ?
+      LIMIT 1
+    `).get(contentAssetId);
+
+    if (!row) {
+      return { item: null, skus: [] };
+    }
+
+    const skuRows = db.prepare(`
+      SELECT *
+      FROM product_content_skus
+      WHERE content_asset_id = ?
+      ORDER BY sort_order ASC, id ASC
+    `).all(contentAssetId);
+
+    return {
+      item: mapProductContentAssetRow(row),
+      skus: skuRows.map(mapProductContentSkuRow),
     };
   });
 
@@ -1188,6 +1540,26 @@ export function createWorkbenchServer() {
       return;
     }
 
+    if ((req.url || '').startsWith('/api/product-business/latest')) {
+      if (url.pathname === '/api/product-business/latest' && req.method === 'GET') {
+        handleApiProductBusinessLatest(req, res);
+        return;
+      }
+    }
+
+    if ((req.url || '').startsWith('/api/product-content')) {
+      const productContentSkusMatch = url.pathname.match(/^\/api\/product-content\/(\d+)\/skus$/);
+      if (productContentSkusMatch && req.method === 'GET') {
+        handleApiProductContentSkus(res, Number(productContentSkusMatch[1]));
+        return;
+      }
+
+      if (url.pathname === '/api/product-content' && req.method === 'GET') {
+        handleApiProductContent(req, res);
+        return;
+      }
+    }
+
     if ((req.url || '').startsWith('/api/menglar/login-health')) {
       await handleApiMenglarLoginHealth(req, res);
       return;
@@ -1295,6 +1667,14 @@ export function createWorkbenchServer() {
 
 export async function startWorkbenchServer({ port = PORT, host = '127.0.0.1' } = {}) {
   await mkdir(WORKBENCH_DIST, { recursive: true }).catch(() => {});
+  if (existsSync(DB_PATH)) {
+    withDb((db) => {
+      ensureSourceJobsMetricsColumns(db);
+      ensureProductBusinessSnapshotColumns(db);
+      ensureProductSelectionItemsTable(db);
+      ensureProductContentTables(db);
+    });
+  }
   const server = createWorkbenchServer();
   await new Promise((resolve) => {
     server.listen(port, host, resolve);

@@ -16,6 +16,10 @@ function tableExists(db, tableName) {
   `).get(tableName));
 }
 
+function tableColumns(db, tableName) {
+  return new Set(db.prepare(`PRAGMA table_info(${tableName})`).all().map((column) => column.name));
+}
+
 function createTargetTables(db) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS product_business_snapshots (
@@ -76,21 +80,17 @@ function createTargetTables(db) {
 
     CREATE TABLE IF NOT EXISTS product_content_assets (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      source_job_id INTEGER,
       platform TEXT NOT NULL DEFAULT 'ozon',
       platform_product_id TEXT NOT NULL,
       product_url TEXT,
-      source_job_id INTEGER,
-      source_snapshot_id INTEGER,
       title TEXT,
       description TEXT,
-      attributes_json TEXT,
       tags_json TEXT,
       main_image_url TEXT,
       image_urls_json TEXT,
-      downloaded_images_json TEXT,
-      content_hash TEXT,
-      content_status TEXT NOT NULL DEFAULT 'pending',
-      captured_at TEXT,
+      content_hash TEXT NOT NULL,
+      captured_at TEXT NOT NULL,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       UNIQUE(platform, platform_product_id, content_hash)
@@ -102,8 +102,35 @@ function createTargetTables(db) {
     CREATE INDEX IF NOT EXISTS idx_product_content_assets_source_job
     ON product_content_assets(source_job_id);
 
-    CREATE INDEX IF NOT EXISTS idx_product_content_assets_status
-    ON product_content_assets(content_status);
+    CREATE INDEX IF NOT EXISTS idx_product_content_assets_captured_at
+    ON product_content_assets(captured_at);
+
+    CREATE TABLE IF NOT EXISTS product_content_skus (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      content_asset_id INTEGER NOT NULL,
+      source_job_id INTEGER,
+      platform TEXT NOT NULL DEFAULT 'ozon',
+      platform_product_id TEXT NOT NULL,
+      platform_sku_id TEXT NOT NULL,
+      sku_name TEXT,
+      price REAL,
+      currency_code TEXT,
+      images_json TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      captured_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(content_asset_id, platform_sku_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_product_content_skus_content_asset
+    ON product_content_skus(content_asset_id);
+
+    CREATE INDEX IF NOT EXISTS idx_product_content_skus_product
+    ON product_content_skus(platform, platform_product_id);
+
+    CREATE INDEX IF NOT EXISTS idx_product_content_skus_source_job
+    ON product_content_skus(source_job_id);
 
     CREATE TABLE IF NOT EXISTS product_content_result (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -189,6 +216,102 @@ function createTargetTables(db) {
     ON product_selection_items(source_platform, source_platform_product_id);
   `);
   ensureProductBusinessSnapshotColumns(db);
+}
+
+function migrateProductContentAssets(db) {
+  if (!tableExists(db, 'product_content_assets')) {
+    return { migratedContentAssets: 0, rebuiltContentAssets: false };
+  }
+
+  const columns = tableColumns(db, 'product_content_assets');
+  const needsRebuild =
+    columns.has('attributes_json') ||
+    columns.has('downloaded_images_json') ||
+    columns.has('content_status') ||
+    columns.has('source_snapshot_id') ||
+    !columns.has('source_job_id') ||
+    !columns.has('content_hash') ||
+    !columns.has('captured_at');
+
+  if (!needsRebuild) {
+    return {
+      migratedContentAssets: db.prepare('SELECT COUNT(*) AS total FROM product_content_assets').get().total,
+      rebuiltContentAssets: false,
+    };
+  }
+
+  db.exec('ALTER TABLE product_content_assets RENAME TO product_content_assets_legacy');
+  db.exec(`
+    CREATE TABLE product_content_assets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      source_job_id INTEGER,
+      platform TEXT NOT NULL DEFAULT 'ozon',
+      platform_product_id TEXT NOT NULL,
+      product_url TEXT,
+      title TEXT,
+      description TEXT,
+      tags_json TEXT,
+      main_image_url TEXT,
+      image_urls_json TEXT,
+      content_hash TEXT NOT NULL,
+      captured_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(platform, platform_product_id, content_hash)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_product_content_assets_product
+    ON product_content_assets(platform, platform_product_id);
+
+    CREATE INDEX IF NOT EXISTS idx_product_content_assets_source_job
+    ON product_content_assets(source_job_id);
+
+    CREATE INDEX IF NOT EXISTS idx_product_content_assets_captured_at
+    ON product_content_assets(captured_at);
+  `);
+
+  db.exec(`
+    INSERT OR IGNORE INTO product_content_assets (
+      id,
+      source_job_id,
+      platform,
+      platform_product_id,
+      product_url,
+      title,
+      description,
+      tags_json,
+      main_image_url,
+      image_urls_json,
+      content_hash,
+      captured_at,
+      created_at,
+      updated_at
+    )
+    SELECT
+      id,
+      source_job_id,
+      COALESCE(NULLIF(platform, ''), 'ozon'),
+      platform_product_id,
+      product_url,
+      title,
+      description,
+      tags_json,
+      main_image_url,
+      image_urls_json,
+      COALESCE(
+        NULLIF(content_hash, ''),
+        'legacy:' || COALESCE(NULLIF(platform, ''), 'ozon') || ':' || COALESCE(platform_product_id, '') || ':' || CAST(id AS TEXT)
+      ),
+      COALESCE(NULLIF(captured_at, ''), NULLIF(created_at, ''), NULLIF(updated_at, ''), datetime('now')),
+      COALESCE(NULLIF(created_at, ''), NULLIF(captured_at, ''), datetime('now')),
+      COALESCE(NULLIF(updated_at, ''), NULLIF(captured_at, ''), datetime('now'))
+    FROM product_content_assets_legacy
+    WHERE platform_product_id IS NOT NULL AND TRIM(platform_product_id) <> '';
+  `);
+
+  const migratedContentAssets = db.prepare('SELECT COUNT(*) AS total FROM product_content_assets').get().total;
+  db.exec('DROP TABLE product_content_assets_legacy');
+  return { migratedContentAssets, rebuiltContentAssets: true };
 }
 
 function ensureProductBusinessSnapshotColumns(db) {
@@ -374,12 +497,14 @@ const db = new DatabaseSync(NEW_DB_PATH);
 try {
   createTargetTables(db);
   const result = migrateProductsNormalized(db);
+  const contentAssetResult = migrateProductContentAssets(db);
   const backfillResult = backfillSnapshotExtendedFields(db);
   console.log(JSON.stringify({
     ok: true,
     database: NEW_DB_PATH,
     copiedFromOld,
     ...result,
+    ...contentAssetResult,
     ...backfillResult,
   }, null, 2));
 } finally {

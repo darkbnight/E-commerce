@@ -19,7 +19,7 @@ function assertColumns(db, tableName, expectedColumns) {
   }
 }
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+const db = new DatabaseSync(DB_PATH);
 try {
   assertColumns(db, 'product_business_snapshots', [
     'job_id',
@@ -37,12 +37,25 @@ try {
     'captured_at',
   ]);
   assertColumns(db, 'product_content_assets', [
+    'source_job_id',
     'platform',
     'platform_product_id',
     'title',
     'description',
+    'tags_json',
+    'main_image_url',
     'image_urls_json',
-    'content_status',
+    'content_hash',
+    'captured_at',
+  ]);
+  assertColumns(db, 'product_content_skus', [
+    'content_asset_id',
+    'source_job_id',
+    'platform_product_id',
+    'platform_sku_id',
+    'price',
+    'images_json',
+    'captured_at',
   ]);
   assertColumns(db, 'product_content_result', [
     'result_key',
@@ -93,6 +106,109 @@ try {
     assert.ok(mapped.sales_volume != null);
     assert.ok(mapped.sales_amount != null);
   }
+
+  const now = new Date();
+  const earlier = new Date(now.getTime() - 60_000).toISOString();
+  const later = now.toISOString();
+  const productId = 'test-product-content-001';
+
+  db.prepare('DELETE FROM product_content_skus WHERE platform_product_id = ?').run(productId);
+  db.prepare('DELETE FROM product_content_assets WHERE platform_product_id = ?').run(productId);
+
+  const assetInsert = db.prepare(`
+    INSERT INTO product_content_assets (
+      source_job_id, platform, platform_product_id, product_url,
+      title, description, tags_json, main_image_url, image_urls_json,
+      content_hash, captured_at, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const firstAsset = assetInsert.run(
+    1,
+    'ozon',
+    productId,
+    'https://example.com/product/1',
+    '旧标题',
+    '旧描述',
+    JSON.stringify(['old-tag']),
+    'https://example.com/old-main.png',
+    JSON.stringify(['https://example.com/old-1.png']),
+    'hash-old',
+    earlier,
+    earlier,
+    earlier,
+  );
+  const secondAsset = assetInsert.run(
+    1,
+    'ozon',
+    productId,
+    'https://example.com/product/1',
+    '新标题',
+    '新描述',
+    JSON.stringify(['new-tag']),
+    'https://example.com/new-main.png',
+    JSON.stringify(['https://example.com/new-1.png', 'https://example.com/new-2.png']),
+    'hash-new',
+    later,
+    later,
+    later,
+  );
+
+  const firstAssetId = Number(firstAsset.lastInsertRowid);
+  const secondAssetId = Number(secondAsset.lastInsertRowid);
+
+  const skuInsert = db.prepare(`
+    INSERT INTO product_content_skus (
+      content_asset_id, source_job_id, platform, platform_product_id, platform_sku_id,
+      sku_name, price, currency_code, images_json, sort_order,
+      captured_at, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  skuInsert.run(
+    firstAssetId,
+    1,
+    'ozon',
+    productId,
+    'sku-old-1',
+    '旧SKU',
+    10.5,
+    'CNY',
+    JSON.stringify(['https://example.com/sku-old-1.png']),
+    0,
+    earlier,
+    earlier,
+    earlier,
+  );
+  skuInsert.run(
+    secondAssetId,
+    1,
+    'ozon',
+    productId,
+    'sku-new-1',
+    '新SKU一',
+    19.92,
+    'CNY',
+    JSON.stringify(['https://example.com/sku-new-1.png']),
+    0,
+    later,
+    later,
+    later,
+  );
+  skuInsert.run(
+    secondAssetId,
+    1,
+    'ozon',
+    productId,
+    'sku-new-2',
+    '新SKU二',
+    29.92,
+    'CNY',
+    JSON.stringify(['https://example.com/sku-new-2.png', 'https://example.com/sku-new-2-b.png']),
+    1,
+    later,
+    later,
+    later,
+  );
 } finally {
   db.close();
 }
@@ -126,11 +242,40 @@ try {
   assert.equal(productsBody.items[0].sales, undefined);
   assert.equal(productsBody.items[0].revenue, undefined);
 
+  const latestContent = await fetch(`${baseUrl}/api/product-content?platform=ozon&productId=test-product-content-001`);
+  assert.equal(latestContent.status, 200);
+  const latestContentBody = await latestContent.json();
+  assert.equal(latestContentBody.item.platform_product_id, 'test-product-content-001');
+  assert.equal(latestContentBody.item.title, '新标题');
+  assert.deepEqual(latestContentBody.item.tags, ['new-tag']);
+  assert.equal(latestContentBody.skus.length, 2);
+  assert.equal(latestContentBody.skus[0].platform_sku_id, 'sku-new-1');
+  assert.deepEqual(latestContentBody.skus[1].images, ['https://example.com/sku-new-2.png', 'https://example.com/sku-new-2-b.png']);
+
+  const historyContent = await fetch(`${baseUrl}/api/product-content?platform=ozon&productId=test-product-content-001&latest=false`);
+  assert.equal(historyContent.status, 200);
+  const historyContentBody = await historyContent.json();
+  assert.equal(historyContentBody.total, 2);
+  assert.equal(historyContentBody.items[0].title, '新标题');
+  assert.equal(historyContentBody.items[0].sku_count, 2);
+  assert.equal(historyContentBody.items[1].title, '旧标题');
+  assert.equal(historyContentBody.items[1].sku_count, 1);
+
+  const versionSkus = await fetch(`${baseUrl}/api/product-content/${latestContentBody.item.id}/skus`);
+  assert.equal(versionSkus.status, 200);
+  const versionSkusBody = await versionSkus.json();
+  assert.equal(versionSkusBody.item.id, latestContentBody.item.id);
+  assert.equal(versionSkusBody.skus.length, 2);
+  assert.equal(versionSkusBody.skus[0].sort_order, 0);
+  assert.equal(versionSkusBody.skus[1].sort_order, 1);
+
   console.log(JSON.stringify({
     ok: true,
     database: DB_PATH,
     productCount: productsBody.actualProductCount,
     resultJobCount: resultJobsBody.jobs.length,
+    latestContentId: latestContentBody.item.id,
+    contentHistoryCount: historyContentBody.total,
   }, null, 2));
 } finally {
   await new Promise((resolve) => server.close(resolve));

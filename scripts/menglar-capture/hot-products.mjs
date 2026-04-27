@@ -329,21 +329,17 @@ async function ensureDb() {
 
     CREATE TABLE IF NOT EXISTS product_content_assets (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      source_job_id INTEGER,
       platform TEXT NOT NULL DEFAULT 'ozon',
       platform_product_id TEXT NOT NULL,
       product_url TEXT,
-      source_job_id INTEGER,
-      source_snapshot_id INTEGER,
       title TEXT,
       description TEXT,
-      attributes_json TEXT,
       tags_json TEXT,
       main_image_url TEXT,
       image_urls_json TEXT,
-      downloaded_images_json TEXT,
-      content_hash TEXT,
-      content_status TEXT NOT NULL DEFAULT 'pending',
-      captured_at TEXT,
+      content_hash TEXT NOT NULL,
+      captured_at TEXT NOT NULL,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       UNIQUE(platform, platform_product_id, content_hash)
@@ -357,6 +353,39 @@ async function ensureDb() {
 
     CREATE INDEX IF NOT EXISTS idx_product_content_assets_product
     ON product_content_assets(platform, platform_product_id);
+
+    CREATE INDEX IF NOT EXISTS idx_product_content_assets_source_job
+    ON product_content_assets(source_job_id);
+
+    CREATE INDEX IF NOT EXISTS idx_product_content_assets_captured_at
+    ON product_content_assets(captured_at);
+
+    CREATE TABLE IF NOT EXISTS product_content_skus (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      content_asset_id INTEGER NOT NULL,
+      source_job_id INTEGER,
+      platform TEXT NOT NULL DEFAULT 'ozon',
+      platform_product_id TEXT NOT NULL,
+      platform_sku_id TEXT NOT NULL,
+      sku_name TEXT,
+      price REAL,
+      currency_code TEXT,
+      images_json TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      captured_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(content_asset_id, platform_sku_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_product_content_skus_content_asset
+    ON product_content_skus(content_asset_id);
+
+    CREATE INDEX IF NOT EXISTS idx_product_content_skus_product
+    ON product_content_skus(platform, platform_product_id);
+
+    CREATE INDEX IF NOT EXISTS idx_product_content_skus_source_job
+    ON product_content_skus(source_job_id);
 
     CREATE TABLE IF NOT EXISTS product_selection_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
