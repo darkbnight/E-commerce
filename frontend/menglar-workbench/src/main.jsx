@@ -7,6 +7,7 @@ import { TasksPage } from './pages/TasksPage';
 import { ResultsPage } from './pages/ResultsPage';
 import { OzonUploadPage } from './pages/OzonUploadPage';
 import { ProductDataPrepPage } from './pages/ProductDataPrepPage';
+import { ProductContentPage } from './pages/ProductContentPage';
 import { ShippingCalculatorPage } from './pages/ShippingCalculatorPage';
 import { ShippingRuleInfoPage } from './pages/ShippingRuleInfoPage';
 import './styles.css';
@@ -22,6 +23,7 @@ const router = createBrowserRouter([
       { path: '/tasks', element: <TasksPage /> },
       { path: '/results', element: <ResultsPage /> },
       { path: '/product-data-prep', element: <ProductDataPrepPage /> },
+      { path: '/product-content', element: <ProductContentPage /> },
       { path: '/shipping-calculator', element: <ShippingCalculatorPage /> },
       { path: '/shipping-calculator/rules', element: <ShippingRuleInfoPage /> },
       { path: '/ozon-upload', element: <OzonUploadPage /> },

@@ -38,6 +38,35 @@ export async function fetchProducts(params = {}) {
   return response.json();
 }
 
+export async function fetchProductContent(params = {}) {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== '' && value != null) {
+      search.set(key, String(value));
+    }
+  });
+
+  const response = await fetch(`/api/product-content?${search.toString()}`);
+  return readJson(response, '读取商品内容资产失败');
+}
+
+export async function fetchProductContentSkus(contentAssetId) {
+  const response = await fetch(`/api/product-content/${encodeURIComponent(contentAssetId)}/skus`);
+  return readJson(response, '读取内容版本下的 SKU 失败');
+}
+
+export async function fetchProductBusinessLatest(params = {}) {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== '' && value != null) {
+      search.set(key, String(value));
+    }
+  });
+
+  const response = await fetch(`/api/product-business/latest?${search.toString()}`);
+  return readJson(response, '读取商品经营快照失败');
+}
+
 export async function fetchProductSelectionItems() {
   const response = await fetch('/api/product-selection/items');
   return readJson(response, '读取商品筛选工作台失败');
