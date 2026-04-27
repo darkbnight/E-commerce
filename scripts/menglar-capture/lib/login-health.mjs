@@ -6,7 +6,7 @@ import {
   PREFLIGHT_DIR,
   getTargetConfig,
 } from './constants.mjs';
-import { getChromeStatus, launchMenglarContext } from './browser-session.mjs';
+import { getBrowserStatus, launchMenglarContext } from './browser-session.mjs';
 import { ensureProfileCopy } from './profile-store.mjs';
 import { extractRuntimeStorage, getPageAuthState } from './preflight-checks.mjs';
 
@@ -41,6 +41,7 @@ function buildResult(fields) {
       businessResponseCount: 0,
       capturedHeaderKeys: [],
       lastUnauthorizedUrl: null,
+      probe: null,
     },
     errorType,
     message: fields.message || null,
@@ -64,10 +65,75 @@ function summarizeStorage(runtimeStorage) {
   };
 }
 
+function sanitizeProbeHeaders(headers, targetUrl) {
+  const result = {
+    accept: 'application/json, text/plain, */*',
+    'content-type': 'application/json',
+    referer: targetUrl,
+  };
+  for (const key of [
+    'authorization',
+    'control-t',
+    'x-risk-dida',
+    'user-agent',
+    'sec-ch-ua',
+    'sec-ch-ua-mobile',
+    'sec-ch-ua-platform',
+  ]) {
+    if (headers?.[key]) result[key] = headers[key];
+  }
+  return result;
+}
+
+async function runBusinessProbe(page, targetConfig, latestAuthorizedRequest) {
+  if (!targetConfig.probe || !latestAuthorizedRequest?.headers) {
+    return {
+      ok: false,
+      status: null,
+      error: 'missing_probe_config',
+      responseKeys: [],
+    };
+  }
+
+  const fullApiUrl = `${new URL(targetConfig.targetUrl).origin}${targetConfig.probe.apiPath}`;
+  const result = await page.evaluate(async ({ apiUrl, headers, body }) => {
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      });
+      const json = await response.json().catch(() => null);
+      return {
+        ok: response.ok,
+        status: response.status,
+        code: json?.code ?? null,
+        responseKeys: json && typeof json === 'object' ? Object.keys(json).slice(0, 20) : [],
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        status: null,
+        error: String(error),
+        responseKeys: [],
+      };
+    }
+  }, {
+    apiUrl: fullApiUrl,
+    headers: sanitizeProbeHeaders(latestAuthorizedRequest.headers, targetConfig.targetUrl),
+    body: targetConfig.probe.body,
+  });
+
+  return {
+    ...result,
+    apiPath: targetConfig.probe.apiPath,
+  };
+}
+
 export async function checkMenglarLoginHealth(options = {}) {
   const target = options.target || 'hot_products';
   const targetConfig = getTargetConfig(target);
-  const browser = getChromeStatus();
+  const browser = getBrowserStatus();
 
   if (!browser.exists) {
     const result = buildResult({
@@ -77,7 +143,7 @@ export async function checkMenglarLoginHealth(options = {}) {
       browser,
       profile: { ok: false },
       errorType: 'browser_blocked',
-      message: `未找到 Chrome: ${browser.executablePath}`,
+      message: `未找到可用浏览器：${browser.executablePath}`,
     });
     await writeLoginHealthResult(result, options.writeResult !== false);
     return result;
@@ -119,6 +185,7 @@ export async function checkMenglarLoginHealth(options = {}) {
         method: request.method(),
         hasAuthorization: Boolean(headers.authorization),
         headerKeys: Object.keys(headers).sort(),
+        headers,
       });
     });
 
@@ -141,12 +208,14 @@ export async function checkMenglarLoginHealth(options = {}) {
       title: await page.title().catch(() => null),
       url: page.url(),
       authState,
+      executablePath: context.__menglarExecutablePath || browser.executablePath,
     };
 
     const authorizedRequests = apiRequests.filter((item) => item.hasAuthorization);
     const unauthorizedResponses = apiResponses.filter((item) => item.status === 401 || item.status === 403);
     const latestAuthorized = authorizedRequests.at(-1);
     const latestUnauthorized = unauthorizedResponses.at(-1);
+    const probe = latestAuthorized ? await runBusinessProbe(page, targetConfig, latestAuthorized) : null;
     const api = {
       requestCount: apiRequests.length,
       authorizedRequestCount: authorizedRequests.length,
@@ -154,6 +223,7 @@ export async function checkMenglarLoginHealth(options = {}) {
       businessResponseCount: apiResponses.length,
       capturedHeaderKeys: latestAuthorized?.headerKeys?.filter((key) => key !== 'authorization') || [],
       lastUnauthorizedUrl: latestUnauthorized?.url || null,
+      probe,
       statuses: apiResponses.slice(-8),
     };
 
@@ -225,6 +295,25 @@ export async function checkMenglarLoginHealth(options = {}) {
       return result;
     }
 
+    if (!probe?.ok) {
+      const result = buildResult({
+        ok: false,
+        target,
+        targetUrl: targetConfig.targetUrl,
+        browser,
+        profile,
+        storage,
+        page: pageInfo,
+        api,
+        errorType: probe?.status === 401 || probe?.status === 403 ? 'api_unauthorized' : 'api_auth_missing',
+        message: probe?.status
+          ? `业务探测失败，接口返回 ${probe.status}`
+          : `业务探测失败：${probe?.error || 'unknown_probe_error'}`,
+      });
+      await writeLoginHealthResult(result, options.writeResult !== false);
+      return result;
+    }
+
     const result = buildResult({
       ok: true,
       target,
@@ -234,7 +323,7 @@ export async function checkMenglarLoginHealth(options = {}) {
       storage,
       page: pageInfo,
       api,
-      message: '萌拉登录态和业务接口授权可用',
+      message: '萌拉登录态、业务授权和接口探测均通过',
     });
     await writeLoginHealthResult(result, options.writeResult !== false);
     return result;

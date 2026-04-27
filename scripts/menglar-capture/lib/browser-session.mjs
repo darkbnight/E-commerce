@@ -1,6 +1,11 @@
 import { existsSync } from 'node:fs';
 import { chromium } from 'playwright';
-import { CHROME_EXECUTABLE_PATH, MENGLAR_ORIGIN, PROFILE_COPY } from './constants.mjs';
+import {
+  CHROME_EXECUTABLE_PATH,
+  MENGLAR_ORIGIN,
+  ZINIAO_EXECUTABLE_PATH,
+} from './constants.mjs';
+import { cleanupRuntimeProfile, prepareRuntimeProfile } from './profile-store.mjs';
 
 export async function injectRuntimeStorage(context, runtimeStorage) {
   await context.addInitScript((payload) => {
@@ -14,31 +19,59 @@ export async function injectRuntimeStorage(context, runtimeStorage) {
   }, { origin: MENGLAR_ORIGIN, ...runtimeStorage });
 }
 
-export function getChromeStatus() {
+export function getBrowserStatus() {
+  const candidates = [CHROME_EXECUTABLE_PATH, ZINIAO_EXECUTABLE_PATH]
+    .filter(Boolean)
+    .map((executablePath) => ({
+      executablePath,
+      exists: existsSync(executablePath),
+    }));
+
   return {
-    executablePath: CHROME_EXECUTABLE_PATH,
-    exists: existsSync(CHROME_EXECUTABLE_PATH),
+    executablePath: candidates.find((item) => item.exists)?.executablePath || CHROME_EXECUTABLE_PATH,
+    exists: candidates.some((item) => item.exists),
+    candidates,
   };
 }
 
 export async function launchMenglarContext({ runtimeStorage, headless = false } = {}) {
-  if (!existsSync(CHROME_EXECUTABLE_PATH)) {
-    const error = new Error(`未找到 Chrome: ${CHROME_EXECUTABLE_PATH}`);
+  const browserStatus = getBrowserStatus();
+  const availableCandidates = browserStatus.candidates.filter((item) => item.exists);
+  if (availableCandidates.length === 0) {
+    const error = new Error(`未找到可用浏览器：${CHROME_EXECUTABLE_PATH} / ${ZINIAO_EXECUTABLE_PATH}`);
     error.errorType = 'browser_blocked';
     throw error;
   }
 
-  try {
-    const context = await chromium.launchPersistentContext(PROFILE_COPY, {
-      executablePath: CHROME_EXECUTABLE_PATH,
-      headless,
-      viewport: { width: 1440, height: 900 },
-    });
-    if (runtimeStorage) await injectRuntimeStorage(context, runtimeStorage);
-    return context;
-  } catch (error) {
-    const wrapped = new Error(`浏览器启动失败: ${error.message}`);
-    wrapped.errorType = 'browser_blocked';
-    throw wrapped;
+  const { runtimeProfileDir, warnings } = await prepareRuntimeProfile();
+  const launchErrors = [];
+  for (const candidate of availableCandidates) {
+    try {
+      const context = await chromium.launchPersistentContext(runtimeProfileDir, {
+        executablePath: candidate.executablePath,
+        headless,
+        viewport: { width: 1440, height: 900 },
+      });
+      if (runtimeStorage) await injectRuntimeStorage(context, runtimeStorage);
+      context.__menglarExecutablePath = candidate.executablePath;
+      context.__menglarRuntimeProfileDir = runtimeProfileDir;
+      context.__menglarRuntimeProfileWarnings = warnings;
+      const originalClose = context.close.bind(context);
+      context.close = async (...args) => {
+        try {
+          return await originalClose(...args);
+        } finally {
+          await cleanupRuntimeProfile(runtimeProfileDir);
+        }
+      };
+      return context;
+    } catch (error) {
+      launchErrors.push(`${candidate.executablePath}: ${error.message}`);
+    }
   }
+
+  await cleanupRuntimeProfile(runtimeProfileDir);
+  const wrapped = new Error(`浏览器启动失败: ${launchErrors.join(' | ')}`);
+  wrapped.errorType = 'browser_blocked';
+  throw wrapped;
 }
