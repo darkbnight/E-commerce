@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
-import { copyFile, mkdtemp, rm } from 'node:fs/promises';
-import os from 'node:os';
+import { copyFile, mkdir, mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { chromium } from 'playwright';
 
 const root = process.cwd();
 const sourceDbPath = path.join(root, 'db', 'ecommerce-workbench.sqlite');
-const tempDir = await mkdtemp(path.join(os.tmpdir(), 'ecommerce-db-ui-'));
+const tempRoot = path.join(root, '.cache', 'test-temp');
+await mkdir(tempRoot, { recursive: true });
+const tempDir = await mkdtemp(path.join(tempRoot, 'ecommerce-db-ui-'));
 const tempDbPath = path.join(tempDir, 'ecommerce-workbench.sqlite');
 await copyFile(sourceDbPath, tempDbPath);
 process.env.ECOMMERCE_WORKBENCH_DB_PATH = tempDbPath;
@@ -40,6 +41,30 @@ try {
     );
   `);
   db.exec('DELETE FROM product_selection_items;');
+  const latestJob = db.prepare(`
+    SELECT source_jobs.id
+    FROM source_jobs
+    WHERE source_jobs.job_status = 'success'
+      AND EXISTS (
+        SELECT 1
+        FROM product_business_snapshots
+        WHERE product_business_snapshots.job_id = source_jobs.id
+        LIMIT 1
+      )
+    ORDER BY source_jobs.id DESC
+    LIMIT 1
+  `).get();
+  if (latestJob?.id) {
+    db.prepare(`
+      UPDATE product_business_snapshots
+      SET avg_price_cny = COALESCE(avg_price_cny, 15),
+          length_cm = COALESCE(length_cm, 45),
+          width_cm = COALESCE(width_cm, 30),
+          height_cm = COALESCE(height_cm, 0.5),
+          weight_g = COALESCE(weight_g, 300)
+      WHERE job_id = ?
+    `).run(latestJob.id);
+  }
 } finally {
   db.close();
 }
@@ -53,14 +78,28 @@ let browser;
 try {
   browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-  await page.goto(`http://127.0.0.1:${port}/results`, { waitUntil: 'networkidle' });
+  await page.goto(`http://127.0.0.1:${port}/results`, { waitUntil: 'domcontentloaded' });
 
   await expectText(page, '商品结果');
   await expectText(page, '商品信息');
-  await expectText(page, '销售量');
+  await expectText(page, '销售量 / 增长');
   await expectText(page, '销售金额');
   await expectText(page, '广告');
+  await expectText(page, '均价区间（CNY）');
+  await expectText(page, '重量区间（g）');
   await expectText(page, '当前页加入筛选池');
+
+  await page.locator('select').filter({ has: page.locator('option[value="pending"]') }).first().waitFor({ timeout: 10000 });
+  await page.locator('.wb-button.danger').first().waitFor({ timeout: 10000 });
+
+  assert.equal(await page.locator('.result-panel-summary').count(), 0);
+  assert.ok(await page.locator('.raw-product-status.is-pending').count() > 0, 'raw results should show pending status before selection action');
+
+  const firstImage = page.locator('.product-image-trigger').first();
+  await firstImage.waitFor({ timeout: 10000 });
+  await firstImage.click();
+  await expectText(page, '关闭');
+  await page.getByRole('button', { name: '关闭' }).click();
 
   await page.getByRole('button', { name: '商品筛选' }).click();
   await expectText(page, '筛选池还没有商品');
@@ -70,6 +109,8 @@ try {
   const initialButtonCount = await addButtons.count();
   assert.ok(initialButtonCount > 0, 'should have at least one single-add button');
   await addButtons.first().click();
+  await page.locator('.screening-row-actions button.is-selected').first().waitFor({ timeout: 10000 });
+  await page.locator('.raw-product-status.is-selected').first().waitFor({ timeout: 10000 });
 
   await page.getByRole('button', { name: '商品筛选' }).click();
   await expectText(page, '商品筛选工作台');
@@ -81,6 +122,19 @@ try {
   await selectionRows.first().waitFor({ timeout: 10000 });
   assert.equal(await selectionRows.count(), 1, 'single add should only create one selection row');
   const firstSelectionRow = selectionRows.first();
+  const autoDeliveryCost = firstSelectionRow.locator('.selection-data-card strong').nth(1);
+  const autoDeliveryText = (await autoDeliveryCost.textContent())?.trim() || '';
+  assert.notEqual(autoDeliveryText, '-', 'delivery cost should be auto calculated after adding to selection pool');
+  await expectButton(firstSelectionRow, '查看竞品详情');
+  await firstSelectionRow.getByRole('button', { name: '查看竞品详情' }).click();
+  await expectText(page, '销售表现');
+  await expectText(page, '流量与转化');
+  await expectText(page, '广告与物流');
+  await expectText(page, '尺寸与来源');
+  const competitorDialogText = await page.getByRole('dialog', { name: '竞品详情' }).innerText();
+  assert.match(competitorDialogText, /\d{1,3}(,\d{3})+/, 'large numbers should use comma thousands separators');
+  assert.doesNotMatch(competitorDialogText, /\d{1,3}(?:\.\d{3}){2,}/, 'large numbers should not use dot thousands separators');
+  await page.getByRole('dialog', { name: '竞品详情' }).getByRole('button', { name: '关闭' }).click();
 
   await expectButton(firstSelectionRow, '进入测价');
   await firstSelectionRow.getByRole('button', { name: '进入测价' }).click();
@@ -95,7 +149,7 @@ try {
   await firstSelectionRow.getByRole('button', { name: '进入商品数据整理' }).click();
   await expectButton(firstSelectionRow, '已流转商品数据整理');
 
-  await page.reload({ waitUntil: 'networkidle' });
+  await page.reload({ waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: '商品筛选' }).click();
   const reloadedRow = page.locator('.selection-table tbody tr').first();
   await reloadedRow.waitFor({ timeout: 10000 });

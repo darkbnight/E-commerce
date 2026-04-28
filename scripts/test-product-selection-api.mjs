@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
-import os from 'node:os';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-const tempDir = await mkdtemp(path.join(os.tmpdir(), 'product-selection-api-'));
+const tempRoot = path.join(process.cwd(), '.cache', 'test-temp');
+await mkdir(tempRoot, { recursive: true });
+const tempDir = await mkdtemp(path.join(tempRoot, 'product-selection-api-'));
 const tempDbPath = path.join(tempDir, 'ecommerce-workbench.sqlite');
 process.env.ECOMMERCE_WORKBENCH_DB_PATH = tempDbPath;
 
@@ -32,6 +33,19 @@ try {
   const createBody = await createResponse.json();
   assert.equal(createBody.insertedCount, 2);
   assert.equal(createBody.duplicateCount, 0);
+  assert.equal(createBody.items.length, 2);
+  for (const item of createBody.items) {
+    assert.equal(typeof item.initialDeliveryCost, 'number');
+    assert.ok(item.initialDeliveryCost > 0, 'initialDeliveryCost should be auto calculated on create');
+  }
+
+  const productsResponse = await fetch(`${baseUrl}/api/products?jobId=11&minAvgPrice=108&maxAvgPrice=110&minWeight=200&maxWeight=220`);
+  assert.equal(productsResponse.status, 200);
+  const productsBody = await productsResponse.json();
+  assert.equal(productsBody.total, 1);
+  assert.equal(productsBody.items[0].platform_product_id, 'SKU-2002');
+  assert.equal(productsBody.filters.minAvgPrice, '108');
+  assert.equal(productsBody.filters.maxWeight, '220');
 
   const duplicateResponse = await fetch(`${baseUrl}/api/product-selection/items`, {
     method: 'POST',
@@ -45,14 +59,46 @@ try {
   assert.equal(duplicateBody.insertedCount, 0);
   assert.equal(duplicateBody.duplicateCount, 1);
 
+  const rejectResponse = await fetch(`${baseUrl}/api/product-selection/items`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      selectionStage: 'screening_rejected',
+      items: [{ sourceSnapshotId: 2002 }],
+    }),
+  });
+  assert.equal(rejectResponse.status, 200);
+  const rejectBody = await rejectResponse.json();
+  assert.equal(rejectBody.insertedCount, 0);
+  assert.equal(rejectBody.duplicateCount, 1);
+  assert.equal(rejectBody.updatedCount, 1);
+
+  const selectedProductsResponse = await fetch(`${baseUrl}/api/products?jobId=11&productStatus=selected`);
+  assert.equal(selectedProductsResponse.status, 200);
+  const selectedProductsBody = await selectedProductsResponse.json();
+  assert.equal(selectedProductsBody.total, 1);
+  assert.equal(selectedProductsBody.items[0].platform_product_id, 'SKU-2001');
+  assert.equal(selectedProductsBody.filters.productStatus, 'selected');
+
+  const rejectedProductsResponse = await fetch(`${baseUrl}/api/products?jobId=11&productStatus=rejected`);
+  assert.equal(rejectedProductsResponse.status, 200);
+  const rejectedProductsBody = await rejectedProductsResponse.json();
+  assert.equal(rejectedProductsBody.total, 1);
+  assert.equal(rejectedProductsBody.items[0].platform_product_id, 'SKU-2002');
+  assert.equal(rejectedProductsBody.items[0].selection_stage, 'screening_rejected');
+
   const listResponse = await fetch(`${baseUrl}/api/product-selection/items`);
   assert.equal(listResponse.status, 200);
   const listBody = await listResponse.json();
   assert.equal(listBody.total, 2);
   assert.equal(listBody.items.length, 2);
   assert.equal(listBody.items[0].item.platform_product_id != null, true);
+  for (const item of listBody.items) {
+    assert.equal(typeof item.initialDeliveryCost, 'number');
+    assert.ok(item.initialDeliveryCost > 0, 'list response should keep auto calculated delivery cost');
+  }
 
-  const firstId = Number(listBody.items[0].id);
+  const firstId = Number(listBody.items.find((item) => item.item.platform_product_id === 'SKU-2001').id);
   const patchResponse = await fetch(`${baseUrl}/api/product-selection/items/${firstId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -99,6 +145,7 @@ try {
       SELECT source_job_id,
              source_snapshot_id,
              selection_stage,
+             initial_delivery_cost,
              initial_target_price,
              pricing_decision,
              supply_match_status,
@@ -109,10 +156,22 @@ try {
     assert.equal(row.source_job_id, 11);
     assert.equal(row.source_snapshot_id === 2001 || row.source_snapshot_id === 2002, true);
     assert.equal(row.selection_stage, 'prep_ready');
+    assert.ok(row.initial_delivery_cost > 0);
     assert.equal(row.initial_target_price, 36.9);
     assert.equal(row.pricing_decision, 'continue');
     assert.equal(row.supply_match_status, 'matched');
     assert.ok(row.transfer_to_prep_at);
+
+    const autoPricedRows = db.prepare(`
+      SELECT source_snapshot_id,
+             initial_delivery_cost
+      FROM product_selection_items
+      ORDER BY source_snapshot_id ASC
+    `).all();
+    assert.equal(autoPricedRows.length, 2);
+    for (const autoPricedRow of autoPricedRows) {
+      assert.ok(autoPricedRow.initial_delivery_cost > 0, `snapshot ${autoPricedRow.source_snapshot_id} should persist auto delivery cost`);
+    }
   } finally {
     db.close();
   }
