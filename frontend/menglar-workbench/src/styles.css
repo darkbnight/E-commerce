@@ -1064,59 +1064,16 @@ select {
 }
 
 .selection-actions {
-  min-width: 190px;
-}
-
-.selection-table {
-  min-width: 1480px;
-  table-layout: fixed;
-}
-
-.selection-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #eaf2ee;
-}
-
-.selection-table th,
-.selection-table td {
-  padding: 10px;
-  line-height: 1.4;
-  vertical-align: top;
-}
-
-.selection-table th:nth-child(1),
-.selection-table td:nth-child(1) {
-  width: 110px;
-}
-
-.selection-table th:nth-child(2),
-.selection-table td:nth-child(2) {
-  width: 260px;
-}
-
-.selection-table th:nth-child(3),
-.selection-table td:nth-child(3) {
-  width: 150px;
-}
-
-.selection-table th:nth-child(4),
-.selection-table td:nth-child(4),
-.selection-table th:nth-child(5),
-.selection-table td:nth-child(5),
-.selection-table th:nth-child(6),
-.selection-table td:nth-child(6) {
-  width: 180px;
+  min-width: 0;
 }
 
 .selection-data-card {
   display: grid;
   gap: 3px;
-  margin-bottom: 8px;
+  min-width: 0;
   padding: 8px 10px;
-  border-radius: 12px;
-  background: rgba(22, 33, 39, 0.05);
+  border-radius: 8px;
+  background: rgba(22, 33, 39, 0.055);
 }
 
 .selection-data-card span {
@@ -1148,6 +1105,159 @@ select {
 
 .selection-link {
   overflow-wrap: anywhere;
+}
+
+.selection-workbench-list {
+  display: grid;
+  gap: 10px;
+}
+
+.selection-list-head,
+.selection-decision-card {
+  display: grid;
+  grid-template-columns: minmax(290px, 0.9fr) minmax(520px, 1.65fr) minmax(150px, 0.35fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.selection-list-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 10px 14px;
+  border-radius: 10px;
+  color: var(--muted);
+  background: #eaf2ee;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.selection-decision-card {
+  padding: 14px;
+  border: 1px solid rgba(22, 33, 39, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 12px 28px rgba(22, 33, 39, 0.05);
+}
+
+.selection-decision-card.is-rejected {
+  background: rgba(185, 28, 28, 0.035);
+}
+
+.selection-product-block,
+.selection-decision-block,
+.selection-action-block,
+.selection-decision-group {
+  min-width: 0;
+}
+
+.selection-product-block {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.selection-product-block .product-info-cell {
+  align-items: start;
+}
+
+.selection-product-block .product-info-cell img,
+.selection-product-block .product-image-placeholder {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+}
+
+.selection-source-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.selection-source-meta span {
+  padding: 4px 7px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: rgba(22, 33, 39, 0.055);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.selection-decision-block {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(280px, 1fr);
+  gap: 12px;
+}
+
+.selection-decision-group {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(22, 33, 39, 0.035);
+}
+
+.selection-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.selection-group-head span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.selection-group-head strong {
+  font-size: 13px;
+  text-align: right;
+}
+
+.selection-group-head strong.is-good {
+  color: var(--success);
+}
+
+.selection-group-head strong.is-danger {
+  color: var(--danger);
+}
+
+.selection-metric-grid,
+.selection-supply-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.selection-action-block {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.selection-primary-action {
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #fff;
+  background: var(--primary);
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(15, 118, 110, 0.18);
+}
+
+.selection-primary-action:disabled {
+  opacity: 0.62;
+  cursor: default;
+}
+
+.selection-action-block .screening-row-actions {
+  display: grid;
+  grid-template-columns: 1fr;
 }
 
 .competitor-detail-backdrop {
@@ -4199,6 +4309,17 @@ select {
   .wb-method-detail-grid,
   .competitor-detail-grid,
   .wb-page-hero.split {
+    grid-template-columns: 1fr;
+  }
+
+  .selection-list-head {
+    display: none;
+  }
+
+  .selection-decision-card,
+  .selection-decision-block,
+  .selection-metric-grid,
+  .selection-supply-grid {
     grid-template-columns: 1fr;
   }
 

@@ -967,38 +967,28 @@ function SelectionWorkbenchTable({
   onTransferToPrep,
 }) {
   return (
-    <div className="wb-table-wrap result-table-wrap">
-      <table className="wb-table selection-table">
-        <thead>
-          <tr>
-            <th>阶段</th>
-            <th>商品信息</th>
-            <th>来源批次</th>
-            <th>测价 / 利润</th>
-            <th>供应链</th>
-            <th>竞品整理</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((entry) => (
-            <SelectionRow
-              key={entry.id}
-              entry={entry}
-              actionPending={actionPending}
-              onMoveToPricing={onMoveToPricing}
-              onReject={onReject}
-              onResetToPool={onResetToPool}
-              onPricingContinue={onPricingContinue}
-              onPricingReject={onPricingReject}
-              onSupplyMatched={onSupplyMatched}
-              onCompetitorReady={onCompetitorReady}
-              onOpenCompetitorDetail={onOpenCompetitorDetail}
-              onTransferToPrep={onTransferToPrep}
-            />
-          ))}
-        </tbody>
-      </table>
+    <div className="selection-workbench-list" aria-label="商品筛选工作台列表">
+      <div className="selection-list-head" aria-hidden="true">
+        <span>商品</span>
+        <span>决策信息</span>
+        <span>执行</span>
+      </div>
+      {entries.map((entry) => (
+        <SelectionRow
+          key={entry.id}
+          entry={entry}
+          actionPending={actionPending}
+          onMoveToPricing={onMoveToPricing}
+          onReject={onReject}
+          onResetToPool={onResetToPool}
+          onPricingContinue={onPricingContinue}
+          onPricingReject={onPricingReject}
+          onSupplyMatched={onSupplyMatched}
+          onCompetitorReady={onCompetitorReady}
+          onOpenCompetitorDetail={onOpenCompetitorDetail}
+          onTransferToPrep={onTransferToPrep}
+        />
+      ))}
     </div>
   );
 }
@@ -1018,13 +1008,16 @@ function SelectionRow({
 }) {
   const { item } = entry;
   const isRejected = entry.stage === 'screening_rejected' || entry.stage === 'pricing_rejected';
+  const profitText = entry.pricingDecision === 'continue'
+    ? `继续 · ${formatPercent((entry.initialProfitRate || 0) / 100)}`
+    : entry.pricingDecision === 'reject'
+      ? `淘汰 · ${formatPercent((entry.initialProfitRate || 0) / 100)}`
+      : '待判断';
 
   return (
-    <tr>
-      <td>
+    <article className={`selection-decision-card ${isRejected ? 'is-rejected' : ''}`}>
+      <section className="selection-product-block">
         <span className={`screening-state-pill is-${stageToneMap[entry.stage] || 'neutral'}`}>{stageLabels[entry.stage]}</span>
-      </td>
-      <td>
         <div className="product-info-cell">
           {item.product_image_url ? (
             <img src={item.product_image_url} alt="" loading="lazy" />
@@ -1037,48 +1030,63 @@ function SelectionRow({
             <div className="cell-sub">{formatText(item.brand)} / {formatText(item.shop_name)}</div>
           </div>
         </div>
-      </td>
-      <td>
-        <div className="cell-main">批次 #{formatText(entry.sourceJobId)}</div>
-        <div className="cell-sub">{formatJobType(entry.sourcePageType)}</div>
-        <div className="cell-sub">{formatDate(entry.sourceFinishedAt)}</div>
-      </td>
-      <td>
-        <div className="selection-data-card">
-          <span>成本</span>
-          <strong>{entry.initialCostPrice != null ? formatCurrency(entry.initialCostPrice, 'CNY') : '待测价'}</strong>
+        <div className="selection-source-meta">
+          <span>批次 #{formatText(entry.sourceJobId)}</span>
+          <span>{formatJobType(entry.sourcePageType)}</span>
+          <span>{formatDate(entry.sourceFinishedAt)}</span>
         </div>
-        <div className="selection-data-card">
-          <span>运费</span>
-          <strong>{entry.initialDeliveryCost != null ? formatCurrency(entry.initialDeliveryCost, 'CNY') : '-'}</strong>
+      </section>
+
+      <section className="selection-decision-block">
+        <div className="selection-decision-group">
+          <div className="selection-group-head">
+            <span>测价 / 利润</span>
+            <strong className={entry.pricingDecision === 'reject' ? 'is-danger' : entry.pricingDecision === 'continue' ? 'is-good' : ''}>{profitText}</strong>
+          </div>
+          <div className="selection-metric-grid">
+            <div className="selection-data-card">
+              <span>成本</span>
+              <strong>{entry.initialCostPrice != null ? formatCurrency(entry.initialCostPrice, 'CNY') : '待测价'}</strong>
+            </div>
+            <div className="selection-data-card">
+              <span>运费</span>
+              <strong>{entry.initialDeliveryCost != null ? formatCurrency(entry.initialDeliveryCost, 'CNY') : '-'}</strong>
+            </div>
+            <div className="selection-data-card">
+              <span>预估售价</span>
+              <strong>{entry.initialTargetPrice != null ? formatCurrency(entry.initialTargetPrice, 'CNY') : '-'}</strong>
+            </div>
+          </div>
         </div>
-        <div className="selection-data-card">
-          <span>预估售价</span>
-          <strong>{entry.initialTargetPrice != null ? formatCurrency(entry.initialTargetPrice, 'CNY') : '-'}</strong>
+
+        <div className="selection-decision-group">
+          <div className="selection-group-head">
+            <span>供应链 / 竞品</span>
+            <strong>{entry.competitorPacketStatus === 'ready' ? '竞品已整理' : '竞品待整理'}</strong>
+          </div>
+          <div className="selection-supply-grid">
+            <div className="selection-data-card">
+              <span>供应链</span>
+              <strong>{entry.supplyMatchStatus === 'matched' ? '已找到货源' : '待找货源'}</strong>
+            </div>
+            <div className="selection-data-card">
+              <span>供应商</span>
+              <strong>{entry.supplyVendorName || '未记录'}</strong>
+            </div>
+            <div className="selection-data-card">
+              <span>流转</span>
+              <strong>{entry.transferToPrepAt ? `已于 ${formatDate(entry.transferToPrepAt)}` : '尚未流转'}</strong>
+            </div>
+          </div>
+          {entry.supplyReferenceUrl ? (
+            <div className="cell-sub mono selection-link">{entry.supplyReferenceUrl}</div>
+          ) : null}
         </div>
-        <div className={`selection-data-card ${entry.pricingDecision === 'reject' ? 'is-danger' : entry.pricingDecision === 'continue' ? 'is-good' : ''}`}>
-          <span>利润判断</span>
-          <strong>{entry.pricingDecision === 'continue' ? `继续 · ${formatPercent((entry.initialProfitRate || 0) / 100)}` : entry.pricingDecision === 'reject' ? `淘汰 · ${formatPercent((entry.initialProfitRate || 0) / 100)}` : '待判断'}</strong>
-        </div>
-      </td>
-      <td>
-        <div className="selection-data-card">
-          <span>状态</span>
-          <strong>{entry.supplyMatchStatus === 'matched' ? '已找到货源' : '待找货源'}</strong>
-        </div>
-        <div className="cell-sub">{entry.supplyVendorName || '未记录供应商'}</div>
-        <div className="cell-sub mono selection-link">{entry.supplyReferenceUrl || '-'}</div>
-      </td>
-      <td>
-        <div className="selection-data-card">
-          <span>竞品整理</span>
-          <strong>{entry.competitorPacketStatus === 'ready' ? '已完成' : '待整理'}</strong>
-        </div>
-        <div className="cell-sub">{entry.transferToPrepAt ? `已于 ${formatDate(entry.transferToPrepAt)} 流转` : '尚未流转商品数据整理'}</div>
-      </td>
-      <td>
+      </section>
+
+      <section className="selection-action-block">
+        <button className="selection-primary-action" type="button" onClick={() => onOpenCompetitorDetail(entry)} disabled={actionPending}>查看竞品详情</button>
         <div className="screening-row-actions selection-actions">
-          <button type="button" onClick={() => onOpenCompetitorDetail(entry)} disabled={actionPending}>查看竞品详情</button>
 
           {entry.stage === 'pool_pending' ? (
             <>
@@ -1122,8 +1130,8 @@ function SelectionRow({
             <button type="button" onClick={() => void onResetToPool(entry.id)} disabled={actionPending}>恢复到待初筛</button>
           ) : null}
         </div>
-      </td>
-    </tr>
+      </section>
+    </article>
   );
 }
 
