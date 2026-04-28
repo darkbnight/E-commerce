@@ -2,10 +2,12 @@ export function formatNumber(value, digits = 0) {
   if (value == null || value === '') return '-';
   const number = Number(value);
   if (!Number.isFinite(number)) return '-';
-  return number.toLocaleString('zh-CN', {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  });
+  const fixed = number.toFixed(digits);
+  const [integerPart, fractionPart] = fixed.split('.');
+  const sign = integerPart.startsWith('-') ? '-' : '';
+  const unsignedInteger = sign ? integerPart.slice(1) : integerPart;
+  const groupedInteger = unsignedInteger.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return fractionPart == null ? `${sign}${groupedInteger}` : `${sign}${groupedInteger}.${fractionPart}`;
 }
 
 export function formatMoney(value) {
@@ -13,7 +15,7 @@ export function formatMoney(value) {
   return `¥ ${formatNumber(value, 2)}`;
 }
 
-export function formatCurrency(value, currency = 'CNY') {
+export function formatCurrency(value, currency = 'CNY', digits = 2) {
   if (value == null || value === '') return '-';
   const symbolMap = {
     CNY: '¥',
@@ -21,12 +23,12 @@ export function formatCurrency(value, currency = 'CNY') {
     USD: '$',
   };
   const symbol = symbolMap[currency] || currency;
-  return `${symbol} ${formatNumber(value, 2)}`;
+  return `${symbol} ${formatNumber(value, digits)}`;
 }
 
-export function formatPercent(value) {
+export function formatPercent(value, digits = 2) {
   if (value == null || value === '') return '-';
-  return `${formatNumber(value, 2)}%`;
+  return `${formatNumber(value, digits)}%`;
 }
 
 export function formatText(value) {

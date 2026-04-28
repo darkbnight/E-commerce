@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+﻿import { useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { Panel } from '../components/Panel';
 import {
@@ -18,6 +18,11 @@ const defaultFilters = {
   categoryLevel1: '',
   minSales: '',
   minRevenue: '',
+  minAvgPrice: '',
+  maxAvgPrice: '',
+  minWeight: '',
+  maxWeight: '',
+  productStatus: '',
   sort: 'sales_desc',
 };
 
@@ -37,7 +42,7 @@ const modeOptions = [
 
 const stageLabels = {
   pool_pending: '待初筛',
-  screening_rejected: '初筛淘汰',
+  screening_rejected: '淘汰',
   pricing_pending: '待测价',
   pricing_rejected: '利润不成立',
   source_pending: '待找供应链',
@@ -47,7 +52,7 @@ const stageLabels = {
 
 const stageToneMap = {
   pool_pending: 'neutral',
-  screening_rejected: 'danger',
+  screening_rejected: '淘汰',
   pricing_pending: 'accent',
   pricing_rejected: 'danger',
   source_pending: 'accent',
@@ -78,6 +83,11 @@ function getInitialFilters(searchParams) {
     categoryLevel1: searchParams.get('categoryLevel1') || '',
     minSales: searchParams.get('minSales') || '',
     minRevenue: searchParams.get('minRevenue') || '',
+    minAvgPrice: searchParams.get('minAvgPrice') || '',
+    maxAvgPrice: searchParams.get('maxAvgPrice') || '',
+    minWeight: searchParams.get('minWeight') || '',
+    maxWeight: searchParams.get('maxWeight') || '',
+    productStatus: searchParams.get('productStatus') || '',
     sort: searchParams.get('sort') || 'sales_desc',
   };
 }
@@ -165,7 +175,26 @@ function computePricingSnapshot(item, decision) {
   };
 }
 
+function formatIntegerCurrency(value, currency = 'CNY') {
+  return formatCurrency(value, currency, 0);
+}
+
+function formatIntegerPercent(value) {
+  return formatPercent(value, 0);
+}
+
+function getDimensionSummary(item) {
+  const hasDimension = [item.length_cm, item.width_cm, item.height_cm].some((value) => value != null && value !== '');
+  return {
+    sizeText: hasDimension
+      ? `${formatText(item.length_cm)} × ${formatText(item.width_cm)} × ${formatText(item.height_cm)} cm`
+      : '-',
+    weightText: item.weight_g == null || item.weight_g === '' ? '-' : `${formatNumber(item.weight_g)} g`,
+  };
+}
+
 export function ResultsPage() {
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [mode, setMode] = useState(() => getInitialMode(searchParams));
   const [filters, setFilters] = useState(() => getInitialFilters(searchParams));
@@ -177,6 +206,8 @@ export function ResultsPage() {
   const [selectionTab, setSelectionTab] = useState('all');
   const [selectionFeedback, setSelectionFeedback] = useState('');
   const [selectionActionPending, setSelectionActionPending] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
+  const [competitorDetailEntry, setCompetitorDetailEntry] = useState(null);
 
   const resultJobsQuery = useQuery({
     queryKey: ['result-jobs', showUnavailableJobs],
@@ -211,6 +242,28 @@ export function ResultsPage() {
     setSearchParams(next, { replace: true });
   }, [filters, mode, page, selectedJobId, setSearchParams]);
 
+  useEffect(() => {
+    if (!previewImage) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setPreviewImage(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [previewImage]);
+
+  useEffect(() => {
+    if (!competitorDetailEntry) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setCompetitorDetailEntry(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [competitorDetailEntry]);
+
   const productsQuery = useQuery({
     queryKey: ['products', selectedJobId, filters, page],
     queryFn: () => fetchProducts({ ...filters, jobId: selectedJobId, page, pageSize }),
@@ -236,16 +289,14 @@ export function ResultsPage() {
     return selectionEntries.filter((entry) => matchesSelectionFilter(entry, selectionFilters, selectionTab));
   }, [selectionEntries, selectionFilters, selectionTab]);
 
-  const resultMetricCards = [
-    { label: '商品数', value: formatNumber(data?.summary?.total_products || 0) },
-    { label: '当前命中', value: formatNumber(data?.total || 0) },
-    { label: '最高销售量', value: formatNumber(data?.summary?.max_sales || 0) },
-    {
-      label: '最高销售金额',
-      value: `${formatCurrency(data?.summary?.max_revenue || 0, 'RUB')} / ${formatCurrency(data?.summary?.max_revenue_cny || 0, 'CNY')}`,
-    },
-    { label: '平均毛利率', value: formatPercent(data?.summary?.avg_margin || 0) },
-  ];
+  const selectedSnapshotIds = useMemo(() => {
+    return new Set(selectionEntries.map((entry) => Number(entry.item?.id)).filter(Boolean));
+  }, [selectionEntries]);
+
+  const selectionStatusBySnapshotId = useMemo(() => {
+    return new Map(selectionEntries.map((entry) => [Number(entry.item?.id), entry.stage]));
+  }, [selectionEntries]);
+
 
   const selectionMetricCards = [
     { label: '入池总数', value: formatNumber(selectionCounts.all || 0) },
@@ -284,7 +335,14 @@ export function ResultsPage() {
     setSelectionActionPending(true);
     try {
       const payload = await action();
+      if (Array.isArray(payload?.items)) {
+        queryClient.setQueryData(['product-selection-items'], (prev) => ({
+          ...(prev || {}),
+          items: payload.items,
+        }));
+      }
       await selectionQuery.refetch();
+      await productsQuery.refetch();
       setSelectionFeedback(typeof buildFeedback === 'function' ? buildFeedback(payload) : '');
     } catch (error) {
       setSelectionFeedback(error.message);
@@ -312,6 +370,27 @@ export function ResultsPage() {
     );
   };
 
+  const rejectCurrentPage = async () => {
+    if (!items.length) return;
+    await runSelectionAction(
+      () => createProductSelectionItems({
+        selectionStage: 'screening_rejected',
+        items: items.map((item) => ({ sourceSnapshotId: item.id })),
+      }),
+      (payload) => buildSelectionRejectFeedback(payload),
+    );
+  };
+
+  const rejectSingleProduct = async (item) => {
+    await runSelectionAction(
+      () => createProductSelectionItems({
+        selectionStage: 'screening_rejected',
+        items: [{ sourceSnapshotId: item.id }],
+      }),
+      (payload) => buildSelectionRejectFeedback(payload),
+    );
+  };
+
   const updateSelectionStage = async (entryId, patch, successMessage) => {
     await runSelectionAction(
       () => updateProductSelectionItem(entryId, patch),
@@ -334,11 +413,13 @@ export function ResultsPage() {
         ))}
       </div>
 
-      <div className="result-metrics-bar">
-        {(mode === 'result' ? resultMetricCards : selectionMetricCards).map((card) => (
-          <MetricCard key={card.label} label={card.label} value={card.value} />
-        ))}
-      </div>
+      {mode === 'screening' ? (
+        <div className="result-metrics-bar">
+          {selectionMetricCards.map((card) => (
+            <MetricCard key={card.label} label={card.label} value={card.value} />
+          ))}
+        </div>
+      ) : null}
 
       {mode === 'screening' ? (
         <div className="screening-status-strip">
@@ -360,10 +441,10 @@ export function ResultsPage() {
         <div className="wb-feedback">{selectionFeedback}</div>
       ) : null}
 
-      <div className="wb-results-layout result-workbench-layout">
+      <div className={`wb-results-layout result-workbench-layout ${mode === 'result' ? 'is-result-mode' : ''}`}>
         {mode === 'result' ? (
           <Panel title="原始结果筛选" subtitle="结果展示只负责按批次查看原始采集结果">
-            <div className="wb-filter-grid">
+            <div className="wb-filter-grid result-filter-grid">
               <div className="wb-field result-batch-field">
                 <span>数据批次</span>
                 <button type="button" className="result-batch-trigger" onClick={() => setBatchOpen((open) => !open)}>
@@ -428,6 +509,16 @@ export function ResultsPage() {
               </label>
 
               <label className="wb-field">
+                <span>商品状态</span>
+                <select value={filters.productStatus} onChange={(event) => applyFilter('productStatus', event.target.value)}>
+                  <option value="">全部</option>
+                  <option value="pending">待处理</option>
+                  <option value="selected">已加筛</option>
+                  <option value="rejected">淘汰</option>
+                </select>
+              </label>
+
+              <label className="wb-field">
                 <span>最低销售量</span>
                 <input type="number" min="0" value={filters.minSales} onChange={(event) => applyFilter('minSales', event.target.value)} />
               </label>
@@ -436,6 +527,22 @@ export function ResultsPage() {
                 <span>最低销售金额</span>
                 <input type="number" min="0" value={filters.minRevenue} onChange={(event) => applyFilter('minRevenue', event.target.value)} />
               </label>
+
+              <div className="wb-field wb-field-span-2">
+                <span>均价区间（CNY）</span>
+                <div className="wb-range-grid">
+                  <input type="number" min="0" value={filters.minAvgPrice} onChange={(event) => applyFilter('minAvgPrice', event.target.value)} placeholder="最低均价" />
+                  <input type="number" min="0" value={filters.maxAvgPrice} onChange={(event) => applyFilter('maxAvgPrice', event.target.value)} placeholder="最高均价" />
+                </div>
+              </div>
+
+              <div className="wb-field wb-field-span-2">
+                <span>重量区间（g）</span>
+                <div className="wb-range-grid">
+                  <input type="number" min="0" value={filters.minWeight} onChange={(event) => applyFilter('minWeight', event.target.value)} placeholder="最轻重量" />
+                  <input type="number" min="0" value={filters.maxWeight} onChange={(event) => applyFilter('maxWeight', event.target.value)} placeholder="最重重量" />
+                </div>
+              </div>
 
               <label className="wb-field">
                 <span>排序方式</span>
@@ -539,6 +646,9 @@ export function ResultsPage() {
               <button className="wb-button wb-button-primary" onClick={() => void addCurrentPageToSelectionPool()} disabled={!items.length || selectionActionPending}>
                 当前页加入筛选池
               </button>
+              <button className="wb-button danger" onClick={() => void rejectCurrentPage()} disabled={!items.length || selectionActionPending}>
+                当前页全部淘汰
+              </button>
               <button className="wb-button ghost" onClick={() => setPage((current) => Math.max(current - 1, 1))} disabled={page <= 1}>
                 上一页
               </button>
@@ -586,7 +696,15 @@ export function ResultsPage() {
               </div>
             </div>
           ) : mode === 'result' ? (
-            <RawResultsTable items={items} onAddSingle={addSingleProductToSelectionPool} actionPending={selectionActionPending} />
+            <RawResultsTable
+              items={items}
+              onAddSingle={addSingleProductToSelectionPool}
+              onRejectSingle={rejectSingleProduct}
+              actionPending={selectionActionPending}
+              selectedSnapshotIds={selectedSnapshotIds}
+              selectionStatusBySnapshotId={selectionStatusBySnapshotId}
+              onPreviewImage={setPreviewImage}
+            />
           ) : (
             <SelectionWorkbenchTable
               entries={visibleSelectionEntries}
@@ -598,7 +716,7 @@ export function ResultsPage() {
               }, '已进入测价阶段')}
               onReject={(entryId) => updateSelectionStage(entryId, {
                 stage: 'screening_rejected',
-              }, '已标记为初筛淘汰')}
+              }, '已淘汰')}
               onResetToPool={(entryId) => updateSelectionStage(entryId, {
                 stage: 'pool_pending',
                 pricingDecision: 'pending',
@@ -630,6 +748,7 @@ export function ResultsPage() {
                 stage: 'prep_ready',
                 competitorPacketStatus: 'ready',
               }, '竞品数据已整理，可流转商品数据整理')}
+              onOpenCompetitorDetail={setCompetitorDetailEntry}
               onTransferToPrep={(entryId) => runSelectionAction(
                 () => transferProductSelectionItemToPrep(entryId),
                 () => '已流转到商品数据整理',
@@ -638,6 +757,22 @@ export function ResultsPage() {
           )}
         </Panel>
       </div>
+
+      {previewImage ? (
+        <div className="image-preview-backdrop" role="presentation" onClick={() => setPreviewImage(null)}>
+          <div className="image-preview-dialog" role="dialog" aria-modal="true" aria-label="商品图片预览" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="image-preview-close" onClick={() => setPreviewImage(null)}>关闭</button>
+            <img src={previewImage.src} alt={previewImage.alt || ''} />
+          </div>
+        </div>
+      ) : null}
+
+      {competitorDetailEntry ? (
+        <CompetitorDetailDialog
+          entry={competitorDetailEntry}
+          onClose={() => setCompetitorDetailEntry(null)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -662,7 +797,33 @@ function buildSelectionAddFeedback(payload) {
   return '没有成功加入商品，请检查来源数据。';
 }
 
-function RawResultsTable({ items, onAddSingle, actionPending }) {
+function buildSelectionRejectFeedback(payload) {
+  const inserted = Number(payload?.insertedCount || 0);
+  const updated = Number(payload?.updatedCount || 0);
+  const skipped = Number(payload?.skippedCount || 0);
+  const rejected = inserted + updated;
+
+  if (rejected && skipped) {
+    return `已淘汰 ${rejected} 个商品，${skipped} 个商品未找到来源快照。`;
+  }
+  if (rejected) {
+    return `已淘汰 ${rejected} 个商品。`;
+  }
+  return '没有成功淘汰商品，请检查来源数据。';
+}
+
+function getRawProductStatus(item, selectionStatusBySnapshotId) {
+  const stage = selectionStatusBySnapshotId.get(Number(item.id)) || item.selection_stage || '';
+  if (stage === 'screening_rejected' || stage === 'pricing_rejected') {
+    return { key: 'rejected', label: '淘汰' };
+  }
+  if (stage) {
+    return { key: 'selected', label: '已加筛' };
+  }
+  return { key: 'pending', label: '待处理' };
+}
+
+function RawResultsTable({ items, onAddSingle, onRejectSingle, actionPending, selectedSnapshotIds, selectionStatusBySnapshotId, onPreviewImage }) {
   return (
     <div className="wb-table-wrap result-table-wrap">
       <table className="wb-table result-table">
@@ -671,26 +832,38 @@ function RawResultsTable({ items, onAddSingle, actionPending }) {
             <th>商品信息</th>
             <th>品牌 / 店铺</th>
             <th>类目</th>
-            <th className="num">销售量</th>
-            <th className="num">销售量增长</th>
+            <th className="num">销售量 / 增长</th>
             <th className="num">均价</th>
+            <th>尺寸 / 重量</th>
             <th className="num">潜力指数</th>
             <th className="num">销售金额</th>
             <th className="num">曝光 / 点击率</th>
             <th className="num">转化 / 毛利</th>
             <th className="num">广告</th>
             <th>物流 / 时效</th>
-            <th>尺寸 / 重量</th>
             <th>操作</th>
           </tr>
         </thead>
         <tbody>
-          {items.length ? items.map((item) => (
-            <tr key={item.id}>
+          {items.length ? items.map((item) => {
+            const status = getRawProductStatus(item, selectionStatusBySnapshotId);
+            const isSelected = status.key === 'selected' || (selectedSnapshotIds.has(Number(item.id)) && status.key !== 'rejected');
+            const isRejected = status.key === 'rejected';
+            return (
+            <tr key={item.id} className={isRejected ? 'is-rejected' : isSelected ? 'is-in-selection-pool' : ''}>
               <td>
                 <div className="product-info-cell">
                   {item.product_image_url ? (
-                    <img src={item.product_image_url} alt="" loading="lazy" />
+                    <button
+                      type="button"
+                      className="product-image-trigger"
+                      onClick={() => onPreviewImage({
+                        src: item.product_image_url,
+                        alt: formatText(item.title),
+                      })}
+                    >
+                      <img src={item.product_image_url} alt="" loading="lazy" />
+                    </button>
                   ) : (
                     <span className="product-image-placeholder" />
                   )}
@@ -712,16 +885,22 @@ function RawResultsTable({ items, onAddSingle, actionPending }) {
                 <div className="cell-main">{formatText(item.category_level_1)}</div>
                 <div className="cell-sub">{formatText(item.category_level_2)} / {formatText(item.category_level_3)}</div>
               </td>
-              <td className="num">{formatNumber(item.sales_volume)}</td>
-              <td className="num">{formatPercent(item.sales_growth)}</td>
+              <td className="num">
+                <div>{formatNumber(item.sales_volume)}</div>
+                <div className="cell-sub">增长 {formatIntegerPercent(item.sales_growth)}</div>
+              </td>
               <td className="num">
                 <div>{formatCurrency(item.avg_price_rub, 'RUB')}</div>
                 <div className="cell-sub">{formatCurrency(item.avg_price_cny, 'CNY')}</div>
               </td>
-              <td className="num">{formatNumber(item.potential_index, 2)}</td>
+              <td>
+                <div>{getDimensionSummary(item).sizeText}</div>
+                <div className="cell-sub">{getDimensionSummary(item).weightText}</div>
+              </td>
+              <td className="num">{formatNumber(item.potential_index, 0)}</td>
               <td className="num">
-                <div>{formatCurrency(item.sales_amount, 'RUB')}</div>
-                <div className="cell-sub">{formatCurrency(item.sales_amount_cny, 'CNY')}</div>
+                <div>{formatIntegerCurrency(item.sales_amount, 'RUB')}</div>
+                <div className="cell-sub">{formatIntegerCurrency(item.sales_amount_cny, 'CNY')}</div>
               </td>
               <td className="num">
                 <div>{formatNumber(item.impressions)} / {formatNumber(item.clicks)}</div>
@@ -732,24 +911,40 @@ function RawResultsTable({ items, onAddSingle, actionPending }) {
                 <div className="cell-sub">毛利 {formatPercent(item.estimated_gross_margin)}</div>
               </td>
               <td className="num">
-                <div>{formatCurrency(item.ad_cost, 'RUB')}</div>
-                <div className="cell-sub">{formatCurrency(item.ad_cost_cny, 'CNY')}</div>
-                <div className="cell-sub">占比 {formatPercent(item.ad_cost_rate)}</div>
+                <div>{formatIntegerCurrency(item.ad_cost, 'RUB')}</div>
+                <div className="cell-sub">{formatIntegerCurrency(item.ad_cost_cny, 'CNY')}</div>
+                <div className="cell-sub">占比 {formatIntegerPercent(item.ad_cost_rate)}</div>
               </td>
               <td>
                 <div className="cell-main">{formatText(item.shipping_mode)}</div>
                 <div className="cell-sub">配送 {formatText(item.delivery_time)}</div>
               </td>
-              <td>{formatText(item.length_cm)} × {formatText(item.width_cm)} × {formatText(item.height_cm)} / {formatNumber(item.weight_g)}g</td>
               <td>
                 <div className="screening-row-actions">
-                  <button type="button" onClick={() => void onAddSingle(item)} disabled={actionPending}>加入筛选池</button>
+                  <span className={`raw-product-status is-${status.key}`}>{status.label}</span>
+                  <button
+                    type="button"
+                    className={isSelected ? 'is-selected' : ''}
+                    onClick={() => void onAddSingle(item)}
+                    disabled={actionPending || isSelected || isRejected}
+                  >
+                    {isRejected ? '已淘汰' : isSelected ? '已在筛选池' : '加入筛选池'}
+                  </button>
+                  <button
+                    type="button"
+                    className="is-reject"
+                    onClick={() => void onRejectSingle(item)}
+                    disabled={actionPending || isRejected}
+                  >
+                    淘汰
+                  </button>
                 </div>
               </td>
             </tr>
-          )) : (
+            );
+          }) : (
             <tr>
-              <td colSpan={14} className="wb-empty-cell">当前没有匹配数据</td>
+              <td colSpan={13} className="wb-empty-cell">当前没有匹配数据</td>
             </tr>
           )}
         </tbody>
@@ -768,6 +963,7 @@ function SelectionWorkbenchTable({
   onPricingReject,
   onSupplyMatched,
   onCompetitorReady,
+  onOpenCompetitorDetail,
   onTransferToPrep,
 }) {
   return (
@@ -797,6 +993,7 @@ function SelectionWorkbenchTable({
               onPricingReject={onPricingReject}
               onSupplyMatched={onSupplyMatched}
               onCompetitorReady={onCompetitorReady}
+              onOpenCompetitorDetail={onOpenCompetitorDetail}
               onTransferToPrep={onTransferToPrep}
             />
           ))}
@@ -816,6 +1013,7 @@ function SelectionRow({
   onPricingReject,
   onSupplyMatched,
   onCompetitorReady,
+  onOpenCompetitorDetail,
   onTransferToPrep,
 }) {
   const { item } = entry;
@@ -880,10 +1078,12 @@ function SelectionRow({
       </td>
       <td>
         <div className="screening-row-actions selection-actions">
+          <button type="button" onClick={() => onOpenCompetitorDetail(entry)} disabled={actionPending}>查看竞品详情</button>
+
           {entry.stage === 'pool_pending' ? (
             <>
               <button type="button" onClick={() => void onMoveToPricing(entry.id)} disabled={actionPending}>进入测价</button>
-              <button type="button" onClick={() => void onReject(entry.id)} disabled={actionPending}>初筛淘汰</button>
+              <button type="button" onClick={() => void onReject(entry.id)} disabled={actionPending}>淘汰</button>
             </>
           ) : null}
 
@@ -927,9 +1127,106 @@ function SelectionRow({
   );
 }
 
-function MetricCard({ label, value }) {
+function CompetitorDetailDialog({ entry, onClose }) {
+  const { item } = entry;
+  const dimension = getDimensionSummary(item);
+  const metricGroups = [
+    {
+      title: '销售表现',
+      items: [
+        ['销售量', formatNumber(item.sales_volume)],
+        ['销售金额', `${formatIntegerCurrency(item.sales_amount, 'RUB')} / ${formatIntegerCurrency(item.sales_amount_cny, 'CNY')}`],
+        ['均价', `${formatCurrency(item.avg_price_rub, 'RUB')} / ${formatCurrency(item.avg_price_cny, 'CNY')}`],
+        ['潜力指数', formatNumber(item.potential_index, 0)],
+      ],
+    },
+    {
+      title: '流量与转化',
+      items: [
+        ['曝光 / 点击', `${formatNumber(item.impressions)} / ${formatNumber(item.clicks)}`],
+        ['点击率', formatPercent(item.view_rate)],
+        ['转化率', formatPercent(item.order_conversion_rate)],
+        ['毛利率', formatPercent(item.estimated_gross_margin)],
+      ],
+    },
+    {
+      title: '广告与物流',
+      items: [
+        ['广告费用', `${formatIntegerCurrency(item.ad_cost, 'RUB')} / ${formatIntegerCurrency(item.ad_cost_cny, 'CNY')}`],
+        ['广告占比', formatIntegerPercent(item.ad_cost_rate)],
+        ['物流方式', formatText(item.shipping_mode)],
+        ['配送时效', formatText(item.delivery_time)],
+      ],
+    },
+    {
+      title: '尺寸与来源',
+      items: [
+        ['尺寸', dimension.sizeText],
+        ['重量', dimension.weightText],
+        ['来源批次', `#${formatText(entry.sourceJobId)} / ${formatJobType(entry.sourcePageType)}`],
+        ['采集时间', formatDate(entry.sourceFinishedAt)],
+      ],
+    },
+  ];
+
   return (
-    <article className="result-metric-card">
+    <div className="competitor-detail-backdrop" role="presentation" onClick={onClose}>
+      <section className="competitor-detail-dialog" role="dialog" aria-modal="true" aria-label="竞品详情" onClick={(event) => event.stopPropagation()}>
+        <div className="competitor-detail-media">
+          <div className="competitor-detail-image-frame">
+            {item.product_image_url ? (
+              <img src={item.product_image_url} alt="" loading="lazy" />
+            ) : (
+              <span className="product-image-placeholder" />
+            )}
+          </div>
+        </div>
+
+        <div className="competitor-detail-content">
+          <header className="competitor-detail-head">
+            <div className="competitor-detail-identity">
+              <p className="wb-kicker">Competitor Snapshot</p>
+              <h3>{formatText(item.title)}</h3>
+              <div className="competitor-detail-sub">
+                <span>{formatText(item.brand)}</span>
+                <span>{formatText(item.shop_name)}</span>
+                <span className="mono">{formatText(item.platform_product_id)}</span>
+              </div>
+            </div>
+            <button type="button" className="competitor-detail-close" onClick={onClose}>关闭</button>
+          </header>
+
+          <div className="competitor-detail-meta">
+            <span>{formatText(item.product_type)}</span>
+            <span>{formatText(item.category_level_1)} / {formatText(item.category_level_2)} / {formatText(item.category_level_3)}</span>
+            <span>创建 {formatText(item.product_created_date)}</span>
+            {item.product_url ? <a href={item.product_url} target="_blank" rel="noreferrer">打开原商品</a> : null}
+          </div>
+
+          <div className="competitor-detail-grid">
+            {metricGroups.map((group) => (
+              <article className="competitor-detail-section" key={group.title}>
+                <h4>{group.title}</h4>
+                <dl>
+                  {group.items.map(([label, value]) => (
+                    <div key={label}>
+                      <dt>{label}</dt>
+                      <dd>{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function MetricCard({ label, value, compact = false }) {
+  return (
+    <article className={`result-metric-card ${compact ? 'is-compact' : ''}`}>
       <span>{label}</span>
       <strong>{value}</strong>
     </article>
