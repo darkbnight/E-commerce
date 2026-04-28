@@ -80,7 +80,6 @@ try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   await page.goto(`http://127.0.0.1:${port}/results`, { waitUntil: 'domcontentloaded' });
 
-  await expectText(page, '商品结果');
   await expectText(page, '商品信息');
   await expectText(page, '销售量 / 增长');
   await expectText(page, '销售金额');
@@ -89,7 +88,9 @@ try {
   await expectText(page, '重量区间（g）');
   await expectText(page, '当前页加入筛选池');
 
-  await page.locator('select').filter({ has: page.locator('option[value="pending"]') }).first().waitFor({ timeout: 10000 });
+  const productStatusSelect = page.locator('select').filter({ has: page.locator('option[value="pending"]') }).first();
+  await productStatusSelect.waitFor({ timeout: 10000 });
+  assert.equal(await productStatusSelect.inputValue(), 'pending', 'product status should default to pending');
   await page.locator('.wb-button.danger').first().waitFor({ timeout: 10000 });
 
   assert.equal(await page.locator('.result-panel-summary').count(), 0);
@@ -101,6 +102,14 @@ try {
   await expectText(page, '关闭');
   await page.getByRole('button', { name: '关闭' }).click();
 
+  const rejectButtons = page.locator('.screening-row-actions button.is-reject');
+  await rejectButtons.first().waitFor({ timeout: 10000 });
+  await rejectButtons.first().click();
+  await productStatusSelect.selectOption('rejected');
+  await page.locator('.raw-product-status.is-rejected').first().waitFor({ timeout: 10000 });
+  await productStatusSelect.selectOption('pending');
+  await page.locator('.raw-product-status.is-pending').first().waitFor({ timeout: 10000 });
+
   await page.getByRole('button', { name: '商品筛选' }).click();
   await expectText(page, '筛选池还没有商品');
   await page.getByRole('button', { name: '回到结果展示' }).click();
@@ -109,13 +118,15 @@ try {
   const initialButtonCount = await addButtons.count();
   assert.ok(initialButtonCount > 0, 'should have at least one single-add button');
   await addButtons.first().click();
-  await page.locator('.screening-row-actions button.is-selected').first().waitFor({ timeout: 10000 });
+  await productStatusSelect.selectOption('selected');
   await page.locator('.raw-product-status.is-selected').first().waitFor({ timeout: 10000 });
+  assert.equal(await page.locator('.screening-row-actions button.is-selected').count(), 0, 'selected action button should not be shown');
+  assert.equal(await page.locator('.screening-row-actions button', { hasText: '已在筛选池' }).count(), 0, 'selected state should only be shown in the status column');
 
   await page.getByRole('button', { name: '商品筛选' }).click();
-  await expectText(page, '商品筛选工作台');
-  await expectText(page, '全部');
-  await expectText(page, '待初筛');
+  await page.locator('.selection-filter-bar').waitFor({ timeout: 10000 });
+  await page.locator('.selection-filter-bar select').first().waitFor({ timeout: 10000 });
+  await page.locator('.screening-status-strip').waitFor({ timeout: 10000 });
   await expectText(page, '进入测价');
 
   const selectionRows = page.locator('.selection-decision-card');
@@ -140,6 +151,8 @@ try {
   await firstSelectionRow.getByRole('button', { name: '进入测价' }).click();
   await expectButton(firstSelectionRow, '测价通过');
   await firstSelectionRow.getByRole('button', { name: '测价通过' }).click();
+  const deliveryAfterPricing = (await firstSelectionRow.locator('.selection-data-card strong').nth(1).textContent())?.trim() || '';
+  assert.equal(deliveryAfterPricing, autoDeliveryText, 'pricing pass should keep the auto calculated delivery cost');
   await expectButton(firstSelectionRow, '已找到货源');
   await firstSelectionRow.getByRole('button', { name: '已找到货源' }).click();
   await expectButton(firstSelectionRow, '竞品已整理');
@@ -168,8 +181,8 @@ try {
   await rm(tempDir, { recursive: true, force: true });
 }
 
-async function expectText(page, text) {
-  const locator = page.getByText(text).first();
+async function expectText(scope, text) {
+  const locator = scope.getByText(text).first();
   await locator.waitFor({ timeout: 10000 });
   assert.ok(await locator.isVisible(), `${text} should be visible`);
 }

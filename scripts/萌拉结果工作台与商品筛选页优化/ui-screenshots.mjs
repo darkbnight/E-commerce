@@ -66,14 +66,15 @@ try {
   const addButtons = page.locator('tbody button', { hasText: '加入筛选池' });
   assert.ok((await addButtons.count()) > 0, '需要至少一个单品加入筛选池按钮');
   await addButtons.first().click();
-  await page.locator('.screening-row-actions button.is-selected').first().waitFor({ timeout: 10000 });
+  await page.locator('select').filter({ has: page.locator('option[value="selected"]') }).first().selectOption('selected');
+  await page.locator('.raw-product-status.is-selected').first().waitFor({ timeout: 10000 });
   await page.screenshot({
     path: path.join(screenshotDir, 'results-single-add.png'),
     fullPage: true,
   });
   await page.getByRole('button', { name: '商品筛选' }).click();
 
-  const selectionRow = page.locator('.selection-table tbody tr').first();
+  const selectionRow = page.locator('.selection-decision-card').first();
   await selectionRow.waitFor({ timeout: 10000 });
   await selectionRow.getByRole('button', { name: '进入测价' }).waitFor({ timeout: 10000 });
 
