@@ -1033,15 +1033,15 @@ select {
 .screening-row-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 
 .raw-product-status {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 56px;
-  padding: 6px 8px;
+  min-width: 64px;
+  padding: 7px 10px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 900;
@@ -1050,11 +1050,6 @@ select {
 .raw-product-status.is-pending {
   color: var(--muted);
   background: rgba(22, 33, 39, 0.07);
-}
-
-.raw-product-status.is-empty {
-  color: rgba(22, 33, 39, 0.34);
-  background: transparent;
 }
 
 .raw-product-status.is-selected {
@@ -1069,13 +1064,16 @@ select {
 
 .screening-row-actions button {
   border: 0;
-  border-radius: 9px;
-  padding: 7px 8px;
+  border-radius: 11px;
+  min-width: 72px;
+  min-height: 34px;
+  padding: 9px 12px;
   color: var(--ink);
   background: rgba(22, 33, 39, 0.07);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
+  line-height: 1.2;
 }
 
 .selection-action-block .screening-row-actions button {
@@ -1084,7 +1082,6 @@ select {
   font-size: 13px;
 }
 
-.screening-row-actions button.is-selected,
 .screening-row-actions button:disabled {
   color: var(--success);
   background: rgba(4, 120, 87, 0.12);
@@ -1275,8 +1272,15 @@ select {
 .selection-metric-grid,
 .selection-supply-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+}
+
+.selection-metric-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.selection-supply-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .selection-action-block {

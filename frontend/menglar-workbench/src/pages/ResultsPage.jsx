@@ -22,7 +22,7 @@ const defaultFilters = {
   maxAvgPrice: '',
   minWeight: '',
   maxWeight: '',
-  productStatus: '',
+  productStatus: 'pending',
   sort: 'sales_desc',
 };
 
@@ -87,7 +87,7 @@ function getInitialFilters(searchParams) {
     maxAvgPrice: searchParams.get('maxAvgPrice') || '',
     minWeight: searchParams.get('minWeight') || '',
     maxWeight: searchParams.get('maxWeight') || '',
-    productStatus: searchParams.get('productStatus') || '',
+    productStatus: searchParams.get('productStatus') || defaultFilters.productStatus,
     sort: searchParams.get('sort') || 'sales_desc',
   };
 }
@@ -114,20 +114,23 @@ function formatDate(value) {
 }
 
 function getStageCount(entries, key) {
-  if (key === 'all') return entries.length;
+  if (key === 'all') return entries.filter((entry) => !isRejectedStage(entry.stage)).length;
   if (key === 'rejected') {
-    return entries.filter((entry) => entry.stage === 'screening_rejected' || entry.stage === 'pricing_rejected').length;
+    return entries.filter((entry) => isRejectedStage(entry.stage)).length;
   }
   return entries.filter((entry) => entry.stage === key).length;
 }
 
 function matchesSelectionFilter(entry, filters, stageFilter) {
+  const isRejected = isRejectedStage(entry.stage);
   if (stageFilter !== 'all') {
     if (stageFilter === 'rejected') {
-      if (entry.stage !== 'screening_rejected' && entry.stage !== 'pricing_rejected') return false;
+      if (!isRejected) return false;
     } else if (entry.stage !== stageFilter) {
       return false;
     }
+  } else if (isRejected) {
+    return false;
   }
 
   const keyword = filters.keyword.trim().toLowerCase();
@@ -157,11 +160,19 @@ function matchesSelectionFilter(entry, filters, stageFilter) {
   return true;
 }
 
-function computePricingSnapshot(item, decision) {
+function isRejectedStage(stage) {
+  return stage === 'screening_rejected' || stage === 'pricing_rejected';
+}
+
+function computePricingSnapshot(entry, decision) {
+  const { item } = entry;
   const avgPrice = Number(item.avg_price_cny || 0);
   const weight = Number(item.weight_g || 0);
   const cost = Number((avgPrice * 0.56).toFixed(2));
-  const delivery = Number((Math.max(weight / 1000, 0.25) * 12).toFixed(2));
+  const existingDelivery = Number(entry.initialDeliveryCost);
+  const delivery = Number.isFinite(existingDelivery) && existingDelivery > 0
+    ? existingDelivery
+    : Number((Math.max(weight / 1000, 0.25) * 12).toFixed(2));
   const target = Number((avgPrice * 0.92).toFixed(2));
   const total = cost + delivery;
   const profitRate = target > 0 ? Number((((target - total) / target) * 100).toFixed(2)) : 0;
@@ -285,6 +296,10 @@ export function ResultsPage() {
     }, {});
   }, [selectionEntries]);
 
+  const activeSelectionEntries = useMemo(() => {
+    return selectionEntries.filter((entry) => !isRejectedStage(entry.stage));
+  }, [selectionEntries]);
+
   const visibleSelectionEntries = useMemo(() => {
     return selectionEntries.filter((entry) => matchesSelectionFilter(entry, selectionFilters, selectionTab));
   }, [selectionEntries, selectionFilters, selectionTab]);
@@ -296,15 +311,6 @@ export function ResultsPage() {
   const selectionStatusBySnapshotId = useMemo(() => {
     return new Map(selectionEntries.map((entry) => [Number(entry.item?.id), entry.stage]));
   }, [selectionEntries]);
-
-
-  const selectionMetricCards = [
-    { label: '入池总数', value: formatNumber(selectionCounts.all || 0) },
-    { label: '待测价', value: formatNumber(selectionCounts.pricing_pending || 0) },
-    { label: '待找供应链', value: formatNumber(selectionCounts.source_pending || 0) },
-    { label: '待整理竞品', value: formatNumber(selectionCounts.competitor_pending || 0) },
-    { label: '可流转', value: formatNumber(selectionCounts.prep_ready || 0) },
-  ];
 
   const applyFilter = (key, value) => {
     setPage(1);
@@ -414,11 +420,19 @@ export function ResultsPage() {
       </div>
 
       {mode === 'screening' ? (
-        <div className="result-metrics-bar">
-          {selectionMetricCards.map((card) => (
-            <MetricCard key={card.label} label={card.label} value={card.value} />
-          ))}
-        </div>
+        <Panel title="选品工作流过滤" subtitle="商品筛选只处理已入池商品，不再按批次整体浏览">
+          <SelectionFilterBar
+            selectionTab={selectionTab}
+            setSelectionTab={setSelectionTab}
+            selectionFilters={selectionFilters}
+            applySelectionFilter={applySelectionFilter}
+            resetSelectionFilters={resetSelectionFilters}
+            selectionOverviewTabs={selectionOverviewTabs}
+            selectionCounts={selectionCounts}
+            selectionEntries={selectionEntries}
+            visibleSelectionEntries={visibleSelectionEntries}
+          />
+        </Panel>
       ) : null}
 
       {mode === 'screening' ? (
@@ -441,7 +455,7 @@ export function ResultsPage() {
         <div className="wb-feedback">{selectionFeedback}</div>
       ) : null}
 
-      <div className={`wb-results-layout result-workbench-layout ${mode === 'result' ? 'is-result-mode' : ''}`}>
+      <div className={`wb-results-layout result-workbench-layout ${mode === 'result' ? 'is-result-mode' : 'is-screening-mode'}`}>
         {mode === 'result' ? (
           <Panel title="原始结果筛选" subtitle="结果展示只负责按批次查看原始采集结果">
             <div className="wb-filter-grid result-filter-grid">
@@ -563,78 +577,7 @@ export function ResultsPage() {
               <button type="button" className="wb-button ghost" onClick={resetFilters}>重置筛选</button>
             </div>
           </Panel>
-        ) : (
-          <Panel title="选品工作流过滤" subtitle="商品筛选只处理已入池商品，不再按批次整体浏览">
-            <div className="wb-filter-grid">
-              <label className="wb-field">
-                <span>阶段状态</span>
-                <select value={selectionTab} onChange={(event) => setSelectionTab(event.target.value)}>
-                  {selectionOverviewTabs.map((tab) => (
-                    <option key={tab.key} value={tab.key}>{tab.label}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="wb-field">
-                <span>关键词</span>
-                <input value={selectionFilters.keyword} onChange={(event) => applySelectionFilter('keyword', event.target.value)} placeholder="商品ID / 品牌 / 类目" />
-              </label>
-
-              <label className="wb-field">
-                <span>来源批次</span>
-                <select value={selectionFilters.sourceJobId} onChange={(event) => applySelectionFilter('sourceJobId', event.target.value)}>
-                  <option value="">全部</option>
-                  {[...new Set(selectionEntries.map((entry) => String(entry.sourceJobId)).filter(Boolean))].map((jobId) => (
-                    <option key={jobId} value={jobId}>批次 #{jobId}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="wb-field">
-                <span>测价状态</span>
-                <select value={selectionFilters.pricingStatus} onChange={(event) => applySelectionFilter('pricingStatus', event.target.value)}>
-                  <option value="all">全部</option>
-                  <option value="priced">已测价</option>
-                  <option value="unpriced">未测价</option>
-                </select>
-              </label>
-
-              <label className="wb-field">
-                <span>利润判断</span>
-                <select value={selectionFilters.profitStatus} onChange={(event) => applySelectionFilter('profitStatus', event.target.value)}>
-                  <option value="all">全部</option>
-                  <option value="ok">利润成立</option>
-                  <option value="bad">利润不成立</option>
-                </select>
-              </label>
-
-              <label className="wb-field">
-                <span>供应链</span>
-                <select value={selectionFilters.supplyStatus} onChange={(event) => applySelectionFilter('supplyStatus', event.target.value)}>
-                  <option value="all">全部</option>
-                  <option value="matched">已找到货源</option>
-                  <option value="pending">待找货源</option>
-                </select>
-              </label>
-
-              <label className="wb-field">
-                <span>竞品整理</span>
-                <select value={selectionFilters.competitorStatus} onChange={(event) => applySelectionFilter('competitorStatus', event.target.value)}>
-                  <option value="all">全部</option>
-                  <option value="ready">已整理</option>
-                  <option value="pending">待整理</option>
-                </select>
-              </label>
-
-              <div className="wb-field">
-                <span>当前工作区</span>
-                <div className="wb-filter-hint">共 {formatNumber(visibleSelectionEntries.length)} 条</div>
-              </div>
-
-              <button type="button" className="wb-button ghost" onClick={resetSelectionFilters}>重置过滤</button>
-            </div>
-          </Panel>
-        )}
+        ) : null}
 
         <Panel
           title={mode === 'screening' ? '商品筛选工作台' : '商品结果'}
@@ -666,7 +609,7 @@ export function ResultsPage() {
             <div className="wb-feedback is-error">商品筛选工作台读取失败：{selectionQuery.error.message}</div>
           ) : null}
 
-          {mode === 'screening' && !selectionEntries.length ? (
+          {mode === 'screening' && !activeSelectionEntries.length && selectionTab !== 'rejected' ? (
             <div className="result-empty-batch">
               <strong>筛选池还没有商品</strong>
               <p>请先在“结果展示”里按页或按单品把目标商品加入筛选池。商品筛选工作台只处理你主动加入的商品。</p>
@@ -732,11 +675,11 @@ export function ResultsPage() {
               }, '已恢复到待初筛')}
               onPricingContinue={(entry) => updateSelectionStage(entry.id, {
                 stage: 'source_pending',
-                ...computePricingSnapshot(entry.item, 'continue'),
+                ...computePricingSnapshot(entry, 'continue'),
               }, '测价通过，已进入找供应链阶段')}
               onPricingReject={(entry) => updateSelectionStage(entry.id, {
                 stage: 'pricing_rejected',
-                ...computePricingSnapshot(entry.item, 'reject'),
+                ...computePricingSnapshot(entry, 'reject'),
               }, '利润不成立，已停止推进')}
               onSupplyMatched={(entry) => updateSelectionStage(entry.id, {
                 stage: 'competitor_pending',
@@ -814,7 +757,7 @@ function buildSelectionRejectFeedback(payload) {
 
 function getRawProductStatus(item, selectionStatusBySnapshotId) {
   const stage = selectionStatusBySnapshotId.get(Number(item.id)) || item.selection_stage || '';
-  if (stage === 'screening_rejected' || stage === 'pricing_rejected') {
+  if (isRejectedStage(stage)) {
     return { key: 'rejected', label: '淘汰' };
   }
   if (stage) {
@@ -841,6 +784,7 @@ function RawResultsTable({ items, onAddSingle, onRejectSingle, actionPending, se
             <th className="num">转化 / 毛利</th>
             <th className="num">广告</th>
             <th>物流 / 时效</th>
+            <th>状态</th>
             <th>操作</th>
           </tr>
         </thead>
@@ -920,35 +864,125 @@ function RawResultsTable({ items, onAddSingle, onRejectSingle, actionPending, se
                 <div className="cell-sub">配送 {formatText(item.delivery_time)}</div>
               </td>
               <td>
+                <span className={`raw-product-status is-${status.key}`}>{status.label}</span>
+              </td>
+              <td>
                 <div className="screening-row-actions">
-                  <span className={`raw-product-status is-${status.key}`}>{status.label}</span>
-                  <button
-                    type="button"
-                    className={isSelected ? 'is-selected' : ''}
-                    onClick={() => void onAddSingle(item)}
-                    disabled={actionPending || isSelected || isRejected}
-                  >
-                    {isRejected ? '已淘汰' : isSelected ? '已在筛选池' : '加入筛选池'}
-                  </button>
-                  <button
-                    type="button"
-                    className="is-reject"
-                    onClick={() => void onRejectSingle(item)}
-                    disabled={actionPending || isRejected}
-                  >
-                    淘汰
-                  </button>
+                  {!isRejected ? (
+                    <>
+                      {!isSelected ? (
+                        <button type="button" onClick={() => void onAddSingle(item)} disabled={actionPending}>
+                          加入筛选池
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="is-reject"
+                        onClick={() => void onRejectSingle(item)}
+                        disabled={actionPending}
+                      >
+                        淘汰
+                      </button>
+                    </>
+                  ) : (
+                    <span className="cell-sub">-</span>
+                  )}
                 </div>
               </td>
             </tr>
             );
           }) : (
             <tr>
-              <td colSpan={13} className="wb-empty-cell">当前没有匹配数据</td>
+              <td colSpan={14} className="wb-empty-cell">当前没有匹配数据</td>
             </tr>
           )}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function SelectionFilterBar({
+  selectionTab,
+  setSelectionTab,
+  selectionFilters,
+  applySelectionFilter,
+  resetSelectionFilters,
+  selectionOverviewTabs,
+  selectionCounts,
+  selectionEntries,
+  visibleSelectionEntries,
+}) {
+  return (
+    <div className="wb-filter-grid selection-filter-bar">
+      <label className="wb-field selection-filter-stage">
+        <span>阶段状态</span>
+        <select value={selectionTab} onChange={(event) => setSelectionTab(event.target.value)}>
+          {selectionOverviewTabs.map((tab) => (
+            <option key={tab.key} value={tab.key}>
+              {tab.label} {formatNumber(selectionCounts[tab.key] || 0)}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="wb-field selection-filter-keyword">
+        <span>关键词</span>
+        <input value={selectionFilters.keyword} onChange={(event) => applySelectionFilter('keyword', event.target.value)} placeholder="商品ID / 品牌 / 类目" />
+      </label>
+
+      <label className="wb-field">
+        <span>来源批次</span>
+        <select value={selectionFilters.sourceJobId} onChange={(event) => applySelectionFilter('sourceJobId', event.target.value)}>
+          <option value="">全部</option>
+          {[...new Set(selectionEntries.map((entry) => String(entry.sourceJobId)).filter(Boolean))].map((jobId) => (
+            <option key={jobId} value={jobId}>批次 #{jobId}</option>
+          ))}
+        </select>
+      </label>
+
+      <label className="wb-field">
+        <span>测价状态</span>
+        <select value={selectionFilters.pricingStatus} onChange={(event) => applySelectionFilter('pricingStatus', event.target.value)}>
+          <option value="all">全部</option>
+          <option value="priced">已测价</option>
+          <option value="unpriced">未测价</option>
+        </select>
+      </label>
+
+      <label className="wb-field">
+        <span>利润判断</span>
+        <select value={selectionFilters.profitStatus} onChange={(event) => applySelectionFilter('profitStatus', event.target.value)}>
+          <option value="all">全部</option>
+          <option value="ok">利润成立</option>
+          <option value="bad">利润不成立</option>
+        </select>
+      </label>
+
+      <label className="wb-field">
+        <span>供应链</span>
+        <select value={selectionFilters.supplyStatus} onChange={(event) => applySelectionFilter('supplyStatus', event.target.value)}>
+          <option value="all">全部</option>
+          <option value="matched">已找到货源</option>
+          <option value="pending">待找货源</option>
+        </select>
+      </label>
+
+      <label className="wb-field">
+        <span>竞品整理</span>
+        <select value={selectionFilters.competitorStatus} onChange={(event) => applySelectionFilter('competitorStatus', event.target.value)}>
+          <option value="all">全部</option>
+          <option value="ready">已整理</option>
+          <option value="pending">待整理</option>
+        </select>
+      </label>
+
+      <div className="wb-field selection-filter-total">
+        <span>当前工作区</span>
+        <div className="wb-filter-hint">共 {formatNumber(visibleSelectionEntries.length)} 条</div>
+      </div>
+
+      <button type="button" className="wb-button ghost selection-filter-reset" onClick={resetSelectionFilters}>重置过滤</button>
     </div>
   );
 }
@@ -1072,10 +1106,6 @@ function SelectionRow({
             <div className="selection-data-card">
               <span>供应商</span>
               <strong>{entry.supplyVendorName || '未记录'}</strong>
-            </div>
-            <div className="selection-data-card">
-              <span>流转</span>
-              <strong>{entry.transferToPrepAt ? `已于 ${formatDate(entry.transferToPrepAt)}` : '尚未流转'}</strong>
             </div>
           </div>
           {entry.supplyReferenceUrl ? (
