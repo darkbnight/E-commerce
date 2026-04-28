@@ -7,6 +7,7 @@ const navItems = [
   { to: '/product-content', label: '商品内容资产' },
   { to: '/shipping-calculator', label: '物流计算器' },
   { to: '/ozon-upload', label: 'Ozon 上货工具' },
+  { to: '/image-compression', label: '图片压缩' },
 ];
 
 export function AppShell() {

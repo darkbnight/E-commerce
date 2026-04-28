@@ -25,6 +25,7 @@ import {
   isProductDataPrepRoute,
 } from './modules/product-data-prep/route.mjs';
 import { checkMenglarLoginHealth } from '../../scripts/menglar-capture/lib/login-health.mjs';
+import { compressImageDirectoriesToJpg } from '../../scripts/图片压缩工具/compress-images-to-jpg.mjs';
 
 const ROOT = import.meta.dirname;
 const PORT = Number(process.env.PORT || 4186);
@@ -69,6 +70,15 @@ function sendError(res, statusCode, message, details = null) {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function toIsoDate(value) {
+  if (!value) return nowIso().slice(0, 10);
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) {
+    return nowIso().slice(0, 10);
+  }
+  return date.toISOString().slice(0, 10);
 }
 
 function safePath(urlPath) {
@@ -351,6 +361,46 @@ function deriveSelectionResult(stage, pricingDecision) {
   return 'pending';
 }
 
+function resolveAutoDeliveryCost(snapshot) {
+  const price = toNullableNumber(snapshot.avg_price_cny);
+  const lengthCm = toNullableNumber(snapshot.length_cm);
+  const widthCm = toNullableNumber(snapshot.width_cm);
+  const heightCm = toNullableNumber(snapshot.height_cm);
+  const weightG = toNullableNumber(snapshot.weight_g);
+
+  if ([price, lengthCm, widthCm, heightCm, weightG].some((value) => value == null || value <= 0)) {
+    return null;
+  }
+
+  const compareInput = {
+    originCountry: 'CN',
+    warehouseType: 'seller_warehouse',
+    salesScheme: 'realFBS',
+    price,
+    lengthCm,
+    widthCm,
+    heightCm,
+    weightG,
+    orderDate: toIsoDate(snapshot.finished_at || snapshot.captured_at || snapshot.created_at),
+    includeXlsxCandidates: false,
+  };
+
+  const primaryResult = compareShipping(compareInput);
+  if (primaryResult.items.length) {
+    return primaryResult.items[0].result.totalLogisticsCost;
+  }
+
+  const fallbackResult = compareShipping({
+    ...compareInput,
+    includeXlsxCandidates: true,
+  });
+  if (fallbackResult.items.length) {
+    return fallbackResult.items[0].result.totalLogisticsCost;
+  }
+
+  return null;
+}
+
 function mapSelectionItemRow(row) {
   return {
     id: Number(row.id),
@@ -519,19 +569,26 @@ function getLatestJobId(db) {
 }
 
 function buildProductsQuery(searchParams, resolvedJobId) {
-  const conditions = ['job_id = ?'];
+  const conditions = ['product_business_snapshots.job_id = ?'];
   const values = [resolvedJobId];
+  const fromClause = `
+      product_business_snapshots
+      LEFT JOIN product_selection_items
+        ON product_selection_items.source_job_id = product_business_snapshots.job_id
+       AND product_selection_items.source_platform = COALESCE(product_business_snapshots.platform, 'ozon')
+       AND product_selection_items.source_platform_product_id = product_business_snapshots.platform_product_id
+    `;
 
   const keyword = searchParams.get('keyword')?.trim();
   if (keyword) {
     conditions.push(`(
-      platform_product_id LIKE ?
-      OR title LIKE ?
-      OR brand LIKE ?
-      OR shop_name LIKE ?
-      OR category_level_1 LIKE ?
-      OR category_level_2 LIKE ?
-      OR category_level_3 LIKE ?
+      product_business_snapshots.platform_product_id LIKE ?
+      OR product_business_snapshots.title LIKE ?
+      OR product_business_snapshots.brand LIKE ?
+      OR product_business_snapshots.shop_name LIKE ?
+      OR product_business_snapshots.category_level_1 LIKE ?
+      OR product_business_snapshots.category_level_2 LIKE ?
+      OR product_business_snapshots.category_level_3 LIKE ?
     )`);
     const likeKeyword = `%${keyword}%`;
     values.push(likeKeyword, likeKeyword, likeKeyword, likeKeyword, likeKeyword, likeKeyword, likeKeyword);
@@ -539,38 +596,73 @@ function buildProductsQuery(searchParams, resolvedJobId) {
 
   const productType = searchParams.get('productType')?.trim();
   if (productType) {
-    conditions.push('product_type = ?');
+    conditions.push('product_business_snapshots.product_type = ?');
     values.push(productType);
   }
 
   const categoryLevel1 = searchParams.get('categoryLevel1')?.trim();
   if (categoryLevel1) {
-    conditions.push('category_level_1 = ?');
+    conditions.push('product_business_snapshots.category_level_1 = ?');
     values.push(categoryLevel1);
   }
 
   const minSales = searchParams.get('minSales');
   if (minSales) {
-    conditions.push('sales_volume >= ?');
+    conditions.push('product_business_snapshots.sales_volume >= ?');
     values.push(Number(minSales));
   }
 
   const minRevenue = searchParams.get('minRevenue');
   if (minRevenue) {
-    conditions.push('sales_amount >= ?');
+    conditions.push('product_business_snapshots.sales_amount >= ?');
     values.push(Number(minRevenue));
+  }
+
+  const minAvgPrice = searchParams.get('minAvgPrice');
+  if (minAvgPrice) {
+    conditions.push('product_business_snapshots.avg_price_cny >= ?');
+    values.push(Number(minAvgPrice));
+  }
+
+  const maxAvgPrice = searchParams.get('maxAvgPrice');
+  if (maxAvgPrice) {
+    conditions.push('product_business_snapshots.avg_price_cny <= ?');
+    values.push(Number(maxAvgPrice));
+  }
+
+  const minWeight = searchParams.get('minWeight');
+  if (minWeight) {
+    conditions.push('product_business_snapshots.weight_g >= ?');
+    values.push(Number(minWeight));
+  }
+
+  const maxWeight = searchParams.get('maxWeight');
+  if (maxWeight) {
+    conditions.push('product_business_snapshots.weight_g <= ?');
+    values.push(Number(maxWeight));
+  }
+
+  const productStatus = searchParams.get('productStatus')?.trim();
+  if (productStatus === 'pending') {
+    conditions.push('product_selection_items.id IS NULL');
+  } else if (productStatus === 'selected') {
+    conditions.push(`product_selection_items.id IS NOT NULL
+      AND product_selection_items.selection_stage NOT IN ('screening_rejected', 'pricing_rejected')`);
+  } else if (productStatus === 'rejected') {
+    conditions.push(`product_selection_items.selection_stage IN ('screening_rejected', 'pricing_rejected')`);
   }
 
   const sort = searchParams.get('sort') || 'sales_desc';
   const orderByMap = {
-    sales_desc: 'sales_volume DESC, sales_amount DESC',
-    sales_growth_desc: 'sales_growth DESC, sales_volume DESC',
-    revenue_desc: 'sales_amount DESC, sales_volume DESC',
-    margin_desc: 'estimated_gross_margin DESC, sales_volume DESC',
-    impressions_desc: 'impressions DESC, sales_volume DESC',
+    sales_desc: 'product_business_snapshots.sales_volume DESC, product_business_snapshots.sales_amount DESC',
+    sales_growth_desc: 'product_business_snapshots.sales_growth DESC, product_business_snapshots.sales_volume DESC',
+    revenue_desc: 'product_business_snapshots.sales_amount DESC, product_business_snapshots.sales_volume DESC',
+    margin_desc: 'product_business_snapshots.estimated_gross_margin DESC, product_business_snapshots.sales_volume DESC',
+    impressions_desc: 'product_business_snapshots.impressions DESC, product_business_snapshots.sales_volume DESC',
   };
 
   return {
+    fromClause,
     whereClause: conditions.join(' AND '),
     values,
     orderBy: orderByMap[sort] || orderByMap.sales_desc,
@@ -686,6 +778,7 @@ function handleApiProducts(req, res) {
 
   const payload = withDb((db) => {
     ensureProductBusinessSnapshotColumns(db);
+    ensureProductSelectionItemsTable(db);
     const latestJobId = getLatestJobId(db);
     if (!latestJobId) {
       return {
@@ -700,26 +793,59 @@ function handleApiProducts(req, res) {
 
     const requestedJobId = parseInteger(url.searchParams.get('jobId'), latestJobId);
     const resolvedJobId = requestedJobId || latestJobId;
-    const { whereClause, values, orderBy } = buildProductsQuery(url.searchParams, resolvedJobId);
+    const { fromClause, whereClause, values, orderBy } = buildProductsQuery(url.searchParams, resolvedJobId);
     const offset = (page - 1) * pageSize;
 
     const totalRow = db.prepare(`
       SELECT COUNT(*) AS total
-      FROM product_business_snapshots
+      FROM ${fromClause}
       WHERE ${whereClause}
     `).get(...values);
 
     const items = db.prepare(`
-      SELECT id, job_id, platform, platform_product_id, product_url, product_image_url,
-             shop_id, shop_name, product_type, brand, title, product_created_date,
-             category_level_1, category_level_2, category_level_3,
-             sales_volume, sales_growth, potential_index, sales_amount, sales_amount_cny,
-             avg_price_rub, avg_price_cny,
-             add_to_cart_rate, impressions, clicks, view_rate,
-             ad_cost, ad_cost_cny, ad_cost_rate, order_conversion_rate, estimated_gross_margin,
-             shipping_mode, delivery_time, average_sales_amount,
-             length_cm, width_cm, height_cm, weight_g, captured_at, created_at, updated_at
-      FROM product_business_snapshots
+      SELECT product_business_snapshots.id,
+             product_business_snapshots.job_id,
+             product_business_snapshots.platform,
+             product_business_snapshots.platform_product_id,
+             product_business_snapshots.product_url,
+             product_business_snapshots.product_image_url,
+             product_business_snapshots.shop_id,
+             product_business_snapshots.shop_name,
+             product_business_snapshots.product_type,
+             product_business_snapshots.brand,
+             product_business_snapshots.title,
+             product_business_snapshots.product_created_date,
+             product_business_snapshots.category_level_1,
+             product_business_snapshots.category_level_2,
+             product_business_snapshots.category_level_3,
+             product_business_snapshots.sales_volume,
+             product_business_snapshots.sales_growth,
+             product_business_snapshots.potential_index,
+             product_business_snapshots.sales_amount,
+             product_business_snapshots.sales_amount_cny,
+             product_business_snapshots.avg_price_rub,
+             product_business_snapshots.avg_price_cny,
+             product_business_snapshots.add_to_cart_rate,
+             product_business_snapshots.impressions,
+             product_business_snapshots.clicks,
+             product_business_snapshots.view_rate,
+             product_business_snapshots.ad_cost,
+             product_business_snapshots.ad_cost_cny,
+             product_business_snapshots.ad_cost_rate,
+             product_business_snapshots.order_conversion_rate,
+             product_business_snapshots.estimated_gross_margin,
+             product_business_snapshots.shipping_mode,
+             product_business_snapshots.delivery_time,
+             product_business_snapshots.average_sales_amount,
+             product_business_snapshots.length_cm,
+             product_business_snapshots.width_cm,
+             product_business_snapshots.height_cm,
+             product_business_snapshots.weight_g,
+             product_business_snapshots.captured_at,
+             product_business_snapshots.created_at,
+             product_business_snapshots.updated_at,
+             product_selection_items.selection_stage AS selection_stage
+      FROM ${fromClause}
       WHERE ${whereClause}
       ORDER BY ${orderBy}
       LIMIT ? OFFSET ?
@@ -776,6 +902,11 @@ function handleApiProducts(req, res) {
         categoryLevel1: url.searchParams.get('categoryLevel1') || '',
         minSales: url.searchParams.get('minSales') || '',
         minRevenue: url.searchParams.get('minRevenue') || '',
+        minAvgPrice: url.searchParams.get('minAvgPrice') || '',
+        maxAvgPrice: url.searchParams.get('maxAvgPrice') || '',
+        minWeight: url.searchParams.get('minWeight') || '',
+        maxWeight: url.searchParams.get('maxWeight') || '',
+        productStatus: url.searchParams.get('productStatus') || '',
         sort: url.searchParams.get('sort') || 'sales_desc',
       },
       options: {
@@ -810,6 +941,7 @@ function mapProductContentAssetRow(row) {
     created_at: row.created_at,
     updated_at: row.updated_at,
     sku_count: row.sku_count == null ? undefined : Number(row.sku_count),
+    version_count: row.version_count == null ? undefined : Number(row.version_count),
   };
 }
 
@@ -939,7 +1071,49 @@ function handleApiProductContent(req, res) {
   const latest = parseBoolean(url.searchParams.get('latest'), true);
 
   if (!productId) {
-    sendError(res, 400, 'productId 不能为空');
+    const payload = withDb((db) => {
+      ensureProductContentTables(db);
+
+      const rows = db.prepare(`
+        SELECT
+          product_content_assets.*,
+          COUNT(DISTINCT product_content_skus.id) AS sku_count,
+          (
+            SELECT COUNT(*)
+            FROM product_content_assets AS history_assets
+            WHERE history_assets.platform = product_content_assets.platform
+              AND history_assets.platform_product_id = product_content_assets.platform_product_id
+          ) AS version_count
+        FROM product_content_assets
+        LEFT JOIN product_content_skus
+          ON product_content_skus.content_asset_id = product_content_assets.id
+        WHERE product_content_assets.platform = ?
+          AND NOT EXISTS (
+            SELECT 1
+            FROM product_content_assets AS newer_assets
+            WHERE newer_assets.platform = product_content_assets.platform
+              AND newer_assets.platform_product_id = product_content_assets.platform_product_id
+              AND (
+                newer_assets.captured_at > product_content_assets.captured_at
+                OR (
+                  newer_assets.captured_at = product_content_assets.captured_at
+                  AND newer_assets.id > product_content_assets.id
+                )
+              )
+          )
+        GROUP BY product_content_assets.id
+        ORDER BY product_content_assets.captured_at DESC, product_content_assets.id DESC
+        LIMIT 200
+      `).all(platform);
+
+      return {
+        query: { platform, latest: true },
+        items: rows.map(mapProductContentAssetRow),
+        total: rows.length,
+      };
+    });
+
+    sendJson(res, 200, payload);
     return;
   }
 
@@ -1062,6 +1236,8 @@ async function handleApiProductSelectionItemsCreate(req, res) {
   try {
     const body = await readJsonBody(req);
     const items = Array.isArray(body.items) ? body.items : [];
+    const requestedStage = body.selectionStage === 'screening_rejected' ? 'screening_rejected' : 'pool_pending';
+    const requestedResult = requestedStage === 'screening_rejected' ? 'rejected' : 'pending';
     if (!items.length) {
       sendError(res, 400, 'items 不能为空');
       return;
@@ -1080,12 +1256,22 @@ async function handleApiProductSelectionItemsCreate(req, res) {
       ensureProductBusinessSnapshotColumns(db);
 
       const selectSnapshot = db.prepare(`
-        SELECT id,
-               job_id,
-               platform,
-               platform_product_id
+        SELECT product_business_snapshots.id,
+               product_business_snapshots.job_id,
+               product_business_snapshots.platform,
+               product_business_snapshots.platform_product_id,
+               product_business_snapshots.avg_price_cny,
+               product_business_snapshots.length_cm,
+               product_business_snapshots.width_cm,
+               product_business_snapshots.height_cm,
+               product_business_snapshots.weight_g,
+               product_business_snapshots.captured_at,
+               product_business_snapshots.created_at,
+               source_jobs.finished_at
         FROM product_business_snapshots
-        WHERE id = ?
+        LEFT JOIN source_jobs
+          ON source_jobs.id = product_business_snapshots.job_id
+        WHERE product_business_snapshots.id = ?
         LIMIT 1
       `);
 
@@ -1097,17 +1283,29 @@ async function handleApiProductSelectionItemsCreate(req, res) {
           source_platform_product_id,
           selection_stage,
           selection_result,
+          initial_delivery_cost,
           pricing_decision,
           supply_match_status,
           competitor_packet_status,
           created_at,
           updated_at
         )
-        VALUES (?, ?, ?, ?, 'pool_pending', 'pending', 'pending', 'pending', 'pending', ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 'pending', 'pending', ?, ?)
+      `);
+
+      const updateRejected = db.prepare(`
+        UPDATE product_selection_items
+        SET selection_stage = 'screening_rejected',
+            selection_result = 'rejected',
+            updated_at = ?
+        WHERE source_job_id = ?
+          AND source_platform = ?
+          AND source_platform_product_id = ?
       `);
 
       let insertedCount = 0;
       let duplicateCount = 0;
+      let updatedCount = 0;
       let skippedCount = 0;
 
       for (const item of items) {
@@ -1123,12 +1321,16 @@ async function handleApiProductSelectionItemsCreate(req, res) {
           continue;
         }
 
+        const autoDeliveryCost = resolveAutoDeliveryCost(snapshot);
         const timestamp = nowIso();
         const result = insert.run(
           snapshot.job_id,
           snapshot.id,
           snapshot.platform || 'ozon',
           snapshot.platform_product_id,
+          requestedStage,
+          requestedResult,
+          autoDeliveryCost,
           timestamp,
           timestamp,
         );
@@ -1137,12 +1339,21 @@ async function handleApiProductSelectionItemsCreate(req, res) {
           insertedCount += 1;
         } else {
           duplicateCount += 1;
+          if (requestedStage === 'screening_rejected') {
+            updatedCount += updateRejected.run(
+              timestamp,
+              snapshot.job_id,
+              snapshot.platform || 'ozon',
+              snapshot.platform_product_id,
+            ).changes;
+          }
         }
       }
 
       return {
         insertedCount,
         duplicateCount,
+        updatedCount,
         skippedCount,
         items: listProductSelectionItems(db),
       };
@@ -1354,6 +1565,28 @@ async function handleApiShippingCompare(req, res) {
   }
 }
 
+async function handleApiImageCompressionCompressJpg(req, res) {
+  try {
+    if (req.method !== 'POST') {
+      sendError(res, 405, '只支持 POST');
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await compressImageDirectoriesToJpg({
+      sourceDir: body.sourceDir,
+      outputDirName: body.outputDirName || '压缩图',
+      quality: body.quality ?? 4,
+      overwrite: body.overwrite !== false,
+      mode: body.mode || 'singleDirectory',
+      includeChildDirs: body.includeChildDirs === true,
+    });
+    sendJson(res, 200, result);
+  } catch (error) {
+    sendError(res, 400, error.message);
+  }
+}
+
 async function handleApiOzonValidate(req, res) {
   try {
     const body = await readJsonBody(req);
@@ -1562,6 +1795,11 @@ export function createWorkbenchServer() {
 
     if ((req.url || '').startsWith('/api/menglar/login-health')) {
       await handleApiMenglarLoginHealth(req, res);
+      return;
+    }
+
+    if (url.pathname === '/api/image-compression/compress-jpg') {
+      await handleApiImageCompressionCompressJpg(req, res);
       return;
     }
 

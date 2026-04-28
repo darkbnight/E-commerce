@@ -107,6 +107,15 @@ export async function checkMenglarLoginHealth(input = {}) {
   return readJson(response, '登录态检查失败');
 }
 
+export async function compressImagesToJpg(input = {}) {
+  const response = await fetch('/api/image-compression/compress-jpg', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  return readJson(response, '图片压缩失败');
+}
+
 async function readJson(response, fallbackMessage) {
   const payload = await response.json().catch(() => null);
   if (!response.ok) {

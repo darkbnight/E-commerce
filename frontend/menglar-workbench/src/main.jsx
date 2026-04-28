@@ -10,6 +10,7 @@ import { ProductDataPrepPage } from './pages/ProductDataPrepPage';
 import { ProductContentPage } from './pages/ProductContentPage';
 import { ShippingCalculatorPage } from './pages/ShippingCalculatorPage';
 import { ShippingRuleInfoPage } from './pages/ShippingRuleInfoPage';
+import { ImageCompressionPage } from './pages/ImageCompressionPage';
 import './styles.css';
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const router = createBrowserRouter([
       { path: '/shipping-calculator', element: <ShippingCalculatorPage /> },
       { path: '/shipping-calculator/rules', element: <ShippingRuleInfoPage /> },
       { path: '/ozon-upload', element: <OzonUploadPage /> },
+      { path: '/image-compression', element: <ImageCompressionPage /> },
     ],
   },
 ]);
