@@ -26,6 +26,7 @@ import {
 } from './modules/product-data-prep/route.mjs';
 import { checkMenglarLoginHealth } from '../../scripts/menglar-capture/lib/login-health.mjs';
 import { compressImageDirectoriesToJpg, compressMultipleDirectoriesToJpg } from '../../scripts/图片压缩工具/compress-images-to-jpg.mjs';
+import { generateMultipleProductVideos } from '../../scripts/商品视频生成工具/generate-product-video.mjs';
 
 const ROOT = import.meta.dirname;
 const PORT = Number(process.env.PORT || 4186);
@@ -1597,6 +1598,34 @@ async function handleApiImageCompressionCompressJpg(req, res) {
   }
 }
 
+async function handleApiVideoGeneratorGenerate(req, res) {
+  try {
+    if (req.method !== 'POST') {
+      sendError(res, 405, '只支持 POST');
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const dirs = (body.directories || [])
+      .map((d) => String(d || '').trim())
+      .filter((d) => d.length > 0);
+
+    if (!dirs.length) {
+      throw new Error('请填写至少一个图片目录');
+    }
+
+    const result = await generateMultipleProductVideos({
+      directories: dirs,
+      duration: Number(body.duration) || 12,
+      resolution: body.resolution || '1080p',
+      outputVideoName: String(body.outputVideoName || '商品视频').trim() || '商品视频',
+    });
+    sendJson(res, 200, result);
+  } catch (error) {
+    sendError(res, 400, error.message);
+  }
+}
+
 async function handleApiOzonValidate(req, res) {
   try {
     const body = await readJsonBody(req);
@@ -1810,6 +1839,11 @@ export function createWorkbenchServer() {
 
     if (url.pathname === '/api/image-compression/compress-jpg') {
       await handleApiImageCompressionCompressJpg(req, res);
+      return;
+    }
+
+    if (url.pathname === '/api/video-generator/generate') {
+      await handleApiVideoGeneratorGenerate(req, res);
       return;
     }
 

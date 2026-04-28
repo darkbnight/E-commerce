@@ -116,6 +116,15 @@ export async function compressImagesToJpg(input = {}) {
   return readJson(response, '图片压缩失败');
 }
 
+export async function generateProductVideos(input = {}) {
+  const response = await fetch('/api/video-generator/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  return readJson(response, '视频生成失败');
+}
+
 async function readJson(response, fallbackMessage) {
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
