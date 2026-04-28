@@ -451,10 +451,6 @@ export function ResultsPage() {
         </div>
       ) : null}
 
-      {selectionFeedback ? (
-        <div className="wb-feedback">{selectionFeedback}</div>
-      ) : null}
-
       <div className={`wb-results-layout result-workbench-layout ${mode === 'result' ? 'is-result-mode' : 'is-screening-mode'}`}>
         {mode === 'result' ? (
           <Panel title="原始结果筛选" subtitle="结果展示只负责按批次查看原始采集结果">
