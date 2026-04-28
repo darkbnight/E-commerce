@@ -25,7 +25,7 @@ import {
   isProductDataPrepRoute,
 } from './modules/product-data-prep/route.mjs';
 import { checkMenglarLoginHealth } from '../../scripts/menglar-capture/lib/login-health.mjs';
-import { compressImageDirectoriesToJpg } from '../../scripts/图片压缩工具/compress-images-to-jpg.mjs';
+import { compressImageDirectoriesToJpg, compressMultipleDirectoriesToJpg } from '../../scripts/图片压缩工具/compress-images-to-jpg.mjs';
 
 const ROOT = import.meta.dirname;
 const PORT = Number(process.env.PORT || 4186);
@@ -1573,14 +1573,24 @@ async function handleApiImageCompressionCompressJpg(req, res) {
     }
 
     const body = await readJsonBody(req);
-    const result = await compressImageDirectoriesToJpg({
-      sourceDir: body.sourceDir,
+    const input = {
       outputDirName: body.outputDirName || '压缩图',
       quality: body.quality ?? 4,
       overwrite: body.overwrite !== false,
-      mode: body.mode || 'singleDirectory',
-      includeChildDirs: body.includeChildDirs === true,
-    });
+    };
+    let result;
+    if (body.directories && body.directories.length > 0) {
+      result = await compressMultipleDirectoriesToJpg({ ...input, directories: body.directories });
+    } else if (body.sourceDir) {
+      result = await compressImageDirectoriesToJpg({
+        ...input,
+        sourceDir: body.sourceDir,
+        mode: body.mode || 'singleDirectory',
+        includeChildDirs: body.includeChildDirs === true,
+      });
+    } else {
+      throw new Error('请填写图片目录（directories 或 sourceDir）');
+    }
     sendJson(res, 200, result);
   } catch (error) {
     sendError(res, 400, error.message);

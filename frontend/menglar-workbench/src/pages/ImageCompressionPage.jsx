@@ -4,10 +4,9 @@ import { Panel } from '../components/Panel';
 import { compressImagesToJpg } from '../lib/api';
 
 const defaultForm = {
-  sourceDir: 'G:\\work\\其他\\商品数据',
+  sourceDirs: 'G:\\work\\其他\\商品数据\\商品A\nG:\\work\\其他\\商品数据\\商品B',
   outputDirName: '压缩图',
   quality: '4',
-  mode: 'childDirectories',
   overwrite: true,
 };
 
@@ -26,11 +25,14 @@ export function ImageCompressionPage() {
 
   const handleSubmit = (event) => {
     event.preventDefault();
+    const dirs = form.sourceDirs
+      .split('\n')
+      .map((d) => d.trim())
+      .filter((d) => d.length > 0);
     compressMutation.mutate({
-      sourceDir: form.sourceDir.trim(),
+      directories: dirs,
       outputDirName: form.outputDirName.trim() || '压缩图',
       quality: Number(form.quality || 4),
-      mode: form.mode,
       overwrite: form.overwrite,
     });
   };
@@ -48,37 +50,17 @@ export function ImageCompressionPage() {
       </div>
 
       <div className="image-compression-layout">
-        <Panel title="压缩参数" subtitle="默认适合商品数据父目录：逐个处理下方商品子目录，原图不覆盖。">
+        <Panel title="压缩参数" subtitle="每行输入一个图片目录，系统依次处理每个目录下的图片，原图不覆盖。">
           <form className="image-compression-form" onSubmit={handleSubmit}>
             <label className="image-compression-field">
-              <span>图片目录</span>
-              <input
-                value={form.sourceDir}
-                placeholder="例如：G:\\work\\其他\\商品数据"
-                onChange={(event) => handleChange('sourceDir', event.target.value)}
+              <span>图片目录（每行一个）</span>
+              <textarea
+                value={form.sourceDirs}
+                rows={6}
+                placeholder={'例如：\nG:\\work\\其他\\商品数据\\商品A\nG:\\work\\其他\\商品数据\\商品B'}
+                onChange={(event) => handleChange('sourceDirs', event.target.value)}
               />
             </label>
-
-            <div className="image-compression-mode">
-              <label className={form.mode === 'childDirectories' ? 'is-active' : ''}>
-                <input
-                  type="radio"
-                  name="compression-mode"
-                  checked={form.mode === 'childDirectories'}
-                  onChange={() => handleChange('mode', 'childDirectories')}
-                />
-                <span>批量处理子目录</span>
-              </label>
-              <label className={form.mode === 'singleDirectory' ? 'is-active' : ''}>
-                <input
-                  type="radio"
-                  name="compression-mode"
-                  checked={form.mode === 'singleDirectory'}
-                  onChange={() => handleChange('mode', 'singleDirectory')}
-                />
-                <span>只处理当前目录</span>
-              </label>
-            </div>
 
             <div className="image-compression-grid">
               <label className="image-compression-field">
@@ -153,7 +135,7 @@ export function ImageCompressionPage() {
 
               <div className="image-compression-output">
                 <span>处理模式</span>
-                <strong>{result.mode === 'childDirectories' ? '批量处理子目录' : '只处理当前目录'}</strong>
+                <strong>批量处理 {result.directoryCount ?? 1} 个目录</strong>
               </div>
 
               <div className="image-compression-directory-list">

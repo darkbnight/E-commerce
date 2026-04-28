@@ -738,9 +738,44 @@ select {
   grid-template-columns: minmax(0, 1fr);
 }
 
+.result-workbench-layout.is-screening-mode {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .result-filter-grid {
   grid-template-columns: minmax(240px, 1.45fr) minmax(220px, 1.35fr) repeat(4, minmax(150px, 1fr));
   align-items: end;
+}
+
+.selection-filter-bar {
+  grid-template-columns: repeat(6, minmax(140px, 1fr));
+  align-items: end;
+}
+
+.selection-filter-stage,
+.selection-filter-keyword {
+  grid-column: span 2;
+}
+
+.selection-filter-bar .wb-field span {
+  font-size: 13px;
+}
+
+.selection-filter-bar .wb-field input,
+.selection-filter-bar .wb-field select {
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.selection-filter-bar .wb-filter-hint {
+  min-height: 44px;
+  font-size: 14px;
+}
+
+.selection-filter-reset {
+  min-height: 44px;
+  font-size: 14px;
 }
 
 .result-filter-grid .result-batch-field {
@@ -1017,6 +1052,11 @@ select {
   background: rgba(22, 33, 39, 0.07);
 }
 
+.raw-product-status.is-empty {
+  color: rgba(22, 33, 39, 0.34);
+  background: transparent;
+}
+
 .raw-product-status.is-selected {
   color: var(--success);
   background: rgba(4, 120, 87, 0.12);
@@ -1036,6 +1076,12 @@ select {
   cursor: pointer;
   font-size: 12px;
   font-weight: 800;
+}
+
+.selection-action-block .screening-row-actions button {
+  min-height: 34px;
+  padding: 8px 12px;
+  font-size: 13px;
 }
 
 .screening-row-actions button.is-selected,
@@ -1110,20 +1156,19 @@ select {
 .selection-workbench-list {
   display: grid;
   gap: 10px;
+  min-width: 0;
 }
 
 .selection-list-head,
 .selection-decision-card {
   display: grid;
-  grid-template-columns: minmax(290px, 0.9fr) minmax(520px, 1.65fr) minmax(150px, 0.35fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   align-items: stretch;
 }
 
 .selection-list-head {
-  position: sticky;
-  top: 0;
-  z-index: 2;
+  display: none;
   padding: 10px 14px;
   border-radius: 10px;
   color: var(--muted);
@@ -1133,6 +1178,9 @@ select {
 }
 
 .selection-decision-card {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
   padding: 14px;
   border: 1px solid rgba(22, 33, 39, 0.08);
   border-radius: 12px;
@@ -1185,7 +1233,7 @@ select {
 
 .selection-decision-block {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(280px, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 12px;
 }
 
@@ -1241,10 +1289,10 @@ select {
   width: 100%;
   border: 0;
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   color: #fff;
-  background: var(--primary);
-  font-size: 12px;
+  background: var(--accent);
+  font-size: 14px;
   font-weight: 900;
   cursor: pointer;
   box-shadow: 0 8px 18px rgba(15, 118, 110, 0.18);
@@ -1256,8 +1304,27 @@ select {
 }
 
 .selection-action-block .screening-row-actions {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+@media (min-width: 1900px) {
+  .selection-list-head,
+  .selection-decision-card {
+    grid-template-columns: minmax(230px, 0.82fr) minmax(0, 1.55fr) minmax(130px, 0.35fr);
+  }
+
+  .selection-list-head {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: grid;
+  }
+
+  .selection-action-block .screening-row-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
 }
 
 .competitor-detail-backdrop {
@@ -4105,7 +4172,8 @@ select {
   font-weight: 700;
 }
 
-.image-compression-field input {
+.image-compression-field input,
+.image-compression-field textarea {
   width: 100%;
   border: 1px solid rgba(22, 33, 39, 0.12);
   border-radius: 14px;
@@ -4115,7 +4183,15 @@ select {
   outline: none;
 }
 
-.image-compression-field input:focus {
+.image-compression-field textarea {
+  resize: vertical;
+  min-height: 100px;
+  font-family: inherit;
+  line-height: 1.6;
+}
+
+.image-compression-field input:focus,
+.image-compression-field textarea:focus {
   border-color: rgba(15, 118, 110, 0.5);
   box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.08);
 }
@@ -4293,6 +4369,7 @@ select {
   }
 
   .wb-results-layout,
+  .selection-filter-bar,
   .product-prep-dashboard-grid,
   .product-prep-edit-layout,
   .product-prep-grid,
@@ -4321,6 +4398,11 @@ select {
   .selection-metric-grid,
   .selection-supply-grid {
     grid-template-columns: 1fr;
+  }
+
+  .selection-filter-stage,
+  .selection-filter-keyword {
+    grid-column: auto;
   }
 
   .competitor-detail-backdrop {

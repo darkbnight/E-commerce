@@ -29,14 +29,14 @@ try {
   await page.getByText('默认质量：4').waitFor();
   await page.screenshot({ path: path.join(screenshotDir, 'image-compression-input.png'), fullPage: true });
 
-  await page.getByLabel('图片目录').fill(fixtureDir);
+  await page.getByLabel('图片目录（每行一个）').fill(childDir);
   await page.getByRole('button', { name: '开始压缩' }).click();
   await page.getByText('输出目录').waitFor();
   await page.getByText('目录数量', { exact: true }).waitFor();
   await page.getByText('sample.bmp').waitFor();
   await page.screenshot({ path: path.join(screenshotDir, 'image-compression-result.png'), fullPage: true });
 
-  await page.getByLabel('图片目录').fill(path.join(fixtureDir, 'missing'));
+  await page.getByLabel('图片目录（每行一个）').fill(path.join(fixtureDir, 'missing'));
   await page.getByRole('button', { name: '开始压缩' }).click();
   await page.getByText('目录不存在或不是文件夹').waitFor();
   await page.screenshot({ path: path.join(screenshotDir, 'image-compression-error.png'), fullPage: true });

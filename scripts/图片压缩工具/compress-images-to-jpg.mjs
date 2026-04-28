@@ -87,6 +87,30 @@ export async function compressImagesToJpg(input) {
   };
 }
 
+export async function compressMultipleDirectoriesToJpg(input) {
+  const dirs = (input?.directories || [])
+    .map((d) => String(d || '').trim())
+    .filter((d) => d.length > 0)
+    .map((d) => path.resolve(d));
+
+  if (!dirs.length) {
+    throw new Error('请填写至少一个有效的图片目录');
+  }
+
+  const directories = [];
+  for (const dir of dirs) {
+    directories.push(await compressImagesToJpg({ ...input, sourceDir: dir }));
+  }
+
+  return toBatchResult({
+    mode: 'multiDirectory',
+    sourceDir: dirs[0],
+    directories,
+    outputDirName: String(input?.outputDirName || DEFAULT_OUTPUT_DIR_NAME).trim() || DEFAULT_OUTPUT_DIR_NAME,
+    quality: normalizeQuality(input?.quality),
+  });
+}
+
 export async function compressImageDirectoriesToJpg(input) {
   const sourceDir = path.resolve(String(input?.sourceDir || '').trim());
   const includeChildDirs = input?.mode === 'childDirectories' || input?.includeChildDirs === true;
