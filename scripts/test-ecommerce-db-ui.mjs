@@ -118,7 +118,7 @@ try {
   await expectText(page, '待初筛');
   await expectText(page, '进入测价');
 
-  const selectionRows = page.locator('.selection-table tbody tr');
+  const selectionRows = page.locator('.selection-decision-card');
   await selectionRows.first().waitFor({ timeout: 10000 });
   assert.equal(await selectionRows.count(), 1, 'single add should only create one selection row');
   const firstSelectionRow = selectionRows.first();
@@ -151,7 +151,7 @@ try {
 
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: '商品筛选' }).click();
-  const reloadedRow = page.locator('.selection-table tbody tr').first();
+  const reloadedRow = page.locator('.selection-decision-card').first();
   await reloadedRow.waitFor({ timeout: 10000 });
   await expectButton(reloadedRow, '已流转商品数据整理');
 

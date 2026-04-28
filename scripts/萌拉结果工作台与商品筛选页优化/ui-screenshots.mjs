@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { copyFile, mkdir, mkdtemp, rm } from 'node:fs/promises';
-import os from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { chromium } from 'playwright';
@@ -8,7 +7,9 @@ import { chromium } from 'playwright';
 const root = process.cwd();
 const sourceDbPath = path.join(root, 'db', 'ecommerce-workbench.sqlite');
 const screenshotDir = path.join(root, 'docs', '测试文档', '萌拉结果工作台与商品筛选页优化', 'UI');
-const tempDir = await mkdtemp(path.join(os.tmpdir(), 'menglar-results-ui-'));
+const tempRoot = path.join(root, '.cache', 'test-temp');
+await mkdir(tempRoot, { recursive: true });
+const tempDir = await mkdtemp(path.join(tempRoot, 'menglar-results-ui-'));
 const tempDbPath = path.join(tempDir, 'ecommerce-workbench.sqlite');
 
 await mkdir(screenshotDir, { recursive: true });
@@ -56,7 +57,7 @@ try {
   browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 960 }, deviceScaleFactor: 1 });
 
-  await page.goto(`http://127.0.0.1:${port}/results`, { waitUntil: 'networkidle' });
+  await page.goto(`http://127.0.0.1:${port}/results`, { waitUntil: 'domcontentloaded' });
   await page.screenshot({
     path: path.join(screenshotDir, 'results-default.png'),
     fullPage: true,
@@ -65,6 +66,11 @@ try {
   const addButtons = page.locator('tbody button', { hasText: '加入筛选池' });
   assert.ok((await addButtons.count()) > 0, '需要至少一个单品加入筛选池按钮');
   await addButtons.first().click();
+  await page.locator('.screening-row-actions button.is-selected').first().waitFor({ timeout: 10000 });
+  await page.screenshot({
+    path: path.join(screenshotDir, 'results-single-add.png'),
+    fullPage: true,
+  });
   await page.getByRole('button', { name: '商品筛选' }).click();
 
   const selectionRow = page.locator('.selection-table tbody tr').first();
@@ -108,6 +114,7 @@ try {
     screenshotDir,
     files: [
       'results-default.png',
+      'results-single-add.png',
       'selection-processing.png',
       'selection-ready.png',
     ],
