@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
 import { Panel } from '../components/Panel';
 import {
   fetchProductBusinessLatest,
@@ -9,35 +8,20 @@ import {
 } from '../lib/api';
 import { formatCurrency, formatNumber, formatPercent, formatText } from '../lib/format';
 
-const defaultSearch = {
+const defaultFilters = {
   platform: 'ozon',
-  productId: '',
+  keyword: '',
+  status: 'all',
+  hasHistory: 'all',
 };
 
-const demoProducts = [
-  {
-    productId: 'demo-content-ornament-001',
-    label: '挂饰套装',
-    description: '2 个内容版本，适合先看版本切换效果',
-  },
-  {
-    productId: 'demo-content-organizer-002',
-    label: '收纳盒',
-    description: '单版本多图，适合核对主图与多图展示',
-  },
-  {
-    productId: 'demo-content-kitchen-003',
-    label: '厨房用品',
-    description: '多 SKU 图片与价格映射示例',
-  },
+const detailTabs = [
+  { key: 'description', label: '描述详情' },
+  { key: 'gallery', label: '图库' },
+  { key: 'sku', label: 'SKU' },
+  { key: 'versions', label: '版本' },
+  { key: 'business', label: '经营' },
 ];
-
-function readSearch(searchParams) {
-  return {
-    platform: searchParams.get('platform') || 'ozon',
-    productId: searchParams.get('productId') || '',
-  };
-}
 
 function formatDate(value) {
   if (!value) return '-';
@@ -58,193 +42,180 @@ function formatHash(value) {
   return value.length > 18 ? `${value.slice(0, 12)}...` : value;
 }
 
-function buildSubmittedKey(filters) {
-  return `${filters.platform}:${filters.productId.trim()}`;
-}
+function getAssetChecks(item, skus = []) {
+  const imageCount = item?.image_urls?.length || 0;
+  const tagCount = item?.tags?.length || 0;
+  const skuCount = typeof item?.sku_count === 'number' ? item.sku_count : skus.length;
+  const skuImageCount = skus.filter((sku) => (sku.images || []).length > 0).length;
+  const checks = [
+    { key: 'title', label: '标题', ok: Boolean(item?.title), issue: '描述缺失' },
+    { key: 'description', label: '描述', ok: Boolean(item?.description), issue: '描述缺失' },
+    { key: 'mainImage', label: '主图', ok: Boolean(item?.main_image_url), issue: '缺主图' },
+    { key: 'gallery', label: '图库', ok: imageCount > 0, issue: '缺图库' },
+    { key: 'tags', label: '标签', ok: tagCount >= 3, issue: '标签不足' },
+    { key: 'sku', label: 'SKU', ok: skuCount > 0, issue: '缺SKU' },
+  ];
 
-async function copyText(value, setFeedback) {
-  if (!value) return;
-  try {
-    await navigator.clipboard.writeText(String(value));
-    setFeedback(`已复制：${value}`);
-  } catch {
-    setFeedback('复制失败，请检查浏览器剪贴板权限');
+  if (skus.length) {
+    checks.push({
+      key: 'skuImages',
+      label: 'SKU图片',
+      ok: skuImageCount === skus.length,
+      issue: '缺SKU图片',
+    });
   }
+
+  return checks;
 }
 
-function CopyPill({ label, value, onCopy }) {
+function getAssetStatus(item, skus = []) {
+  const failed = getAssetChecks(item, skus).filter((check) => !check.ok);
+  if (!failed.length) return { label: '正常', tone: 'success' };
+  if (failed.some((check) => check.key === 'mainImage')) return { label: '缺主图', tone: 'danger' };
+  if (failed.some((check) => check.key === 'gallery')) return { label: '缺图库', tone: 'warning' };
+  if (failed.some((check) => check.key === 'skuImages')) return { label: '缺SKU图片', tone: 'warning' };
+  if (failed.some((check) => check.key === 'tags')) return { label: '标签不足', tone: 'warning' };
+  return { label: '待确认', tone: 'warning' };
+}
+
+function StatusPill({ status }) {
+  return <span className={`product-content-status is-${status.tone}`}>{status.label}</span>;
+}
+
+function SummaryCard({ label, value, tone = 'neutral' }) {
   return (
-    <button type="button" className="product-content-copy-pill" onClick={() => onCopy(value)}>
+    <article className={`product-content-browser-metric is-${tone}`}>
       <span>{label}</span>
-      <strong>{formatText(value)}</strong>
-    </button>
+      <strong>{value}</strong>
+    </article>
+  );
+}
+
+function FieldBlock({ label, children }) {
+  return (
+    <section className="product-content-field-block">
+      <small>{label}</small>
+      <div>{children}</div>
+    </section>
   );
 }
 
 export function ProductContentPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [filters, setFilters] = useState(() => readSearch(searchParams));
-  const [submittedFilters, setSubmittedFilters] = useState(() => readSearch(searchParams));
+  const [filters, setFilters] = useState(defaultFilters);
+  const [selectedProductId, setSelectedProductId] = useState('');
   const [selectedContentId, setSelectedContentId] = useState(null);
-  const [copyFeedback, setCopyFeedback] = useState('');
+  const [activeTab, setActiveTab] = useState('description');
 
-  const hasQuery = Boolean(submittedFilters.productId.trim());
-  const submittedKey = buildSubmittedKey(submittedFilters);
-
-  useEffect(() => {
-    const next = new URLSearchParams();
-    if (submittedFilters.platform) next.set('platform', submittedFilters.platform);
-    if (submittedFilters.productId) next.set('productId', submittedFilters.productId);
-    setSearchParams(next, { replace: true });
-  }, [submittedFilters, setSearchParams]);
-
-  useEffect(() => {
-    if (!copyFeedback) return undefined;
-    const timer = window.setTimeout(() => setCopyFeedback(''), 1800);
-    return () => window.clearTimeout(timer);
-  }, [copyFeedback]);
-
-  const latestQuery = useQuery({
-    queryKey: ['product-content', 'latest', submittedKey],
-    queryFn: () => fetchProductContent({
-      platform: submittedFilters.platform,
-      productId: submittedFilters.productId.trim(),
-      latest: true,
-    }),
-    enabled: hasQuery,
+  const listQuery = useQuery({
+    queryKey: ['product-content', 'browser-list', filters.platform],
+    queryFn: () => fetchProductContent({ platform: filters.platform }),
   });
+
+  const allItems = listQuery.data?.items || [];
+
+  const filteredItems = useMemo(() => {
+    const keyword = filters.keyword.trim().toLowerCase();
+    return allItems.filter((item) => {
+      const status = getAssetStatus(item);
+      const matchesKeyword = !keyword
+        || String(item.platform_product_id || '').toLowerCase().includes(keyword)
+        || String(item.title || '').toLowerCase().includes(keyword);
+      const matchesStatus = filters.status === 'all' || status.label === filters.status;
+      const matchesHistory = filters.hasHistory === 'all'
+        || (filters.hasHistory === 'yes' && Number(item.version_count || 0) > 1)
+        || (filters.hasHistory === 'no' && Number(item.version_count || 0) <= 1);
+      return matchesKeyword && matchesStatus && matchesHistory;
+    });
+  }, [allItems, filters]);
+
+  const selectedListItem = useMemo(
+    () => allItems.find((item) => item.platform_product_id === selectedProductId) || null,
+    [allItems, selectedProductId],
+  );
 
   const historyQuery = useQuery({
-    queryKey: ['product-content', 'history', submittedKey],
+    queryKey: ['product-content', 'history', filters.platform, selectedProductId],
     queryFn: () => fetchProductContent({
-      platform: submittedFilters.platform,
-      productId: submittedFilters.productId.trim(),
+      platform: filters.platform,
+      productId: selectedProductId,
       latest: false,
     }),
-    enabled: hasQuery,
-  });
-
-  const businessQuery = useQuery({
-    queryKey: ['product-business-latest', submittedKey],
-    queryFn: () => fetchProductBusinessLatest({
-      platform: submittedFilters.platform,
-      productId: submittedFilters.productId.trim(),
-    }),
-    enabled: hasQuery,
+    enabled: Boolean(selectedProductId),
   });
 
   const historyItems = historyQuery.data?.items || [];
-  const latestItem = latestQuery.data?.item || null;
-  const businessItem = businessQuery.data?.item || null;
 
   useEffect(() => {
-    if (!historyItems.length) {
-      setSelectedContentId(null);
-      return;
+    if (!selectedProductId) return;
+    const nextItem = historyItems[0] || selectedListItem;
+    if (nextItem && !historyItems.some((item) => item.id === selectedContentId)) {
+      setSelectedContentId(nextItem.id);
     }
-    setSelectedContentId((current) => {
-      if (current && historyItems.some((item) => item.id === current)) {
-        return current;
-      }
-      return historyItems[0].id;
-    });
-  }, [historyItems]);
+  }, [historyItems, selectedContentId, selectedListItem, selectedProductId]);
 
-  const selectedHistoryItem = useMemo(
-    () => historyItems.find((item) => item.id === selectedContentId) || null,
-    [historyItems, selectedContentId],
+  const selectedItem = useMemo(
+    () => historyItems.find((item) => item.id === selectedContentId) || selectedListItem,
+    [historyItems, selectedContentId, selectedListItem],
   );
 
   const skusQuery = useQuery({
     queryKey: ['product-content-skus', selectedContentId],
     queryFn: () => fetchProductContentSkus(selectedContentId),
-    enabled: Boolean(selectedContentId) && selectedContentId !== latestItem?.id,
+    enabled: Boolean(selectedContentId),
   });
 
-  const selectedItem = selectedHistoryItem || latestItem;
-  const selectedSkus = selectedContentId === latestItem?.id
-    ? (latestQuery.data?.skus || [])
-    : (skusQuery.data?.skus || []);
-  const isInitialLoading = hasQuery && (latestQuery.isLoading || historyQuery.isLoading);
-  const isMissing = hasQuery && !isInitialLoading && !latestItem;
+  const businessQuery = useQuery({
+    queryKey: ['product-business-latest', filters.platform, selectedProductId],
+    queryFn: () => fetchProductBusinessLatest({
+      platform: filters.platform,
+      productId: selectedProductId,
+    }),
+    enabled: Boolean(selectedProductId),
+  });
 
-  const metricCards = [
-    { label: '最新采集', value: selectedItem ? formatDate(selectedItem.captured_at) : '-' },
-    { label: '历史版本', value: String(historyQuery.data?.total || 0) },
-    { label: '当前 SKU 数', value: String(selectedSkus.length) },
-  ];
+  const selectedSkus = skusQuery.data?.skus || [];
+  const businessItem = businessQuery.data?.item || null;
+  const detailStatus = selectedItem ? getAssetStatus(selectedItem, selectedSkus) : null;
+  const detailChecks = selectedItem ? getAssetChecks(selectedItem, selectedSkus) : [];
 
-  const contentSummaryCards = selectedItem ? [
-    { label: '标题长度', value: String((selectedItem.title || '').length) },
-    { label: '标签数量', value: String((selectedItem.tags || []).length) },
-    { label: '图片数量', value: String((selectedItem.image_urls || []).length) },
-    { label: 'SKU 数量', value: String(selectedSkus.length) },
-  ] : [];
-
-  const businessCards = businessItem ? [
-    { label: '销量', value: formatNumber(businessItem.sales_volume) },
-    { label: '销售额', value: formatCurrency(businessItem.sales_amount_cny, 'CNY') },
-    { label: '均价', value: formatCurrency(businessItem.avg_price_cny, 'CNY') },
-    { label: '毛利率', value: formatPercent(businessItem.estimated_gross_margin) },
-  ] : [];
-
-  const submitSearch = (event) => {
-    event.preventDefault();
-    setSubmittedFilters({
-      platform: filters.platform || 'ozon',
-      productId: filters.productId.trim(),
-    });
-  };
-
-  const resetSearch = () => {
-    setFilters(defaultSearch);
-    setSubmittedFilters(defaultSearch);
-    setSelectedContentId(null);
-  };
-
-  const applyDemo = (productId) => {
-    const next = {
-      platform: 'ozon',
-      productId,
+  const summary = useMemo(() => {
+    const problemItems = allItems.filter((item) => getAssetStatus(item).label !== '正常');
+    const missingImages = allItems.filter((item) => !item.main_image_url || !(item.image_urls || []).length);
+    const missingSkus = allItems.filter((item) => !Number(item.sku_count || 0));
+    const today = new Date().toISOString().slice(0, 10);
+    const todayItems = allItems.filter((item) => String(item.captured_at || '').slice(0, 10) === today);
+    return {
+      total: allItems.length,
+      problem: problemItems.length,
+      missingImages: missingImages.length,
+      missingSkus: missingSkus.length,
+      today: todayItems.length,
+      latest: allItems[0]?.captured_at,
     };
-    setFilters(next);
-    setSubmittedFilters(next);
+  }, [allItems]);
+
+  const openDetail = (item) => {
+    setSelectedProductId(item.platform_product_id);
+    setSelectedContentId(item.id);
+    setActiveTab('description');
+  };
+
+  const resetFilters = () => {
+    setFilters(defaultFilters);
   };
 
   return (
     <div className="wb-page product-content-page">
-      <section className="wb-page-hero product-content-hero">
-        <div className="product-content-hero-main">
-          <p className="wb-kicker">Content QA</p>
-          <h2>商品内容资产</h2>
-          <p>
-            这个页面专门用来核对内容版本，不混入经营快照。重点看 4 件事：标题描述是否正确、标签是否合理、
-            图片是否齐全、SKU 与价格图片的映射是否稳定。
-          </p>
-          <div className="product-content-demo-strip">
-            {demoProducts.map((demo) => (
-              <button key={demo.productId} type="button" onClick={() => applyDemo(demo.productId)}>
-                <strong>{demo.label}</strong>
-                <span>{demo.productId}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="product-content-hero-side">
-          {metricCards.map((card) => (
-            <article key={card.label} className="wb-hero-card">
-              <span>{card.label}</span>
-              <strong>{card.value}</strong>
-            </article>
-          ))}
+      <section className="product-content-browser-head">
+        <div>
+          <p className="wb-kicker">Content Assets</p>
+          <h2>商品内容资产浏览器</h2>
+          <p>按商品浏览已采集的标题、描述、标签、图片、SKU 图片和历史版本，列表负责定位，详情抽屉负责核查。</p>
         </div>
       </section>
 
-      <Panel
-        title="内容资产检索"
-        subtitle="围绕 platform + platform_product_id 查询内容版本；下方 3 个示例商品已写入当前数据库"
-      >
-        <form className="wb-filter-grid product-content-search-grid" onSubmit={submitSearch}>
+      <Panel title="筛选" subtitle="默认展示每个商品最新一条内容资产，点击表格行查看完整详情。">
+        <div className="product-content-browser-filter">
           <label className="wb-field">
             <span>平台</span>
             <select
@@ -254,72 +225,248 @@ export function ProductContentPage() {
               <option value="ozon">ozon</option>
             </select>
           </label>
-
-          <label className="wb-field wb-field-span-2">
-            <span>平台商品 ID</span>
+          <label className="wb-field">
+            <span>商品ID / 标题</span>
             <input
-              value={filters.productId}
-              onChange={(event) => setFilters((current) => ({ ...current, productId: event.target.value }))}
-              placeholder="例如 demo-content-ornament-001"
+              value={filters.keyword}
+              onChange={(event) => setFilters((current) => ({ ...current, keyword: event.target.value }))}
+              placeholder="输入关键词筛选"
             />
           </label>
-
-          <div className="wb-inline-actions product-content-search-actions">
-            <button className="wb-button wb-button-primary" type="submit">查询内容资产</button>
-            <button className="wb-button ghost" type="button" onClick={resetSearch}>重置</button>
-          </div>
-        </form>
+          <label className="wb-field">
+            <span>内容状态</span>
+            <select
+              value={filters.status}
+              onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}
+            >
+              <option value="all">全部</option>
+              <option value="正常">正常</option>
+              <option value="待确认">待确认</option>
+              <option value="缺主图">缺主图</option>
+              <option value="缺图库">缺图库</option>
+              <option value="缺SKU图片">缺SKU图片</option>
+              <option value="标签不足">标签不足</option>
+            </select>
+          </label>
+          <label className="wb-field">
+            <span>历史版本</span>
+            <select
+              value={filters.hasHistory}
+              onChange={(event) => setFilters((current) => ({ ...current, hasHistory: event.target.value }))}
+            >
+              <option value="all">全部</option>
+              <option value="yes">有历史版本</option>
+              <option value="no">仅单版本</option>
+            </select>
+          </label>
+          <button className="wb-button ghost" type="button" onClick={resetFilters}>重置</button>
+        </div>
       </Panel>
 
-      {latestQuery.isError ? <div className="wb-feedback is-error">读取最新内容资产失败：{latestQuery.error.message}</div> : null}
-      {historyQuery.isError ? <div className="wb-feedback is-error">读取历史版本失败：{historyQuery.error.message}</div> : null}
-      {skusQuery.isError ? <div className="wb-feedback is-error">读取 SKU 资产失败：{skusQuery.error.message}</div> : null}
-      {businessQuery.isError ? <div className="wb-feedback is-error">读取经营快照失败：{businessQuery.error.message}</div> : null}
-      {copyFeedback ? <div className="wb-feedback">{copyFeedback}</div> : null}
-      {isInitialLoading ? <div className="wb-feedback is-busy">正在读取商品内容资产和版本历史...</div> : null}
+      <div className="product-content-browser-metrics">
+        <SummaryCard label="商品数" value={summary.total} />
+        <SummaryCard label="待处理" value={summary.problem} tone={summary.problem ? 'warning' : 'success'} />
+        <SummaryCard label="缺图片" value={summary.missingImages} tone={summary.missingImages ? 'warning' : 'success'} />
+        <SummaryCard label="缺SKU" value={summary.missingSkus} tone={summary.missingSkus ? 'warning' : 'success'} />
+        <SummaryCard label="今日新增" value={summary.today} />
+        <SummaryCard label="最近采集" value={formatDate(summary.latest)} />
+      </div>
 
-      {!hasQuery ? (
-        <Panel title="示例商品" subtitle="直接点击即可查看页面效果，不需要自己先准备数据">
-          <div className="product-content-demo-grid">
-            {demoProducts.map((demo) => (
-              <button
-                key={demo.productId}
-                type="button"
-                className="product-content-demo-card"
-                onClick={() => applyDemo(demo.productId)}
-              >
-                <strong>{demo.label}</strong>
-                <span>{demo.productId}</span>
-                <small>{demo.description}</small>
-              </button>
-            ))}
-          </div>
-        </Panel>
-      ) : null}
+      {listQuery.isError ? <div className="wb-feedback is-error">读取内容资产列表失败：{listQuery.error.message}</div> : null}
+      {listQuery.isLoading ? <div className="wb-feedback is-busy">正在读取商品内容资产列表...</div> : null}
 
-      {isMissing ? (
-        <Panel title="查询结果" subtitle={`未找到 ${submittedFilters.platform} / ${submittedFilters.productId} 的内容资产`}>
-          <div className="product-content-empty">
-            <strong>没有内容资产数据</strong>
-            <p>当前商品还没有写入 `product_content_assets`，或者平台商品 ID 输入不正确。</p>
-          </div>
-        </Panel>
-      ) : null}
-
-      {hasQuery && selectedItem ? (
-        <div className="product-content-layout">
-          <Panel
-            title="版本列表"
-            subtitle={`当前商品共 ${historyQuery.data?.total || 0} 个内容版本，最新版本默认排在最上面`}
-          >
-            <div className="product-content-version-list">
-              {historyItems.map((item, index) => {
-                const isActive = item.id === selectedItem.id;
+      <Panel
+        title="内容资产列表"
+        subtitle={`当前筛选结果 ${filteredItems.length} 条，表格每行对应一个平台商品。`}
+      >
+        <div className="wb-table-wrap product-content-table-wrap">
+          <table className="wb-table product-content-table">
+            <thead>
+              <tr>
+                <th>主图</th>
+                <th>商品标题</th>
+                <th>平台</th>
+                <th>平台商品ID</th>
+                <th>状态</th>
+                <th>图片</th>
+                <th>SKU</th>
+                <th>标签</th>
+                <th>版本</th>
+                <th>最新采集</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredItems.map((item) => {
+                const status = getAssetStatus(item);
                 return (
+                  <tr key={item.id} className={selectedProductId === item.platform_product_id ? 'is-selected' : ''}>
+                    <td>
+                      {item.main_image_url ? (
+                        <img className="product-content-thumb" src={item.main_image_url} alt="" loading="lazy" />
+                      ) : (
+                        <div className="product-content-thumb is-empty">无图</div>
+                      )}
+                    </td>
+                    <td>
+                      <button type="button" className="product-content-title-button" onClick={() => openDetail(item)}>
+                        {formatText(item.title)}
+                      </button>
+                    </td>
+                    <td>{formatText(item.platform)}</td>
+                    <td className="product-content-id-cell">{formatText(item.platform_product_id)}</td>
+                    <td><StatusPill status={status} /></td>
+                    <td>{item.main_image_url ? 1 : 0} / {(item.image_urls || []).length}</td>
+                    <td>{item.sku_count ?? 0}</td>
+                    <td>{(item.tags || []).length}</td>
+                    <td>{item.version_count ?? 1}</td>
+                    <td>{formatDate(item.captured_at)}</td>
+                    <td>
+                      <button type="button" className="wb-button ghost" onClick={() => openDetail(item)}>查看</button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {!filteredItems.length && !listQuery.isLoading ? (
+                <tr>
+                  <td colSpan="11" className="wb-empty-cell">没有符合筛选条件的内容资产</td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+
+      {selectedItem ? (
+        <div className="product-content-drawer-backdrop" onClick={() => setSelectedProductId('')}>
+          <aside className="product-content-drawer" onClick={(event) => event.stopPropagation()}>
+            <div className="product-content-drawer-head">
+              <h3>{formatText(selectedItem.title)}</h3>
+              <button type="button" className="product-content-drawer-close" onClick={() => setSelectedProductId('')}>关闭</button>
+            </div>
+
+            <div className="product-content-info-card">
+              <div className="product-content-info-card-image">
+                {selectedItem.main_image_url ? (
+                  <img src={selectedItem.main_image_url} alt="" loading="lazy" />
+                ) : (
+                  <div className="product-content-image-empty">暂无主图</div>
+                )}
+              </div>
+              <div className="product-content-info-card-details">
+                <div className="product-content-info-card-row">
+                  <span className="product-content-info-card-label">商品ID</span>
+                  <span>{formatText(selectedItem.platform_product_id)}</span>
+                </div>
+                <div className="product-content-info-card-row">
+                  <span className="product-content-info-card-label">状态</span>
+                  <StatusPill status={detailStatus} />
+                </div>
+                <div className="product-content-info-card-row">
+                  <span className="product-content-info-card-label">标签</span>
+                  <div className="product-content-tag-list">
+                    {(selectedItem.tags || []).length
+                      ? selectedItem.tags.map((tag) => <span key={String(tag)}>{String(tag)}</span>)
+                      : <em>暂无标签</em>}
+                  </div>
+                </div>
+                <div className="product-content-info-card-checks">
+                  {detailChecks
+                    .filter((c) => ['mainImage', 'gallery', 'sku', 'skuImages'].includes(c.key))
+                    .map((check) => (
+                      <span
+                        key={check.key}
+                        className={`product-content-info-card-check ${check.ok ? 'is-ok' : 'is-warning'}`}
+                      >
+                        {check.ok ? '✓' : '⚠'} {check.label}
+                      </span>
+                    ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="product-content-drawer-tabs">
+              {detailTabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  className={activeTab === tab.key ? 'is-active' : ''}
+                  onClick={() => setActiveTab(tab.key)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {historyQuery.isLoading || skusQuery.isLoading ? (
+              <div className="wb-feedback is-busy">正在读取详情...</div>
+            ) : null}
+
+            {activeTab === 'description' ? (
+              <div className="product-content-drawer-body">
+                <FieldBlock label="描述">
+                  {selectedItem.description
+                    ? <p>{formatText(selectedItem.description)}</p>
+                    : <em>暂无描述</em>}
+                </FieldBlock>
+                <FieldBlock label="基础信息">
+                  <div className="product-content-meta-grid">
+                    <span>平台：{formatText(selectedItem.platform)}</span>
+                    <span>版本ID：{selectedItem.id}</span>
+                    <span>采集时间：{formatDate(selectedItem.captured_at)}</span>
+                    <span>内容哈希：{formatHash(selectedItem.content_hash)}</span>
+                  </div>
+                </FieldBlock>
+              </div>
+            ) : null}
+
+            {activeTab === 'gallery' ? (
+              <div className="product-content-drawer-body">
+                <div className="product-content-drawer-gallery">
+                  {(selectedItem.image_urls || []).length
+                    ? selectedItem.image_urls.map((url, index) => <img key={`${url}-${index}`} src={url} alt="" loading="lazy" />)
+                    : <div className="product-content-image-empty">暂无图库</div>}
+                </div>
+              </div>
+            ) : null}
+
+            {activeTab === 'sku' ? (
+              <div className="product-content-drawer-body product-content-sku-list">
+                {selectedSkus.length ? selectedSkus.map((sku) => (
+                  <article key={sku.id} className="product-content-sku-card">
+                    <div className="product-content-sku-head">
+                      <div>
+                        <small>SKU</small>
+                        <strong>{formatText(sku.sku_name || sku.platform_sku_id)}</strong>
+                      </div>
+                      <div className="product-content-sku-price">
+                        <small>价格</small>
+                        <strong>{formatCurrency(sku.price, sku.currency_code || 'CNY')}</strong>
+                      </div>
+                    </div>
+                    <div className="product-content-meta-grid">
+                      <span>平台SKU：{formatText(sku.platform_sku_id)}</span>
+                      <span>图片数：{sku.images?.length || 0}</span>
+                    </div>
+                    <div className="product-content-drawer-gallery">
+                      {sku.images?.length
+                        ? sku.images.map((url, index) => <img key={`${sku.id}-${index}`} src={url} alt="" loading="lazy" />)
+                        : <div className="product-content-image-empty">暂无 SKU 图片</div>}
+                    </div>
+                  </article>
+                )) : (
+                  <div className="product-content-empty">当前版本没有 SKU 数据</div>
+                )}
+              </div>
+            ) : null}
+
+            {activeTab === 'versions' ? (
+              <div className="product-content-drawer-body product-content-version-list">
+                {historyItems.map((item, index) => (
                   <button
                     key={item.id}
                     type="button"
-                    className={`product-content-version-card ${isActive ? 'is-active' : ''}`}
+                    className={`product-content-version-card ${item.id === selectedItem.id ? 'is-active' : ''}`}
                     onClick={() => setSelectedContentId(item.id)}
                   >
                     <div className="product-content-version-head">
@@ -330,156 +477,35 @@ export function ProductContentPage() {
                     <small>hash: {formatHash(item.content_hash)}</small>
                     <small>SKU: {item.sku_count ?? '-'}</small>
                   </button>
-                );
-              })}
-            </div>
-          </Panel>
-
-          <div className="product-content-main-column">
-            <Panel
-              title="内容概览"
-              subtitle={`当前查看 ${selectedItem.platform} / ${selectedItem.platform_product_id}`}
-            >
-              <div className="product-content-summary-grid">
-                {contentSummaryCards.map((card) => (
-                  <article key={card.label} className="product-content-summary-card">
-                    <span>{card.label}</span>
-                    <strong>{card.value}</strong>
-                  </article>
                 ))}
               </div>
+            ) : null}
 
-              <div className="product-content-copy-row">
-                <CopyPill label="商品 ID" value={selectedItem.platform_product_id} onCopy={(value) => copyText(value, setCopyFeedback)} />
-                <CopyPill label="内容哈希" value={selectedItem.content_hash} onCopy={(value) => copyText(value, setCopyFeedback)} />
-                <CopyPill label="版本 ID" value={selectedItem.id} onCopy={(value) => copyText(value, setCopyFeedback)} />
-              </div>
-
-              <div className="product-content-detail">
-                <div className="product-content-meta-strip">
-                  <span>平台：{formatText(selectedItem.platform)}</span>
-                  <span>商品 ID：{formatText(selectedItem.platform_product_id)}</span>
-                  <span>采集时间：{formatDate(selectedItem.captured_at)}</span>
-                  <span>内容哈希：{formatText(selectedItem.content_hash)}</span>
-                </div>
-
-                <section className="product-content-section">
-                  <small>标题</small>
-                  <h3>{formatText(selectedItem.title)}</h3>
-                </section>
-
-                <section className="product-content-section">
-                  <small>描述</small>
-                  <p>{formatText(selectedItem.description)}</p>
-                </section>
-
-                <section className="product-content-section">
-                  <small>标签</small>
-                  <div className="product-content-tag-list">
-                    {(selectedItem.tags || []).length ? (selectedItem.tags || []).map((tag) => (
-                      <span key={String(tag)}>{String(tag)}</span>
-                    )) : <em>暂无标签</em>}
-                  </div>
-                </section>
-              </div>
-            </Panel>
-
-            <Panel title="经营快照" subtitle="补看这个商品最近一次经营表现，便于判断内容核对优先级">
-              {businessItem ? (
-                <div className="product-content-business-block">
-                  <div className="product-content-summary-grid">
-                    {businessCards.map((card) => (
-                      <article key={card.label} className="product-content-summary-card">
-                        <span>{card.label}</span>
-                        <strong>{card.value}</strong>
-                      </article>
-                    ))}
-                  </div>
-                  <div className="product-content-business-meta">
-                    <span>店铺：{formatText(businessItem.shop_name)}</span>
-                    <span>品牌：{formatText(businessItem.brand)}</span>
-                    <span>曝光：{formatNumber(businessItem.impressions)}</span>
-                    <span>点击：{formatNumber(businessItem.clicks)}</span>
-                    <span>转化率：{formatPercent(businessItem.order_conversion_rate)}</span>
-                    <span>物流：{formatText(businessItem.shipping_mode)} / {formatText(businessItem.delivery_time)}</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="product-content-empty">
-                  <strong>当前商品没有经营快照</strong>
-                  <p>内容资产已存在，但还没有关联到 `product_business_snapshots` 的最近经营记录。</p>
-                </div>
-              )}
-            </Panel>
-
-            <div className="product-content-asset-grid">
-              <Panel title="主图" subtitle="当前内容版本的主展示图">
-                {selectedItem.main_image_url ? (
-                  <img
-                    className="product-content-main-image"
-                    src={selectedItem.main_image_url}
-                    alt={selectedItem.title || selectedItem.platform_product_id}
-                    loading="lazy"
-                  />
+            {activeTab === 'business' ? (
+              <div className="product-content-drawer-body">
+                {businessItem ? (
+                  <>
+                    <div className="product-content-detail-metrics">
+                      <SummaryCard label="销量" value={formatNumber(businessItem.sales_volume)} />
+                      <SummaryCard label="销售额" value={formatCurrency(businessItem.sales_amount_cny, 'CNY')} />
+                      <SummaryCard label="均价" value={formatCurrency(businessItem.avg_price_cny, 'CNY')} />
+                      <SummaryCard label="毛利率" value={formatPercent(businessItem.estimated_gross_margin)} />
+                    </div>
+                    <div className="product-content-meta-grid">
+                      <span>店铺：{formatText(businessItem.shop_name)}</span>
+                      <span>品牌：{formatText(businessItem.brand)}</span>
+                      <span>曝光：{formatNumber(businessItem.impressions)}</span>
+                      <span>点击：{formatNumber(businessItem.clicks)}</span>
+                      <span>转化率：{formatPercent(businessItem.order_conversion_rate)}</span>
+                      <span>物流：{formatText(businessItem.shipping_mode)} / {formatText(businessItem.delivery_time)}</span>
+                    </div>
+                  </>
                 ) : (
-                  <div className="product-content-image-empty">暂无主图</div>
-                )}
-              </Panel>
-
-              <Panel title="图片画廊" subtitle="当前内容版本的多图列表">
-                <div className="product-content-gallery">
-                  {(selectedItem.image_urls || []).length ? (selectedItem.image_urls || []).map((url, index) => (
-                    <img
-                      key={`${selectedItem.id}-image-${index}`}
-                      src={url}
-                      alt=""
-                      loading="lazy"
-                    />
-                  )) : <div className="product-content-image-empty">暂无多图</div>}
-                </div>
-              </Panel>
-            </div>
-
-            <Panel title="SKU 资产" subtitle="当前版本下的 SKU 图片、价格与平台 SKU ID">
-              <div className="product-content-sku-list">
-                {selectedSkus.length ? selectedSkus.map((sku) => (
-                  <article key={sku.id} className="product-content-sku-card">
-                    <div className="product-content-sku-head">
-                      <div>
-                        <small>SKU 名称</small>
-                        <strong>{formatText(sku.sku_name)}</strong>
-                      </div>
-                      <div className="product-content-sku-price">
-                        <small>价格</small>
-                        <strong>{formatCurrency(sku.price, sku.currency_code || 'CNY')}</strong>
-                      </div>
-                    </div>
-                    <div className="product-content-sku-copy-row">
-                      <CopyPill label="SKU ID" value={sku.platform_sku_id} onCopy={(value) => copyText(value, setCopyFeedback)} />
-                      <CopyPill label="排序" value={sku.sort_order} onCopy={(value) => copyText(value, setCopyFeedback)} />
-                    </div>
-                    <div className="product-content-sku-meta">
-                      <span>采集时间：{formatDate(sku.captured_at)}</span>
-                      <span>图片数：{sku.images?.length || 0}</span>
-                    </div>
-                    <div className="product-content-sku-images">
-                      {sku.images?.length ? sku.images.map((url, index) => (
-                        <div key={`${sku.id}-${index}`} className="product-content-sku-image-card">
-                          <img src={url} alt="" loading="lazy" />
-                          <small>图 {index + 1}</small>
-                        </div>
-                      )) : <div className="product-content-image-empty">暂无 SKU 图片</div>}
-                    </div>
-                  </article>
-                )) : (
-                  <div className="product-content-empty">
-                    <strong>当前版本没有 SKU 数据</strong>
-                    <p>如果内容版本存在但 SKU 为空，说明该版本尚未写入 `product_content_skus`。</p>
-                  </div>
+                  <div className="product-content-empty">当前商品没有经营快照</div>
                 )}
               </div>
-            </Panel>
-          </div>
+            ) : null}
+          </aside>
         </div>
       ) : null}
     </div>
