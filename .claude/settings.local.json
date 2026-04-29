@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__browser-tools__getConsoleErrors",
+      "mcp__browser-tools__getNetworkErrors",
+      "Bash(node -e \"import\\('./scripts/图片压缩工具/compress-images-to-jpg.mjs'\\).then\\(m => console.log\\('exports:', Object.keys\\(m\\)\\)\\).catch\\(e => console.error\\('import error:', e.message\\)\\)\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(node -e \"import\\('./scripts/商品视频生成工具/generate-product-video.mjs'\\).then\\(m => console.log\\('exports:', Object.keys\\(m\\)\\)\\).catch\\(e => console.error\\('error:', e.message\\)\\)\")",
+      "Bash(node -e \"import\\('./backend/menglar-workbench-api/server.mjs'\\).then\\(m => console.log\\('server OK, exports:', Object.keys\\(m\\)\\)\\).catch\\(e => console.error\\('error:', e.message\\)\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(git status *)"
+    ]
+  }
+}
