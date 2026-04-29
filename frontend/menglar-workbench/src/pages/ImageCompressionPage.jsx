@@ -251,6 +251,41 @@ export function ImageCompressionPage() {
                   </details>
                 ))}
               </div>
+
+              {videoResult ? (
+                <div className="image-compression-video-result">
+                  <div className="image-compression-output">
+                    <span>视频生成</span>
+                    <strong>已自动生成商品视频</strong>
+                  </div>
+                  <div className="image-compression-summary">
+                    <Metric label="生成视频" value={`${videoResult.totalVideos} 个`} />
+                    <Metric label="处理图片" value={`${videoResult.totalImages} 张`} />
+                    <Metric label="视频时长" value={`${videoResult.duration} 秒`} />
+                    <Metric label="分辨率" value={`${videoResult.resolution?.width ?? 1920}×${videoResult.resolution?.height ?? 1080}`} />
+                  </div>
+                  <div className="image-compression-directory-list">
+                    {videoResult.directories.map((dir) => (
+                      <details className="image-compression-directory" key={dir.sourceDir} open>
+                        <summary>
+                          <span>{dir.sourceDir}</span>
+                          <strong>{dir.error ? '失败' : `${dir.imageCount} 张 / ${formatBytes(dir.fileSize)}`}</strong>
+                        </summary>
+                        {dir.error ? (
+                          <div className="image-compression-output">
+                            <span>{dir.error}</span>
+                          </div>
+                        ) : (
+                          <div className="image-compression-output">
+                            <span>输出视频</span>
+                            <strong>{dir.videoPath}</strong>
+                          </div>
+                        )}
+                      </details>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
           )}
         </Panel>
