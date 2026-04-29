@@ -98,6 +98,16 @@ ON product_selection_items(source_platform, source_platform_product_id);
 | `created_at` | text | 是 | 记录创建时间 |
 | `updated_at` | text | 是 | 记录更新时间 |
 
+## 5.1 测价字段计算口径
+
+商品筛选工作台的测价弹窗复用前端 Ozon 快速定价计算模块生成结果，不新增字段。
+
+- `initial_cost_price`：写回用户在测价弹窗中确认使用的采购成本。
+- `initial_delivery_cost`：写回用户在测价弹窗中确认使用的跨境物流成本，默认可沿用入池时自动测算值，也可手动覆盖。
+- `initial_target_price`：写回快速定价计算出的预估折后售价。
+- `initial_profit_rate`：写回快速定价计算出的利润率，单位为百分数。
+- 总成本和利润金额为页面即时展示值，由采购、物流、佣金、提现、退货损耗等费用计算得到，当前不单独落库。
+
 ## 6. 建议枚举
 
 ### 6.1 `selection_stage`
