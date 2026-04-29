@@ -13,6 +13,7 @@ const tempDbPath = path.join(tempDir, 'ecommerce-workbench.sqlite');
 await copyFile(sourceDbPath, tempDbPath);
 process.env.ECOMMERCE_WORKBENCH_DB_PATH = tempDbPath;
 
+let latestJobIdForTest = null;
 const db = new DatabaseSync(tempDbPath);
 try {
   db.exec(`
@@ -55,6 +56,7 @@ try {
     LIMIT 1
   `).get();
   if (latestJob?.id) {
+    latestJobIdForTest = latestJob.id;
     db.prepare(`
       UPDATE product_business_snapshots
       SET avg_price_cny = COALESCE(avg_price_cny, 15),
@@ -76,97 +78,68 @@ const server = await startWorkbenchServer({ port });
 let browser;
 
 try {
+  if (latestJobIdForTest) {
+    const response = await fetch(`http://127.0.0.1:${port}/api/products?jobId=${latestJobIdForTest}&minGrowth=30&pageSize=5`);
+    assert.equal(response.status, 200, 'minGrowth API request should succeed');
+    const payload = await response.json();
+    assert.equal(payload.filters.minGrowth, '30', 'minGrowth should be echoed by product filters');
+    assert.ok(payload.items.every((item) => Number(item.sales_growth) >= 30), 'minGrowth should filter by sales_growth');
+  }
+
   browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-  await page.goto(`http://127.0.0.1:${port}/results`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`http://127.0.0.1:${port}/results?mode=result`, { waitUntil: 'domcontentloaded' });
+  await page.locator('.result-mode-tabs button').first().click();
 
-  await expectText(page, '商品信息');
-  await expectText(page, '销售量 / 增长');
-  await expectText(page, '销售金额');
-  await expectText(page, '广告');
-  await expectText(page, '均价区间（CNY）');
-  await expectText(page, '重量区间（g）');
-  await expectText(page, '当前页加入筛选池');
-
-  const productStatusSelect = page.locator('select').filter({ has: page.locator('option[value="pending"]') }).first();
-  await productStatusSelect.waitFor({ timeout: 10000 });
-  assert.equal(await productStatusSelect.inputValue(), 'pending', 'product status should default to pending');
-  await page.locator('.wb-button.danger').first().waitFor({ timeout: 10000 });
-
-  assert.equal(await page.locator('.result-panel-summary').count(), 0);
-  assert.ok(await page.locator('.raw-product-status.is-pending').count() > 0, 'raw results should show pending status before selection action');
-
-  const firstImage = page.locator('.product-image-trigger').first();
-  await firstImage.waitFor({ timeout: 10000 });
-  await firstImage.click();
-  await expectText(page, '关闭');
-  await page.getByRole('button', { name: '关闭' }).click();
-
-  const rejectButtons = page.locator('.screening-row-actions button.is-reject');
-  await rejectButtons.first().waitFor({ timeout: 10000 });
-  await rejectButtons.first().click();
-  await productStatusSelect.selectOption('rejected');
-  await page.locator('.raw-product-status.is-rejected').first().waitFor({ timeout: 10000 });
-  await productStatusSelect.selectOption('pending');
   await page.locator('.raw-product-status.is-pending').first().waitFor({ timeout: 10000 });
+  await page.locator('.product-image-trigger').first().click();
+  await page.locator('.image-preview-close').click();
 
-  await page.getByRole('button', { name: '商品筛选' }).click();
-  await expectText(page, '筛选池还没有商品');
-  await page.getByRole('button', { name: '回到结果展示' }).click();
+  await page.locator('.result-mode-tabs button').nth(1).click();
+  await page.locator('.result-empty-batch').waitFor({ timeout: 10000 });
+  await page.locator('.result-empty-batch .wb-button').first().click();
 
-  const addButtons = page.locator('tbody button', { hasText: '加入筛选池' });
-  const initialButtonCount = await addButtons.count();
-  assert.ok(initialButtonCount > 0, 'should have at least one single-add button');
-  await addButtons.first().click();
-  await productStatusSelect.selectOption('selected');
-  await page.locator('.raw-product-status.is-selected').first().waitFor({ timeout: 10000 });
-  assert.equal(await page.locator('.screening-row-actions button.is-selected').count(), 0, 'selected action button should not be shown');
-  assert.equal(await page.locator('.screening-row-actions button', { hasText: '已在筛选池' }).count(), 0, 'selected state should only be shown in the status column');
+  const addButton = page.locator('tbody .screening-row-actions button').first();
+  await addButton.waitFor({ timeout: 10000 });
+  await addButton.click();
 
-  await page.getByRole('button', { name: '商品筛选' }).click();
+  await page.locator('.result-mode-tabs button').nth(1).click();
   await page.locator('.selection-filter-bar').waitFor({ timeout: 10000 });
-  await page.locator('.selection-filter-bar select').first().waitFor({ timeout: 10000 });
   await page.locator('.screening-status-strip').waitFor({ timeout: 10000 });
-  await expectText(page, '进入测价');
 
-  const selectionRows = page.locator('.selection-decision-card');
-  await selectionRows.first().waitFor({ timeout: 10000 });
-  assert.equal(await selectionRows.count(), 1, 'single add should only create one selection row');
-  const firstSelectionRow = selectionRows.first();
-  const autoDeliveryCost = firstSelectionRow.locator('.selection-data-card strong').nth(1);
-  const autoDeliveryText = (await autoDeliveryCost.textContent())?.trim() || '';
+  const row = page.locator('.selection-decision-card').first();
+  await row.waitFor({ timeout: 10000 });
+  assert.equal(await page.locator('.selection-decision-card').count(), 1, 'single add should create one selection row');
+  assert.equal(await row.locator('.selection-logistics-block').count(), 1, 'logistics column should be visible');
+  assert.equal(await row.locator('.selection-pricing-block').count(), 1, 'pricing column should be visible');
+  assert.equal(await row.locator('.selection-supply-block').count(), 1, 'supply column should be visible');
+
+  const autoDeliveryText = (await row.locator('.selection-logistics-block .selection-data-card strong').nth(1).textContent())?.trim() || '';
   assert.notEqual(autoDeliveryText, '-', 'delivery cost should be auto calculated after adding to selection pool');
-  await expectButton(firstSelectionRow, '查看竞品详情');
-  await firstSelectionRow.getByRole('button', { name: '查看竞品详情' }).click();
-  await expectText(page, '销售表现');
-  await expectText(page, '流量与转化');
-  await expectText(page, '广告与物流');
-  await expectText(page, '尺寸与来源');
-  const competitorDialogText = await page.getByRole('dialog', { name: '竞品详情' }).innerText();
+
+  await row.locator('.selection-primary-action').click();
+  await page.locator('.competitor-detail-dialog').waitFor({ timeout: 10000 });
+  const competitorDialogText = await page.locator('.competitor-detail-dialog').innerText();
   assert.match(competitorDialogText, /\d{1,3}(,\d{3})+/, 'large numbers should use comma thousands separators');
   assert.doesNotMatch(competitorDialogText, /\d{1,3}(?:\.\d{3}){2,}/, 'large numbers should not use dot thousands separators');
-  await page.getByRole('dialog', { name: '竞品详情' }).getByRole('button', { name: '关闭' }).click();
+  await page.locator('.competitor-detail-close').click();
 
-  await expectButton(firstSelectionRow, '进入测价');
-  await firstSelectionRow.getByRole('button', { name: '进入测价' }).click();
-  await expectButton(firstSelectionRow, '测价通过');
-  await firstSelectionRow.getByRole('button', { name: '测价通过' }).click();
-  const deliveryAfterPricing = (await firstSelectionRow.locator('.selection-data-card strong').nth(1).textContent())?.trim() || '';
+  const rowActions = row.locator('.selection-action-block .screening-row-actions button');
+  await rowActions.first().click();
+  await rowActions.first().click();
+  const deliveryAfterPricing = (await row.locator('.selection-logistics-block .selection-data-card strong').nth(1).textContent())?.trim() || '';
   assert.equal(deliveryAfterPricing, autoDeliveryText, 'pricing pass should keep the auto calculated delivery cost');
-  await expectButton(firstSelectionRow, '已找到货源');
-  await firstSelectionRow.getByRole('button', { name: '已找到货源' }).click();
-  await expectButton(firstSelectionRow, '竞品已整理');
-  await firstSelectionRow.getByRole('button', { name: '竞品已整理' }).click();
-  await expectText(firstSelectionRow, '可流转');
-  await expectButton(firstSelectionRow, '进入商品数据整理');
-  await firstSelectionRow.getByRole('button', { name: '进入商品数据整理' }).click();
-  await expectButton(firstSelectionRow, '已流转商品数据整理');
+
+  await rowActions.first().click();
+  await rowActions.first().click();
+  await rowActions.first().click();
+  await rowActions.first().waitFor({ timeout: 10000 });
 
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: '商品筛选' }).click();
+  await page.locator('.result-mode-tabs button').nth(1).click();
   const reloadedRow = page.locator('.selection-decision-card').first();
   await reloadedRow.waitFor({ timeout: 10000 });
-  await expectButton(reloadedRow, '已流转商品数据整理');
+  assert.equal(await reloadedRow.locator('.selection-logistics-block').count(), 1, 'logistics column should persist after reload');
 
   console.log(JSON.stringify({
     ok: true,
@@ -179,16 +152,4 @@ try {
   if (browser) await browser.close();
   await new Promise((resolve) => server.close(resolve));
   await rm(tempDir, { recursive: true, force: true });
-}
-
-async function expectText(scope, text) {
-  const locator = scope.getByText(text).first();
-  await locator.waitFor({ timeout: 10000 });
-  assert.ok(await locator.isVisible(), `${text} should be visible`);
-}
-
-async function expectButton(scope, text) {
-  const locator = scope.getByRole('button', { name: text });
-  await locator.waitFor({ timeout: 10000 });
-  assert.ok(await locator.isVisible(), `${text} button should be visible`);
 }

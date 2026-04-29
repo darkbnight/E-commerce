@@ -52,10 +52,8 @@ let browser;
 
 try {
   browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-  await page.goto('http://127.0.0.1:4212/results', { waitUntil: 'domcontentloaded' });
-
-  await page.getByRole('button', { name: '结果展示' }).click();
+  const page = await browser.newPage({ viewport: { width: 1920, height: 900 } });
+  await page.goto('http://127.0.0.1:4212/results?mode=result', { waitUntil: 'domcontentloaded' });
   const addButtons = page.locator('tbody button', { hasText: '加入筛选池' });
   await addButtons.first().waitFor({ timeout: 10000 });
   await addButtons.first().click();
