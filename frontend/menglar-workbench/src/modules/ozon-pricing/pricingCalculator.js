@@ -6,6 +6,7 @@ export const defaultPricingForm = {
   profitVal: '20',
   discount: '50',
   logisticId: '',
+  shippingServiceKey: '',
   deliveryType: '1',
   chinaFee: '0',
   adsRate: '0',
@@ -112,7 +113,7 @@ export function calculateLogisticsFee(logistic, input, exchangeRates) {
   };
 }
 
-export function calculatePricing({ form, logistics, categoryRates, exchangeRates }) {
+export function calculatePricing({ form, logistics, categoryRates, exchangeRates, shippingQuote = null }) {
   const input = toPricingInput(form);
   const logistic = logistics.find((item) => String(item.logId) === String(input.logisticId));
   const category = categoryRates.find((item) => String(item.cId) === String(input.categoryId));
@@ -128,7 +129,8 @@ export function calculatePricing({ form, logistics, categoryRates, exchangeRates
 
   const logisticsQuote = calculateLogisticsFee(logistic, input, exchangeRates);
   const categoryRate = input.manualCategoryRate == null ? Number(category.rate) : input.manualCategoryRate / 100;
-  const logisticsFee = input.manualLogisticsFee == null ? logisticsQuote.feeRmb : input.manualLogisticsFee;
+  const automaticLogisticsFee = shippingQuote?.feeRmb ?? logisticsQuote.feeRmb;
+  const logisticsFee = input.manualLogisticsFee == null ? automaticLogisticsFee : input.manualLogisticsFee;
   const fixedCost = input.purchaseCost + input.chinaFee + logisticsFee + input.otherFee;
   const variableRate = categoryRate + input.adsRate + input.cashRate + input.refundRate;
   const denominator =
@@ -153,8 +155,11 @@ export function calculatePricing({ form, logistics, categoryRates, exchangeRates
   const cashFee = safeSalePriceRmb * input.cashRate;
   const refundFee = safeSalePriceRmb * input.refundRate;
   const profit = safeSalePriceRmb - fixedCost - commission - adsFee - cashFee - refundFee;
+  const totalCost = fixedCost + commission + adsFee + cashFee + refundFee;
   const actualProfitRate = safeSalePriceRmb > 0 ? profit / safeSalePriceRmb : 0;
-  const logisticsShare = safeSalePriceRmb > 0 ? logisticsFee / safeSalePriceRmb : 0;
+  const crossBorderLogisticsShare = safeSalePriceRmb > 0 ? logisticsFee / safeSalePriceRmb : 0;
+  const domesticLogisticsShare = safeSalePriceRmb > 0 ? input.chinaFee / safeSalePriceRmb : 0;
+  const totalLogisticsShare = crossBorderLogisticsShare + domesticLogisticsShare;
 
   return {
     ok: true,
@@ -163,7 +168,17 @@ export function calculatePricing({ form, logistics, categoryRates, exchangeRates
     category,
     rubRate,
     usdRate,
-    logistics: logisticsQuote,
+    logistics: shippingQuote
+      ? {
+          ...logisticsQuote,
+          feeRmb: shippingQuote.feeRmb,
+          charged: shippingQuote.chargeableWeightG ?? logisticsQuote.charged,
+          actualWeight: shippingQuote.physicalWeightG ?? logisticsQuote.actualWeight,
+          volumetricWeight: shippingQuote.volumetricWeightG ?? logisticsQuote.volumetricWeight,
+          unit: shippingQuote.incrementUnitG ?? logisticsQuote.unit,
+        }
+      : logisticsQuote,
+    shippingQuote,
     logisticsFee,
     categoryRate,
     salePriceRmb: safeSalePriceRmb,
@@ -177,11 +192,15 @@ export function calculatePricing({ form, logistics, categoryRates, exchangeRates
     cashFee,
     refundFee,
     profit,
+    totalCost,
     actualProfitRate,
     fixedCost,
     variableRate,
-    logisticsShare,
-    warnings: collectWarnings({ variableRate, salePriceRmb: safeSalePriceRmb, logisticsShare, profit }),
+    logisticsShare: totalLogisticsShare,
+    totalLogisticsShare,
+    crossBorderLogisticsShare,
+    domesticLogisticsShare,
+    warnings: collectWarnings({ variableRate, salePriceRmb: safeSalePriceRmb, logisticsShare: totalLogisticsShare, profit }),
   };
 }
 
