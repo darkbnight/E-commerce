@@ -1,13 +1,17 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Panel } from '../components/Panel';
-import { compressImagesToJpg } from '../lib/api';
+import { compressImagesToJpg, generateProductVideos } from '../lib/api';
 
 const defaultForm = {
   sourceDirs: 'G:\\work\\其他\\商品数据\\商品A\nG:\\work\\其他\\商品数据\\商品B',
   outputDirName: '压缩图',
   quality: '4',
   overwrite: true,
+  generateVideo: false,
+  videoDuration: 12,
+  videoResolution: '1080p',
+  videoOutputName: '商品视频',
 };
 
 const supportedFormats = ['PNG', 'JPG', 'JPEG', 'WEBP', 'BMP'];
@@ -19,25 +23,43 @@ export function ImageCompressionPage() {
     mutationFn: compressImagesToJpg,
   });
 
+  const generateVideoMutation = useMutation({
+    mutationFn: generateProductVideos,
+  });
+
   const handleChange = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const dirs = form.sourceDirs
       .split('\n')
       .map((d) => d.trim())
       .filter((d) => d.length > 0);
-    compressMutation.mutate({
-      directories: dirs,
-      outputDirName: form.outputDirName.trim() || '压缩图',
-      quality: Number(form.quality || 4),
-      overwrite: form.overwrite,
-    });
+    try {
+      const result = await compressMutation.mutateAsync({
+        directories: dirs,
+        outputDirName: form.outputDirName.trim() || '压缩图',
+        quality: Number(form.quality || 4),
+        overwrite: form.overwrite,
+      });
+      if (form.generateVideo) {
+        const videoDirs = (result.directories || [result]).map((d) => d.outputDir);
+        generateVideoMutation.mutate({
+          directories: videoDirs,
+          duration: Number(form.videoDuration || 12),
+          resolution: form.videoResolution || '1080p',
+          outputVideoName: form.videoOutputName.trim() || '商品视频',
+        });
+      }
+    } catch {
+      // 错误通过 compressMutation.error 展示
+    }
   };
 
   const result = compressMutation.data;
+  const videoResult = generateVideoMutation.data;
 
   return (
     <div className="wb-page image-compression-page">
