@@ -122,9 +122,54 @@ export function ImageCompressionPage() {
               <span>目标 JPG 已存在时覆盖</span>
             </label>
 
+            <label className="image-compression-check">
+              <input
+                type="checkbox"
+                checked={form.generateVideo}
+                onChange={(event) => handleChange('generateVideo', event.target.checked)}
+              />
+              <span>自动生成商品视频（在压缩输出目录下生成商品视频）</span>
+            </label>
+
+            {form.generateVideo ? (
+              <>
+                <div className="image-compression-grid">
+                  <label className="image-compression-field">
+                    <span>视频时长（秒）</span>
+                    <input
+                      type="number"
+                      min="5"
+                      max="300"
+                      step="1"
+                      value={form.videoDuration}
+                      onChange={(event) => handleChange('videoDuration', event.target.value)}
+                    />
+                  </label>
+                  <label className="image-compression-field">
+                    <span>输出分辨率</span>
+                    <select
+                      value={form.videoResolution}
+                      onChange={(event) => handleChange('videoResolution', event.target.value)}
+                    >
+                      <option value="1080p">1080p (1920×1080)</option>
+                      <option value="720p">720p (1280×720)</option>
+                    </select>
+                  </label>
+                </div>
+                <label className="image-compression-field">
+                  <span>输出视频名</span>
+                  <input
+                    value={form.videoOutputName}
+                    placeholder="商品视频"
+                    onChange={(event) => handleChange('videoOutputName', event.target.value)}
+                  />
+                </label>
+              </>
+            ) : null}
+
             <div className="image-compression-actions">
-              <button className="wb-button wb-button-primary" type="submit" disabled={compressMutation.isPending}>
-                {compressMutation.isPending ? '压缩中...' : '开始压缩'}
+              <button className="wb-button wb-button-primary" type="submit" disabled={compressMutation.isPending || generateVideoMutation.isPending}>
+                {compressMutation.isPending ? '压缩中...' : generateVideoMutation.isPending ? '生成视频中...' : '开始压缩'}
               </button>
               <button className="wb-button ghost" type="button" onClick={() => setForm(defaultForm)}>
                 重置
@@ -135,8 +180,16 @@ export function ImageCompressionPage() {
               <div className="wb-feedback is-error">{compressMutation.error.message}</div>
             ) : null}
 
+            {generateVideoMutation.error ? (
+              <div className="wb-feedback is-error">{generateVideoMutation.error.message}</div>
+            ) : null}
+
             {compressMutation.isPending ? (
               <div className="wb-feedback is-busy">正在调用 ffmpeg 处理图片，图片较多时需要等待一段时间。</div>
+            ) : null}
+
+            {generateVideoMutation.isPending ? (
+              <div className="wb-feedback is-busy">正在调用 ffmpeg 合成商品视频，图片较多时需要等待一段时间。</div>
             ) : null}
           </form>
         </Panel>
