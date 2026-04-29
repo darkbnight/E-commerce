@@ -17,6 +17,7 @@ const defaultFilters = {
   productType: '',
   categoryLevel1: '',
   minSales: '',
+  minGrowth: '',
   minRevenue: '',
   minAvgPrice: '',
   maxAvgPrice: '',
@@ -82,6 +83,7 @@ function getInitialFilters(searchParams) {
     productType: searchParams.get('productType') || '',
     categoryLevel1: searchParams.get('categoryLevel1') || '',
     minSales: searchParams.get('minSales') || '',
+    minGrowth: searchParams.get('minGrowth') || '',
     minRevenue: searchParams.get('minRevenue') || '',
     minAvgPrice: searchParams.get('minAvgPrice') || '',
     maxAvgPrice: searchParams.get('maxAvgPrice') || '',
@@ -90,6 +92,11 @@ function getInitialFilters(searchParams) {
     productStatus: searchParams.get('productStatus') || defaultFilters.productStatus,
     sort: searchParams.get('sort') || 'sales_desc',
   };
+}
+
+function hasInitialAdvancedFilters(searchParams) {
+  return ['minSales', 'minGrowth', 'minRevenue', 'minAvgPrice', 'maxAvgPrice', 'minWeight', 'maxWeight']
+    .some((key) => Boolean(searchParams.get(key)));
 }
 
 function formatJobType(value) {
@@ -111,6 +118,26 @@ function formatDate(value) {
     minute: '2-digit',
     hour12: false,
   });
+}
+
+function formatDeliveryDays(value) {
+  if (value == null || value === '') return '-';
+  const number = Number(value);
+  if (Number.isFinite(number)) {
+    if (number < 0) return '-';
+    const daysText = Number.isInteger(number) ? formatNumber(number) : String(Number(number.toFixed(1)));
+    return `${daysText}天`;
+  }
+  const text = formatText(value);
+  return text === '-' ? '-' : text;
+}
+
+function formatSignedIntegerPercent(value) {
+  if (value == null || value === '') return '-';
+  const number = Number(value);
+  if (!Number.isFinite(number)) return '-';
+  const sign = number > 0 ? '+' : '';
+  return `${sign}${formatIntegerPercent(number)}`;
 }
 
 function getStageCount(entries, key) {
@@ -214,6 +241,7 @@ export function ResultsPage() {
   const [selectedJobId, setSelectedJobId] = useState(() => searchParams.get('jobId') || '');
   const [showUnavailableJobs, setShowUnavailableJobs] = useState(false);
   const [batchOpen, setBatchOpen] = useState(false);
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(() => hasInitialAdvancedFilters(searchParams));
   const [selectionTab, setSelectionTab] = useState('all');
   const [selectionFeedback, setSelectionFeedback] = useState('');
   const [selectionActionPending, setSelectionActionPending] = useState(false);
@@ -288,6 +316,19 @@ export function ResultsPage() {
   const currentJob = data?.latestJob || jobs.find((job) => String(job.id) === String(selectedJobId));
   const firstAvailableJob = jobs.find((job) => Number(job.product_count || 0) > 0 && job.job_status === 'success');
   const isEmptyBatch = Boolean(selectedJobId && data && Number(data.actualProductCount || 0) === 0);
+  const resultFilterTitle = currentJob
+    ? `原始结果筛选 #${currentJob.id} · 商品 ${formatNumber(data?.actualProductCount ?? currentJob.product_count ?? 0)}`
+    : '原始结果筛选 选择批次';
+  const hasAdvancedFilters = Boolean(
+    filters.minSales
+      || filters.minGrowth
+      || filters.minRevenue
+      || filters.minAvgPrice
+      || filters.maxAvgPrice
+      || filters.minWeight
+      || filters.maxWeight,
+  );
+  const showAdvancedFilters = advancedFiltersOpen;
 
   const selectionCounts = useMemo(() => {
     return selectionOverviewTabs.reduce((acc, tab) => {
@@ -319,6 +360,7 @@ export function ResultsPage() {
 
   const resetFilters = () => {
     setPage(1);
+    setAdvancedFiltersOpen(false);
     setFilters(defaultFilters);
   };
 
@@ -453,8 +495,19 @@ export function ResultsPage() {
 
       <div className={`wb-results-layout result-workbench-layout ${mode === 'result' ? 'is-result-mode' : 'is-screening-mode'}`}>
         {mode === 'result' ? (
-          <Panel title="原始结果筛选" subtitle="结果展示只负责按批次查看原始采集结果">
-            <div className="wb-filter-grid result-filter-grid">
+          <Panel
+            title={resultFilterTitle}
+            actions={(
+              <div className="result-filter-actions">
+                <span className="result-filter-count">当前结果 {formatNumber(data?.total || 0)} 条</span>
+                <button type="button" className="wb-button ghost" onClick={() => setAdvancedFiltersOpen((open) => !open)}>
+                  {showAdvancedFilters ? '收起高级筛选' : hasAdvancedFilters ? '高级筛选（已启用）' : '高级筛选'}
+                </button>
+                <button type="button" className="wb-button ghost" onClick={resetFilters}>重置筛选</button>
+              </div>
+            )}
+          >
+            <div className="wb-filter-grid result-filter-grid is-compact">
               <div className="wb-field result-batch-field">
                 <span>数据批次</span>
                 <button type="button" className="result-batch-trigger" onClick={() => setBatchOpen((open) => !open)}>
@@ -529,32 +582,6 @@ export function ResultsPage() {
               </label>
 
               <label className="wb-field">
-                <span>最低销售量</span>
-                <input type="number" min="0" value={filters.minSales} onChange={(event) => applyFilter('minSales', event.target.value)} />
-              </label>
-
-              <label className="wb-field">
-                <span>最低销售金额</span>
-                <input type="number" min="0" value={filters.minRevenue} onChange={(event) => applyFilter('minRevenue', event.target.value)} />
-              </label>
-
-              <div className="wb-field wb-field-span-2">
-                <span>均价区间（CNY）</span>
-                <div className="wb-range-grid">
-                  <input type="number" min="0" value={filters.minAvgPrice} onChange={(event) => applyFilter('minAvgPrice', event.target.value)} placeholder="最低均价" />
-                  <input type="number" min="0" value={filters.maxAvgPrice} onChange={(event) => applyFilter('maxAvgPrice', event.target.value)} placeholder="最高均价" />
-                </div>
-              </div>
-
-              <div className="wb-field wb-field-span-2">
-                <span>重量区间（g）</span>
-                <div className="wb-range-grid">
-                  <input type="number" min="0" value={filters.minWeight} onChange={(event) => applyFilter('minWeight', event.target.value)} placeholder="最轻重量" />
-                  <input type="number" min="0" value={filters.maxWeight} onChange={(event) => applyFilter('maxWeight', event.target.value)} placeholder="最重重量" />
-                </div>
-              </div>
-
-              <label className="wb-field">
                 <span>排序方式</span>
                 <select value={filters.sort} onChange={(event) => applyFilter('sort', event.target.value)}>
                   <option value="sales_desc">销售量降序</option>
@@ -565,12 +592,40 @@ export function ResultsPage() {
                 </select>
               </label>
 
-              <div className="wb-field">
-                <span>当前结果</span>
-                <div className="wb-filter-hint">共 {formatNumber(data?.total || 0)} 条</div>
-              </div>
+              {showAdvancedFilters ? (
+                <div className="result-advanced-filters">
+                  <label className="wb-field">
+                    <span>最低销售量</span>
+                    <input type="number" min="0" value={filters.minSales} onChange={(event) => applyFilter('minSales', event.target.value)} />
+                  </label>
 
-              <button type="button" className="wb-button ghost" onClick={resetFilters}>重置筛选</button>
+                  <label className="wb-field">
+                    <span>最低增长率（%）</span>
+                    <input type="number" value={filters.minGrowth} onChange={(event) => applyFilter('minGrowth', event.target.value)} placeholder="例如 30" />
+                  </label>
+
+                  <label className="wb-field">
+                    <span>最低销售金额</span>
+                    <input type="number" min="0" value={filters.minRevenue} onChange={(event) => applyFilter('minRevenue', event.target.value)} />
+                  </label>
+
+                  <div className="wb-field">
+                    <span>均价区间（CNY）</span>
+                    <div className="wb-range-grid">
+                      <input type="number" min="0" value={filters.minAvgPrice} onChange={(event) => applyFilter('minAvgPrice', event.target.value)} placeholder="最低均价" />
+                      <input type="number" min="0" value={filters.maxAvgPrice} onChange={(event) => applyFilter('maxAvgPrice', event.target.value)} placeholder="最高均价" />
+                    </div>
+                  </div>
+
+                  <div className="wb-field">
+                    <span>重量区间（g）</span>
+                    <div className="wb-range-grid">
+                      <input type="number" min="0" value={filters.minWeight} onChange={(event) => applyFilter('minWeight', event.target.value)} placeholder="最轻重量" />
+                      <input type="number" min="0" value={filters.maxWeight} onChange={(event) => applyFilter('maxWeight', event.target.value)} placeholder="最重重量" />
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </Panel>
         ) : null}
@@ -793,20 +848,23 @@ function RawResultsTable({ items, onAddSingle, onRejectSingle, actionPending, se
             <tr key={item.id} className={isRejected ? 'is-rejected' : isSelected ? 'is-in-selection-pool' : ''}>
               <td>
                 <div className="product-info-cell">
-                  {item.product_image_url ? (
-                    <button
-                      type="button"
-                      className="product-image-trigger"
-                      onClick={() => onPreviewImage({
-                        src: item.product_image_url,
-                        alt: formatText(item.title),
-                      })}
-                    >
-                      <img src={item.product_image_url} alt="" loading="lazy" />
-                    </button>
-                  ) : (
-                    <span className="product-image-placeholder" />
-                  )}
+                  <div className="product-media-stack">
+                    {item.product_image_url ? (
+                      <button
+                        type="button"
+                        className="product-image-trigger"
+                        onClick={() => onPreviewImage({
+                          src: item.product_image_url,
+                          alt: formatText(item.title),
+                        })}
+                      >
+                        <img src={item.product_image_url} alt="" loading="lazy" />
+                      </button>
+                    ) : (
+                      <span className="product-image-placeholder" />
+                    )}
+                    <span className="product-batch-pill">#{formatText(item.job_id)}</span>
+                  </div>
                   <div>
                     <div className="cell-main product-title">{formatText(item.title)}</div>
                     <div className="cell-sub mono">{item.product_url ? (
@@ -827,15 +885,15 @@ function RawResultsTable({ items, onAddSingle, onRejectSingle, actionPending, se
               </td>
               <td className="num">
                 <div>{formatNumber(item.sales_volume)}</div>
-                <div className="cell-sub">增长 {formatIntegerPercent(item.sales_growth)}</div>
+                <div className="cell-sub metric-sub">{formatSignedIntegerPercent(item.sales_growth)}</div>
               </td>
               <td className="num">
                 <div>{formatCurrency(item.avg_price_rub, 'RUB')}</div>
-                <div className="cell-sub">{formatCurrency(item.avg_price_cny, 'CNY')}</div>
+                <div className="cell-sub metric-sub">{formatCurrency(item.avg_price_cny, 'CNY')}</div>
               </td>
               <td>
                 <div>{getDimensionSummary(item).sizeText}</div>
-                <div className="cell-sub">{getDimensionSummary(item).weightText}</div>
+                <div className="cell-sub metric-sub">{getDimensionSummary(item).weightText}</div>
               </td>
               <td className="num">{formatNumber(item.potential_index, 0)}</td>
               <td className="num">
@@ -857,7 +915,7 @@ function RawResultsTable({ items, onAddSingle, onRejectSingle, actionPending, se
               </td>
               <td>
                 <div className="cell-main">{formatText(item.shipping_mode)}</div>
-                <div className="cell-sub">配送 {formatText(item.delivery_time)}</div>
+                <div className="cell-sub">配送 {formatDeliveryDays(item.delivery_time)}</div>
               </td>
               <td>
                 <span className={`raw-product-status is-${status.key}`}>{status.label}</span>
@@ -1000,7 +1058,9 @@ function SelectionWorkbenchTable({
     <div className="selection-workbench-list" aria-label="商品筛选工作台列表">
       <div className="selection-list-head" aria-hidden="true">
         <span>商品</span>
-        <span>决策信息</span>
+        <span>重量与物流</span>
+        <span>测价</span>
+        <span>供应链</span>
         <span>执行</span>
       </div>
       {entries.map((entry) => (
@@ -1067,41 +1127,54 @@ function SelectionRow({
         </div>
       </section>
 
-      <section className="selection-decision-block">
+      <section className="selection-logistics-block">
         <div className="selection-decision-group">
-          <div className="selection-group-head">
-            <span>测价 / 利润</span>
-            <strong className={entry.pricingDecision === 'reject' ? 'is-danger' : entry.pricingDecision === 'continue' ? 'is-good' : ''}>{profitText}</strong>
+          <div className="selection-logistics-grid">
+            <div className="selection-data-card">
+              <span>重量</span>
+              <strong>{getDimensionSummary(item).weightText}</strong>
+            </div>
+            <div className="selection-data-card">
+              <span>跨境物流成本</span>
+              <strong>{entry.initialDeliveryCost != null ? formatCurrency(entry.initialDeliveryCost, 'CNY') : '-'}</strong>
+            </div>
           </div>
+        </div>
+      </section>
+
+      <section className="selection-pricing-block">
+        <div className="selection-decision-group">
           <div className="selection-metric-grid">
             <div className="selection-data-card">
               <span>成本</span>
               <strong>{entry.initialCostPrice != null ? formatCurrency(entry.initialCostPrice, 'CNY') : '待测价'}</strong>
             </div>
             <div className="selection-data-card">
-              <span>运费</span>
-              <strong>{entry.initialDeliveryCost != null ? formatCurrency(entry.initialDeliveryCost, 'CNY') : '-'}</strong>
-            </div>
-            <div className="selection-data-card">
               <span>预估售价</span>
               <strong>{entry.initialTargetPrice != null ? formatCurrency(entry.initialTargetPrice, 'CNY') : '-'}</strong>
             </div>
+            <div className="selection-data-card">
+              <span>利润判断</span>
+              <strong className={entry.pricingDecision === 'reject' ? 'is-danger' : entry.pricingDecision === 'continue' ? 'is-good' : ''}>{profitText}</strong>
+            </div>
           </div>
         </div>
+      </section>
 
+      <section className="selection-supply-block">
         <div className="selection-decision-group">
-          <div className="selection-group-head">
-            <span>供应链 / 竞品</span>
-            <strong>{entry.competitorPacketStatus === 'ready' ? '竞品已整理' : '竞品待整理'}</strong>
-          </div>
           <div className="selection-supply-grid">
             <div className="selection-data-card">
-              <span>供应链</span>
+              <span>状态</span>
               <strong>{entry.supplyMatchStatus === 'matched' ? '已找到货源' : '待找货源'}</strong>
             </div>
             <div className="selection-data-card">
               <span>供应商</span>
               <strong>{entry.supplyVendorName || '未记录'}</strong>
+            </div>
+            <div className="selection-data-card">
+              <span>竞品</span>
+              <strong>{entry.competitorPacketStatus === 'ready' ? '已整理' : '待整理'}</strong>
             </div>
           </div>
           {entry.supplyReferenceUrl ? (
@@ -1189,7 +1262,7 @@ function CompetitorDetailDialog({ entry, onClose }) {
         ['广告费用', `${formatIntegerCurrency(item.ad_cost, 'RUB')} / ${formatIntegerCurrency(item.ad_cost_cny, 'CNY')}`],
         ['广告占比', formatIntegerPercent(item.ad_cost_rate)],
         ['物流方式', formatText(item.shipping_mode)],
-        ['配送时效', formatText(item.delivery_time)],
+        ['配送时效', formatDeliveryDays(item.delivery_time)],
       ],
     },
     {

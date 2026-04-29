@@ -743,8 +743,32 @@ select {
 }
 
 .result-filter-grid {
-  grid-template-columns: minmax(240px, 1.45fr) minmax(220px, 1.35fr) repeat(4, minmax(150px, 1fr));
+  grid-template-columns: minmax(230px, 1.3fr) minmax(220px, 1.45fr) repeat(4, minmax(150px, 1fr));
   align-items: end;
+}
+
+.result-filter-grid.is-compact {
+  gap: 12px;
+}
+
+.result-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.result-filter-count {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 999px;
+  color: var(--accent);
+  background: rgba(15, 118, 110, 0.1);
+  font-size: 13px;
+  font-weight: 900;
 }
 
 .selection-filter-bar {
@@ -788,6 +812,17 @@ select {
 
 .result-filter-grid .wb-button {
   align-self: end;
+}
+
+.result-advanced-filters {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(22, 33, 39, 0.08);
+  border-radius: 18px;
+  background: rgba(22, 33, 39, 0.035);
 }
 
 .result-batch-field {
@@ -938,6 +973,12 @@ select {
   white-space: nowrap;
 }
 
+.result-table .metric-sub {
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 700;
+}
+
 .result-table th:nth-child(1),
 .result-table td:nth-child(1) {
   width: 260px;
@@ -960,6 +1001,12 @@ select {
   gap: 10px;
 }
 
+.product-media-stack {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+}
+
 .product-info-cell img,
 .product-image-placeholder {
   width: 48px;
@@ -979,6 +1026,20 @@ select {
 
 .product-image-trigger img {
   display: block;
+}
+
+.product-batch-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: var(--accent);
+  background: rgba(15, 118, 110, 0.1);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.1;
 }
 
 .product-title {
@@ -1138,11 +1199,19 @@ select {
   color: var(--success);
 }
 
+.selection-data-card strong.is-good {
+  color: var(--success);
+}
+
 .selection-data-card.is-danger {
   background: rgba(185, 28, 28, 0.1);
 }
 
 .selection-data-card.is-danger strong {
+  color: var(--danger);
+}
+
+.selection-data-card strong.is-danger {
   color: var(--danger);
 }
 
@@ -1190,7 +1259,9 @@ select {
 }
 
 .selection-product-block,
-.selection-decision-block,
+.selection-logistics-block,
+.selection-pricing-block,
+.selection-supply-block,
 .selection-action-block,
 .selection-decision-group {
   min-width: 0;
@@ -1238,12 +1309,6 @@ select {
   font-weight: 800;
 }
 
-.selection-decision-block {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 12px;
-}
-
 .selection-decision-group {
   display: grid;
   align-content: start;
@@ -1279,6 +1344,7 @@ select {
   color: var(--danger);
 }
 
+.selection-logistics-grid,
 .selection-metric-grid,
 .selection-supply-grid {
   display: grid;
@@ -1289,8 +1355,12 @@ select {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.selection-supply-grid {
+.selection-logistics-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.selection-supply-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .selection-action-block {
@@ -1325,7 +1395,7 @@ select {
 @media (min-width: 1900px) {
   .selection-list-head,
   .selection-decision-card {
-    grid-template-columns: minmax(230px, 0.82fr) minmax(0, 1.55fr) minmax(130px, 0.35fr);
+    grid-template-columns: minmax(380px, 1.05fr) minmax(210px, 0.5fr) minmax(310px, 0.7fr) minmax(330px, 0.75fr) minmax(160px, 0.35fr);
   }
 
   .selection-list-head {
@@ -4624,6 +4694,13 @@ select {
   grid-column: 1 / -1;
 }
 
+.ozon-pricing-category-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.42fr);
+  gap: 12px;
+  align-items: end;
+}
+
 .ozon-pricing-field {
   display: grid;
   gap: 7px;
@@ -4729,6 +4806,53 @@ select {
   font-size: 20px;
 }
 
+.ozon-pricing-metric-label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.ozon-pricing-info {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid rgba(15, 118, 110, 0.28);
+  border-radius: 50%;
+  padding: 0;
+  color: var(--accent);
+  background: rgba(15, 118, 110, 0.08);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.ozon-pricing-info span {
+  position: absolute;
+  z-index: 5;
+  right: 0;
+  bottom: calc(100% + 8px);
+  display: none;
+  width: max-content;
+  max-width: 230px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink);
+  background: #fffaf2;
+  box-shadow: 0 12px 32px rgba(22, 33, 39, 0.16);
+  white-space: pre-line;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: left;
+}
+
+.ozon-pricing-info:hover span,
+.ozon-pricing-info:focus-visible span {
+  display: block;
+}
+
 .ozon-pricing-metric.is-highlight strong {
   color: var(--accent);
   font-size: 28px;
@@ -4828,6 +4952,23 @@ select {
   border-top: 1px solid var(--line);
 }
 
+button.ozon-pricing-compare-row {
+  width: 100%;
+  height: auto;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0;
+  color: var(--ink);
+  background: transparent;
+  text-align: left;
+}
+
+button.ozon-pricing-compare-row:hover,
+button.ozon-pricing-compare-row.is-active {
+  background: rgba(15, 118, 110, 0.08);
+}
+
 .ozon-pricing-carrier {
   display: grid;
   grid-template-columns: 58px minmax(0, 1fr);
@@ -4837,11 +4978,60 @@ select {
 
 .ozon-pricing-carrier img,
 .ozon-pricing-carrier span {
+  display: grid;
+  place-items: center;
   width: 52px;
   height: 52px;
   border-radius: 8px;
   object-fit: contain;
   background: rgba(22, 33, 39, 0.05);
+  color: var(--accent);
+  font-weight: 900;
+}
+
+.ozon-pricing-carrier small {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ozon-pricing-logistics {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  border-radius: 14px;
+  background: rgba(15, 118, 110, 0.04);
+}
+
+.ozon-pricing-logistics legend {
+  padding: 0 5px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.ozon-pricing-logistics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ozon-pricing-shipping-field {
+  grid-column: span 3;
+}
+
+.ozon-pricing-logistics-action {
+  display: flex;
+  align-items: flex-start;
+  padding-top: 24px;
+}
+
+.ozon-pricing-logistics-action .wb-button {
+  width: 100%;
+  min-height: 42px;
 }
 
 .ozon-pricing-fee-lines {
@@ -4849,6 +5039,21 @@ select {
   gap: 7px;
   color: var(--muted);
   font-weight: 800;
+}
+
+.ozon-pricing-compare-empty,
+.ozon-pricing-field-note {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ozon-pricing-compare-empty {
+  padding: 22px;
+}
+
+.ozon-pricing-field-note.is-danger {
+  color: var(--danger);
 }
 
 @media (max-width: 1200px) {
@@ -4887,7 +5092,7 @@ select {
   }
 
   .selection-decision-card,
-  .selection-decision-block,
+  .selection-logistics-grid,
   .selection-metric-grid,
   .selection-supply-grid {
     grid-template-columns: 1fr;
@@ -4943,6 +5148,7 @@ select {
   .ozon-pricing-layout,
   .ozon-pricing-form,
   .ozon-pricing-volume,
+  .ozon-pricing-logistics-grid,
   .ozon-pricing-price-grid,
   .ozon-pricing-summary-grid,
   .ozon-pricing-compare-head,
@@ -4959,6 +5165,18 @@ select {
 
   .ozon-pricing-row {
     grid-template-columns: 1fr;
+  }
+
+  .ozon-pricing-category-row {
+    grid-template-columns: 1fr;
+  }
+
+  .ozon-pricing-shipping-field {
+    grid-column: auto;
+  }
+
+  .ozon-pricing-logistics-action {
+    padding-top: 0;
   }
 
   .product-prep-candidate-list {
@@ -5005,12 +5223,14 @@ select {
   }
 
   .result-filter-grid,
+  .result-advanced-filters,
   .wb-range-grid {
     grid-template-columns: 1fr;
   }
 
   .result-filter-grid .result-batch-field,
-  .result-filter-grid .wb-field-span-2 {
+  .result-filter-grid .wb-field-span-2,
+  .result-advanced-filters {
     grid-column: auto;
   }
 }
