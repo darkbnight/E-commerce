@@ -23,6 +23,7 @@ const exchangeRates = exchangeRatesData.items || [];
 const baseForm = normalizeInitialForm(defaultPricingForm, categoryRates, logistics);
 
 testDefaultPricing();
+testShippingCalculatorQuote();
 testManualOverrides();
 testInvalidRateBoundary();
 
@@ -34,8 +35,26 @@ function testDefaultPricing() {
   assert.ok(Number.isFinite(result.salePriceUsd) && result.salePriceUsd > 0);
   assert.ok(Number.isFinite(result.salePriceRub) && result.salePriceRub > 0);
   assert.ok(Number.isFinite(result.profit));
+  assert.ok(Number.isFinite(result.totalCost) && result.totalCost > 0);
   assert.ok(Number.isFinite(result.actualProfitRate));
+  assert.equal(result.totalLogisticsShare, result.domesticLogisticsShare + result.crossBorderLogisticsShare);
   assert.ok(result.logistics.charged > 0);
+}
+
+function testShippingCalculatorQuote() {
+  const shippingQuote = {
+    name: 'China Post to PUDO Economy',
+    feeRmb: 12.34,
+    chargeableWeightG: 500,
+    physicalWeightG: 480,
+    volumetricWeightG: 120,
+    incrementUnitG: 50,
+  };
+  const result = calculatePricing({ form: baseForm, logistics, categoryRates, exchangeRates, shippingQuote });
+  assert.equal(result.ok, true);
+  assert.equal(result.logisticsFee, 12.34);
+  assert.equal(result.logistics.charged, 500);
+  assert.equal(result.shippingQuote.name, 'China Post to PUDO Economy');
 }
 
 function testManualOverrides() {

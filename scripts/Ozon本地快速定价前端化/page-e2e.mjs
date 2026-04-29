@@ -17,24 +17,30 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
 try {
   await page.goto(`${baseUrl}/ozon-pricing`, { waitUntil: 'networkidle' });
   await page.waitForSelector('text=Ozon 快速定价');
+  await page.waitForFunction(() =>
+    Array.from(document.querySelectorAll('select option')).some((option) =>
+      /China Post|CEL|Economy|Standard/.test(option.textContent || ''),
+    ),
+  );
   await page.screenshot({ path: path.join(screenshotDir, 'ozon-pricing-default.png'), fullPage: true });
 
   const originalSale = await page.locator('.ozon-pricing-price-grid .ozon-pricing-metric').nth(1).textContent();
-  const inputs = page.locator('.ozon-pricing-form input');
-  await inputs.nth(0).fill('20');
-  await inputs.nth(1).fill('500');
-  await inputs.nth(3).fill('60');
-  await page.waitForTimeout(200);
+  const shippingResponse = page.waitForResponse((response) => response.url().includes('/api/shipping/compare') && response.status() === 200);
+  await page.getByTestId('ozon-pricing-purchase-cost').fill('20');
+  await page.getByTestId('ozon-pricing-weight').fill('500');
+  await page.getByTestId('ozon-pricing-discount').fill('60');
+  await shippingResponse;
   const changedSale = await page.locator('.ozon-pricing-price-grid .ozon-pricing-metric').nth(1).textContent();
   assert.notEqual(changedSale, originalSale);
-  assert.match(changedSale || '', /\$/);
+  assert.match(changedSale || '', /₽/);
+  assert.match(changedSale || '', /¥/);
   await page.screenshot({ path: path.join(screenshotDir, 'ozon-pricing-result.png'), fullPage: true });
 
-  await page.getByRole('button', { name: '查看 CEL 物流费用对比' }).click();
+  await page.getByRole('button', { name: '查看物流费用对比' }).click();
   await page.waitForSelector('text=物流费用对比');
   const compareText = await page.locator('.ozon-pricing-dialog').textContent();
-  assert.match(compareText || '', /CEL/);
-  assert.match(compareText || '', /到取货点/);
+  assert.match(compareText || '', /物流计算器结果/);
+  assert.match(compareText || '', /计费重/);
   await page.screenshot({ path: path.join(screenshotDir, 'ozon-pricing-compare.png'), fullPage: true });
 
   console.log('Ozon pricing page e2e passed');
