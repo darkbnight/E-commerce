@@ -231,6 +231,15 @@ const address = server.address();
 const baseUrl = `http://${address.address}:${address.port}`;
 
 try {
+  const listResponse = await fetch(`${baseUrl}/api/product-content?platform=ozon`);
+  assert.equal(listResponse.status, 200);
+  const listPayload = await listResponse.json();
+  assert.equal(listPayload.total, 1);
+  assert.equal(listPayload.items[0].platform_product_id, 'test-product-content-001');
+  assert.equal(listPayload.items[0].content_hash, 'hash-latest-version');
+  assert.equal(listPayload.items[0].sku_count, 2);
+  assert.equal(listPayload.items[0].version_count, 2);
+
   const latestResponse = await fetch(`${baseUrl}/api/product-content?productId=test-product-content-001&platform=ozon`);
   assert.equal(latestResponse.status, 200);
   const latestPayload = await latestResponse.json();
@@ -284,6 +293,7 @@ try {
 
   console.log(JSON.stringify({
     verified: true,
+    browserListTotal: listPayload.total,
     latestContentId: assetRow.id,
     historyCount: historyPayload.total,
     latestSkuCount: latestPayload.skus.length,

@@ -250,38 +250,43 @@ try {
     await route.continue();
   });
 
-  await page.goto(`${baseUrl}/product-content`, { waitUntil: 'networkidle' });
-  await page.screenshot({ path: path.join(screenshotDir, 'product-content-input.png'), fullPage: true });
-
-  const responsePromise = page.waitForResponse((response) =>
-    response.url().includes('/api/product-content?') &&
+  const listResponsePromise = page.waitForResponse((response) =>
+    response.url().includes('/api/product-content?platform=ozon') &&
     response.request().method() === 'GET' &&
     response.status() === 200,
   );
-  await page.locator('.product-content-demo-strip button').first().click();
-  await page.waitForSelector('text=正在读取商品内容资产和版本历史');
+  await page.goto(`${baseUrl}/product-content`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('text=正在读取商品内容资产列表');
   await page.screenshot({ path: path.join(screenshotDir, 'product-content-loading.png'), fullPage: true });
-  await responsePromise;
-  await page.waitForSelector('text=复古金属挂饰套装 100 枚 升级版');
-  await page.waitForSelector('text=150 枚装');
-  await page.waitForSelector('text=经营快照');
-  await page.waitForSelector('text=Craft Home');
+  await listResponsePromise;
 
+  await page.waitForSelector('text=商品内容资产浏览器');
+  await page.waitForSelector('text=复古金属挂饰套装 100 枚 升级版');
+  await page.screenshot({ path: path.join(screenshotDir, 'product-content-input.png'), fullPage: true });
+
+  await page.getByRole('button', { name: /复古金属挂饰套装 100 枚 升级版/ }).click();
+  await page.waitForSelector('.product-content-drawer');
+  await page.getByRole('button', { name: 'SKU' }).click();
+  await page.waitForSelector('text=150 枚装');
+  const skuText = await page.locator('.product-content-sku-list').textContent();
+  assert.match(skuText || '', /150 枚装/);
+
+  await page.getByRole('button', { name: '版本' }).click();
   await page.locator('.product-content-version-card').nth(1).click();
+  await page.getByRole('button', { name: '内容' }).click();
   await page.waitForSelector('text=复古金属挂饰套装 100 枚');
-  await page.waitForSelector('text=100 枚装');
+  const drawerText = await page.locator('.product-content-drawer').textContent();
+  assert.match(drawerText || '', /旧版内容描述/);
+
+  await page.getByRole('button', { name: '经营' }).click();
+  await page.waitForSelector('text=Craft Home');
   await page.screenshot({ path: path.join(screenshotDir, 'product-content-result.png'), fullPage: true });
 
-  const detailText = await page.locator('.product-content-detail').textContent();
-  assert.match(detailText || '', /复古金属挂饰套装 100 枚/);
-  const skuText = await page.locator('.product-content-sku-list').textContent();
-  assert.match(skuText || '', /100 枚装/);
-
-  await page.getByPlaceholder('例如 demo-content-ornament-001').fill('not-exists-001');
-  await page.getByRole('button', { name: '查询内容资产' }).click();
-  await page.waitForSelector('text=没有内容资产数据');
-  const emptyText = await page.textContent('.product-content-empty');
-  assert.match(emptyText || '', /没有内容资产数据/);
+  await page.getByRole('button', { name: '关闭' }).click();
+  await page.getByPlaceholder('输入关键词筛选').fill('not-exists-001');
+  await page.waitForSelector('text=没有符合筛选条件的内容资产');
+  const emptyText = await page.textContent('.wb-empty-cell');
+  assert.match(emptyText || '', /没有符合筛选条件的内容资产/);
 
   console.log('product-content-page e2e passed');
 } finally {
