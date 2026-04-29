@@ -11,6 +11,14 @@ import {
   updateProductSelectionItem,
 } from '../lib/api';
 import { formatCurrency, formatNumber, formatPercent, formatText } from '../lib/format';
+import categoryRatesData from '../modules/ozon-pricing/data/categoryRates.json';
+import exchangeRatesData from '../modules/ozon-pricing/data/exchangeRates.json';
+import logisticsData from '../modules/ozon-pricing/data/logistics.json';
+import {
+  calculatePricing,
+  defaultPricingForm,
+  normalizeInitialForm,
+} from '../modules/ozon-pricing/pricingCalculator';
 
 const defaultFilters = {
   keyword: '',
@@ -72,6 +80,38 @@ const selectionOverviewTabs = [
 ];
 
 const pageSize = 20;
+const categoryRates = categoryRatesData.items || [];
+const exchangeRates = exchangeRatesData.items || [];
+const logistics = logisticsData.items || [];
+const quickPricingBaseForm = normalizeInitialForm(defaultPricingForm, categoryRates, logistics);
+const quickPricingFixedParams = {
+  profitType: 'rate',
+  profitVal: '20',
+  discount: '50',
+  chinaFee: '0',
+  adsRate: '0',
+  cashRate: '1',
+  refundRate: '2',
+  otherFee: '0',
+};
+const builtInPricingTemplates = [
+  {
+    id: 'standard',
+    name: '标准利润 20%',
+    values: quickPricingFixedParams,
+  },
+  {
+    id: 'conservative',
+    name: '保守测算 25%',
+    values: { ...quickPricingFixedParams, profitVal: '25', adsRate: '5', refundRate: '3' },
+  },
+  {
+    id: 'traffic',
+    name: '投流测试 18%',
+    values: { ...quickPricingFixedParams, profitVal: '18', adsRate: '8', refundRate: '3' },
+  },
+];
+const pricingTemplateStorageKey = 'menglar-selection-pricing-templates';
 
 function getInitialMode(searchParams) {
   return searchParams.get('mode') === 'screening' ? 'screening' : 'result';
@@ -191,25 +231,79 @@ function isRejectedStage(stage) {
   return stage === 'screening_rejected' || stage === 'pricing_rejected';
 }
 
-function computePricingSnapshot(entry, decision) {
+function buildPricingFormForEntry(entry, overrides = {}) {
   const { item } = entry;
   const avgPrice = Number(item.avg_price_cny || 0);
   const weight = Number(item.weight_g || 0);
   const cost = Number((avgPrice * 0.56).toFixed(2));
   const existingDelivery = Number(entry.initialDeliveryCost);
-  const delivery = Number.isFinite(existingDelivery) && existingDelivery > 0
-    ? existingDelivery
-    : Number((Math.max(weight / 1000, 0.25) * 12).toFixed(2));
-  const target = Number((avgPrice * 0.92).toFixed(2));
-  const total = cost + delivery;
-  const profitRate = target > 0 ? Number((((target - total) / target) * 100).toFixed(2)) : 0;
+  return {
+    ...quickPricingBaseForm,
+    ...quickPricingFixedParams,
+    purchaseCost: String(cost || quickPricingBaseForm.purchaseCost),
+    weight: String(weight || quickPricingBaseForm.weight),
+    volumeL: String(Number(item.length_cm || 0) > 0 ? item.length_cm : quickPricingBaseForm.volumeL),
+    volumeW: String(Number(item.width_cm || 0) > 0 ? item.width_cm : quickPricingBaseForm.volumeW),
+    volumeH: String(Number(item.height_cm || 0) > 0 ? item.height_cm : quickPricingBaseForm.volumeH),
+    manualLogisticsFee: Number.isFinite(existingDelivery) && existingDelivery > 0 ? String(existingDelivery) : '',
+    ...overrides,
+  };
+}
+
+function computeQuickPricingFromForm(form) {
+  return calculatePricing({
+    form,
+    logistics,
+    categoryRates,
+    exchangeRates,
+  });
+}
+
+function computePricingSnapshotFromResult(quickPricing, decision) {
+
+  if (!quickPricing.ok) {
+    return {
+      pricingDecision: decision,
+    };
+  }
 
   return {
-    initialCostPrice: cost,
-    initialDeliveryCost: delivery,
-    initialTargetPrice: target,
-    initialProfitRate: decision === 'continue' ? Math.max(profitRate, 12.5) : Math.min(profitRate, 4.5),
+    initialCostPrice: Number(quickPricing.input.purchaseCost.toFixed(2)),
+    initialDeliveryCost: Number(quickPricing.logisticsFee.toFixed(2)),
+    initialTargetPrice: Number(quickPricing.salePriceRmb.toFixed(2)),
+    initialProfitRate: Number((quickPricing.actualProfitRate * 100).toFixed(2)),
     pricingDecision: decision,
+  };
+}
+
+function loadStoredPricingTemplates() {
+  if (typeof window === 'undefined') return [];
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(pricingTemplateStorageKey) || '[]');
+    return Array.isArray(stored) ? stored.filter((item) => item?.id && item?.name && item?.values) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveStoredPricingTemplates(templates) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(pricingTemplateStorageKey, JSON.stringify(templates));
+}
+
+function pickPricingTemplateValues(form) {
+  return {
+    categoryId: form.categoryId,
+    logisticId: form.logisticId,
+    profitType: form.profitType,
+    profitVal: form.profitVal,
+    discount: form.discount,
+    chinaFee: form.chinaFee,
+    adsRate: form.adsRate,
+    cashRate: form.cashRate,
+    refundRate: form.refundRate,
+    otherFee: form.otherFee,
+    manualCategoryRate: form.manualCategoryRate,
   };
 }
 
@@ -247,6 +341,9 @@ export function ResultsPage() {
   const [selectionActionPending, setSelectionActionPending] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [competitorDetailEntry, setCompetitorDetailEntry] = useState(null);
+  const [pricingDialogEntry, setPricingDialogEntry] = useState(null);
+  const [pricingDialogForm, setPricingDialogForm] = useState(null);
+  const [customPricingTemplates, setCustomPricingTemplates] = useState(() => loadStoredPricingTemplates());
 
   const resultJobsQuery = useQuery({
     queryKey: ['result-jobs', showUnavailableJobs],
@@ -302,6 +399,17 @@ export function ResultsPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [competitorDetailEntry]);
+
+  useEffect(() => {
+    if (!pricingDialogEntry) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setPricingDialogEntry(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [pricingDialogEntry]);
 
   const productsQuery = useQuery({
     queryKey: ['products', selectedJobId, filters, page],
@@ -446,6 +554,92 @@ export function ResultsPage() {
     );
   };
 
+  const openPricingDialog = (entry) => {
+    const existingValues = {
+      ...(entry.initialCostPrice != null ? { purchaseCost: String(entry.initialCostPrice) } : {}),
+      ...(entry.initialDeliveryCost != null ? { manualLogisticsFee: String(entry.initialDeliveryCost) } : {}),
+    };
+    setPricingDialogEntry(entry);
+    setPricingDialogForm(buildPricingFormForEntry(entry, existingValues));
+  };
+
+  const updatePricingDialogForm = (key, value) => {
+    setPricingDialogForm((prev) => ({ ...(prev || quickPricingBaseForm), [key]: value }));
+  };
+
+  const applyPricingTemplate = (templateId) => {
+    const template = [...builtInPricingTemplates, ...customPricingTemplates].find((item) => item.id === templateId);
+    if (!template || !pricingDialogEntry) return;
+    setPricingDialogForm(buildPricingFormForEntry(pricingDialogEntry, template.values));
+  };
+
+  const savePricingTemplate = (name) => {
+    const trimmed = name.trim();
+    if (!trimmed || !pricingDialogForm) return;
+    const template = {
+      id: `custom-${Date.now()}`,
+      name: trimmed,
+      values: pickPricingTemplateValues(pricingDialogForm),
+    };
+    const nextTemplates = [...customPricingTemplates, template];
+    setCustomPricingTemplates(nextTemplates);
+    saveStoredPricingTemplates(nextTemplates);
+  };
+
+  const confirmPricing = async (decision) => {
+    if (!pricingDialogEntry || !pricingDialogForm) return;
+    const result = computeQuickPricingFromForm(pricingDialogForm);
+    if (!result.ok) {
+      setSelectionFeedback(result.error || '当前参数无法生成测价结果');
+      return;
+    }
+    const stage = decision === 'continue' ? 'source_pending' : 'pricing_rejected';
+    await updateSelectionStage(pricingDialogEntry.id, {
+      stage,
+      ...computePricingSnapshotFromResult(result, decision),
+    }, decision === 'continue' ? '测价通过，已进入找供应链阶段' : '利润不成立，已停止推进');
+    setPricingDialogEntry(null);
+    setPricingDialogForm(null);
+  };
+
+  const resultBatchSelector = (
+    <div className="result-batch-field result-batch-action">
+      <button type="button" className="result-batch-trigger" onClick={() => setBatchOpen((open) => !open)}>
+        <strong>{currentJob ? `#${currentJob.id} · 商品 ${formatNumber(data?.actualProductCount ?? currentJob.product_count ?? 0)}` : '选择批次'}</strong>
+      </button>
+
+      {batchOpen ? (
+        <div className="result-batch-popover">
+          <label className="result-batch-toggle">
+            <input
+              type="checkbox"
+              checked={showUnavailableJobs}
+              onChange={(event) => setShowUnavailableJobs(event.target.checked)}
+            />
+            <span>显示空批次和失败批次</span>
+          </label>
+          <div className="result-batch-list">
+            {jobs.length ? jobs.map((job) => (
+              <button
+                key={job.id}
+                type="button"
+                className={String(job.id) === String(selectedJobId) ? 'is-active' : ''}
+                onClick={() => selectJob(job.id)}
+              >
+                <strong>#{job.id}</strong>
+                <span>商品 {formatNumber(job.product_count || 0)} · {formatJobType(job.page_type)} · {formatDate(job.finished_at)}</span>
+                {job.job_status !== 'success' ? <em>失败/未完成</em> : null}
+                {job.job_status === 'success' && Number(job.product_count || 0) === 0 ? <em>无商品</em> : null}
+              </button>
+            )) : (
+              <div className="wb-empty-cell">暂无可选批次</div>
+            )}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+
   return (
     <div className="wb-page results-workbench">
       <div className="result-mode-tabs" aria-label="结果工作台模式">
@@ -462,17 +656,11 @@ export function ResultsPage() {
       </div>
 
       {mode === 'screening' ? (
-        <Panel title="选品工作流过滤" subtitle="商品筛选只处理已入池商品，不再按批次整体浏览">
+        <Panel title="选品工作流过滤">
           <SelectionFilterBar
-            selectionTab={selectionTab}
-            setSelectionTab={setSelectionTab}
             selectionFilters={selectionFilters}
             applySelectionFilter={applySelectionFilter}
             resetSelectionFilters={resetSelectionFilters}
-            selectionOverviewTabs={selectionOverviewTabs}
-            selectionCounts={selectionCounts}
-            selectionEntries={selectionEntries}
-            visibleSelectionEntries={visibleSelectionEntries}
           />
         </Panel>
       ) : null}
@@ -499,6 +687,7 @@ export function ResultsPage() {
             title={resultFilterTitle}
             actions={(
               <div className="result-filter-actions">
+                {resultBatchSelector}
                 <span className="result-filter-count">当前结果 {formatNumber(data?.total || 0)} 条</span>
                 <button type="button" className="wb-button ghost" onClick={() => setAdvancedFiltersOpen((open) => !open)}>
                   {showAdvancedFilters ? '收起高级筛选' : hasAdvancedFilters ? '高级筛选（已启用）' : '高级筛选'}
@@ -508,44 +697,6 @@ export function ResultsPage() {
             )}
           >
             <div className="wb-filter-grid result-filter-grid is-compact">
-              <div className="wb-field result-batch-field">
-                <span>数据批次</span>
-                <button type="button" className="result-batch-trigger" onClick={() => setBatchOpen((open) => !open)}>
-                  <strong>{currentJob ? `#${currentJob.id} · 商品 ${formatNumber(data?.actualProductCount ?? currentJob.product_count ?? 0)}` : '选择批次'}</strong>
-                  <small>{currentJob ? `${formatJobType(currentJob.page_type)} · ${formatDate(currentJob.finished_at)}` : '默认只显示有商品数据的成功批次'}</small>
-                </button>
-
-                {batchOpen ? (
-                  <div className="result-batch-popover">
-                    <label className="result-batch-toggle">
-                      <input
-                        type="checkbox"
-                        checked={showUnavailableJobs}
-                        onChange={(event) => setShowUnavailableJobs(event.target.checked)}
-                      />
-                      <span>显示空批次和失败批次</span>
-                    </label>
-                    <div className="result-batch-list">
-                      {jobs.length ? jobs.map((job) => (
-                        <button
-                          key={job.id}
-                          type="button"
-                          className={String(job.id) === String(selectedJobId) ? 'is-active' : ''}
-                          onClick={() => selectJob(job.id)}
-                        >
-                          <strong>#{job.id}</strong>
-                          <span>商品 {formatNumber(job.product_count || 0)} · {formatJobType(job.page_type)} · {formatDate(job.finished_at)}</span>
-                          {job.job_status !== 'success' ? <em>失败/未完成</em> : null}
-                          {job.job_status === 'success' && Number(job.product_count || 0) === 0 ? <em>无商品</em> : null}
-                        </button>
-                      )) : (
-                        <div className="wb-empty-cell">暂无可选批次</div>
-                      )}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-
               <label className="wb-field">
                 <span>关键词</span>
                 <input value={filters.keyword} onChange={(event) => applyFilter('keyword', event.target.value)} placeholder="平台商品ID / 品牌 / 类目" />
@@ -703,11 +854,7 @@ export function ResultsPage() {
             <SelectionWorkbenchTable
               entries={visibleSelectionEntries}
               actionPending={selectionActionPending}
-              onMoveToPricing={(entryId) => updateSelectionStage(entryId, {
-                stage: 'pricing_pending',
-                pricingDecision: 'pending',
-                selectionResult: 'active',
-              }, '已进入测价阶段')}
+              onOpenPricing={openPricingDialog}
               onReject={(entryId) => updateSelectionStage(entryId, {
                 stage: 'screening_rejected',
               }, '已淘汰')}
@@ -724,14 +871,6 @@ export function ResultsPage() {
                 competitorPacketStatus: 'pending',
                 transferToPrepAt: null,
               }, '已恢复到待初筛')}
-              onPricingContinue={(entry) => updateSelectionStage(entry.id, {
-                stage: 'source_pending',
-                ...computePricingSnapshot(entry, 'continue'),
-              }, '测价通过，已进入找供应链阶段')}
-              onPricingReject={(entry) => updateSelectionStage(entry.id, {
-                stage: 'pricing_rejected',
-                ...computePricingSnapshot(entry, 'reject'),
-              }, '利润不成立，已停止推进')}
               onSupplyMatched={(entry) => updateSelectionStage(entry.id, {
                 stage: 'competitor_pending',
                 supplyMatchStatus: 'matched',
@@ -765,6 +904,21 @@ export function ResultsPage() {
         <CompetitorDetailDialog
           entry={competitorDetailEntry}
           onClose={() => setCompetitorDetailEntry(null)}
+        />
+      ) : null}
+
+      {pricingDialogEntry && pricingDialogForm ? (
+        <PricingDialog
+          entry={pricingDialogEntry}
+          form={pricingDialogForm}
+          templates={[...builtInPricingTemplates, ...customPricingTemplates]}
+          result={computeQuickPricingFromForm(pricingDialogForm)}
+          actionPending={selectionActionPending}
+          onChange={updatePricingDialogForm}
+          onApplyTemplate={applyPricingTemplate}
+          onSaveTemplate={savePricingTemplate}
+          onConfirm={confirmPricing}
+          onClose={() => setPricingDialogEntry(null)}
         />
       ) : null}
     </div>
@@ -957,60 +1111,15 @@ function RawResultsTable({ items, onAddSingle, onRejectSingle, actionPending, se
 }
 
 function SelectionFilterBar({
-  selectionTab,
-  setSelectionTab,
   selectionFilters,
   applySelectionFilter,
   resetSelectionFilters,
-  selectionOverviewTabs,
-  selectionCounts,
-  selectionEntries,
-  visibleSelectionEntries,
 }) {
   return (
     <div className="wb-filter-grid selection-filter-bar">
-      <label className="wb-field selection-filter-stage">
-        <span>阶段状态</span>
-        <select value={selectionTab} onChange={(event) => setSelectionTab(event.target.value)}>
-          {selectionOverviewTabs.map((tab) => (
-            <option key={tab.key} value={tab.key}>
-              {tab.label} {formatNumber(selectionCounts[tab.key] || 0)}
-            </option>
-          ))}
-        </select>
-      </label>
-
       <label className="wb-field selection-filter-keyword">
         <span>关键词</span>
         <input value={selectionFilters.keyword} onChange={(event) => applySelectionFilter('keyword', event.target.value)} placeholder="商品ID / 品牌 / 类目" />
-      </label>
-
-      <label className="wb-field">
-        <span>来源批次</span>
-        <select value={selectionFilters.sourceJobId} onChange={(event) => applySelectionFilter('sourceJobId', event.target.value)}>
-          <option value="">全部</option>
-          {[...new Set(selectionEntries.map((entry) => String(entry.sourceJobId)).filter(Boolean))].map((jobId) => (
-            <option key={jobId} value={jobId}>批次 #{jobId}</option>
-          ))}
-        </select>
-      </label>
-
-      <label className="wb-field">
-        <span>测价状态</span>
-        <select value={selectionFilters.pricingStatus} onChange={(event) => applySelectionFilter('pricingStatus', event.target.value)}>
-          <option value="all">全部</option>
-          <option value="priced">已测价</option>
-          <option value="unpriced">未测价</option>
-        </select>
-      </label>
-
-      <label className="wb-field">
-        <span>利润判断</span>
-        <select value={selectionFilters.profitStatus} onChange={(event) => applySelectionFilter('profitStatus', event.target.value)}>
-          <option value="all">全部</option>
-          <option value="ok">利润成立</option>
-          <option value="bad">利润不成立</option>
-        </select>
       </label>
 
       <label className="wb-field">
@@ -1031,11 +1140,6 @@ function SelectionFilterBar({
         </select>
       </label>
 
-      <div className="wb-field selection-filter-total">
-        <span>当前工作区</span>
-        <div className="wb-filter-hint">共 {formatNumber(visibleSelectionEntries.length)} 条</div>
-      </div>
-
       <button type="button" className="wb-button ghost selection-filter-reset" onClick={resetSelectionFilters}>重置过滤</button>
     </div>
   );
@@ -1044,11 +1148,9 @@ function SelectionFilterBar({
 function SelectionWorkbenchTable({
   entries,
   actionPending,
-  onMoveToPricing,
+  onOpenPricing,
   onReject,
   onResetToPool,
-  onPricingContinue,
-  onPricingReject,
   onSupplyMatched,
   onCompetitorReady,
   onOpenCompetitorDetail,
@@ -1068,11 +1170,9 @@ function SelectionWorkbenchTable({
           key={entry.id}
           entry={entry}
           actionPending={actionPending}
-          onMoveToPricing={onMoveToPricing}
+          onOpenPricing={onOpenPricing}
           onReject={onReject}
           onResetToPool={onResetToPool}
-          onPricingContinue={onPricingContinue}
-          onPricingReject={onPricingReject}
           onSupplyMatched={onSupplyMatched}
           onCompetitorReady={onCompetitorReady}
           onOpenCompetitorDetail={onOpenCompetitorDetail}
@@ -1086,11 +1186,9 @@ function SelectionWorkbenchTable({
 function SelectionRow({
   entry,
   actionPending,
-  onMoveToPricing,
+  onOpenPricing,
   onReject,
   onResetToPool,
-  onPricingContinue,
-  onPricingReject,
   onSupplyMatched,
   onCompetitorReady,
   onOpenCompetitorDetail,
@@ -1098,12 +1196,19 @@ function SelectionRow({
 }) {
   const { item } = entry;
   const isRejected = entry.stage === 'screening_rejected' || entry.stage === 'pricing_rejected';
-  const profitText = entry.pricingDecision === 'continue'
-    ? `继续 · ${formatPercent((entry.initialProfitRate || 0) / 100)}`
-    : entry.pricingDecision === 'reject'
-      ? `淘汰 · ${formatPercent((entry.initialProfitRate || 0) / 100)}`
-      : '待判断';
-
+  const isPriced = entry.pricingDecision !== 'pending' && entry.initialTargetPrice != null;
+  const persistedCost = Number(entry.initialCostPrice || 0) + Number(entry.initialDeliveryCost || 0);
+  const pricingRows = [
+    ['预估售价', entry.initialTargetPrice != null ? formatCurrency(entry.initialTargetPrice, 'CNY') : '未测价'],
+    ['已记录成本', isPriced ? formatCurrency(persistedCost, 'CNY') : '-'],
+    [
+      '利润判断',
+      isPriced
+        ? `${entry.pricingDecision === 'continue' ? '通过' : '不成立'} · ${formatPercent(entry.initialProfitRate || 0)}`
+        : '待确认',
+      entry.pricingDecision === 'continue' ? 'is-good' : entry.pricingDecision === 'reject' ? 'is-danger' : '',
+    ],
+  ];
   return (
     <article className={`selection-decision-card ${isRejected ? 'is-rejected' : ''}`}>
       <section className="selection-product-block">
@@ -1144,19 +1249,13 @@ function SelectionRow({
 
       <section className="selection-pricing-block">
         <div className="selection-decision-group">
-          <div className="selection-metric-grid">
-            <div className="selection-data-card">
-              <span>成本</span>
-              <strong>{entry.initialCostPrice != null ? formatCurrency(entry.initialCostPrice, 'CNY') : '待测价'}</strong>
-            </div>
-            <div className="selection-data-card">
-              <span>预估售价</span>
-              <strong>{entry.initialTargetPrice != null ? formatCurrency(entry.initialTargetPrice, 'CNY') : '-'}</strong>
-            </div>
-            <div className="selection-data-card">
-              <span>利润判断</span>
-              <strong className={entry.pricingDecision === 'reject' ? 'is-danger' : entry.pricingDecision === 'continue' ? 'is-good' : ''}>{profitText}</strong>
-            </div>
+          <div className="selection-pricing-lines">
+            {pricingRows.map(([label, value, tone]) => (
+              <div className="selection-pricing-line" key={label}>
+                <span>{label}</span>
+                <strong className={tone || ''}>{value}</strong>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -1189,15 +1288,14 @@ function SelectionRow({
 
           {entry.stage === 'pool_pending' ? (
             <>
-              <button type="button" onClick={() => void onMoveToPricing(entry.id)} disabled={actionPending}>进入测价</button>
+              <button type="button" onClick={() => onOpenPricing(entry)} disabled={actionPending}>进入测价</button>
               <button type="button" onClick={() => void onReject(entry.id)} disabled={actionPending}>淘汰</button>
             </>
           ) : null}
 
           {entry.stage === 'pricing_pending' ? (
             <>
-              <button type="button" onClick={() => void onPricingContinue(entry)} disabled={actionPending}>测价通过</button>
-              <button type="button" onClick={() => void onPricingReject(entry)} disabled={actionPending}>利润不成立</button>
+              <button type="button" onClick={() => onOpenPricing(entry)} disabled={actionPending}>填写测价参数</button>
               <button type="button" onClick={() => void onResetToPool(entry.id)} disabled={actionPending}>退回初筛</button>
             </>
           ) : null}
@@ -1205,7 +1303,7 @@ function SelectionRow({
           {entry.stage === 'source_pending' ? (
             <>
               <button type="button" onClick={() => void onSupplyMatched(entry)} disabled={actionPending}>已找到货源</button>
-              <button type="button" onClick={() => void onMoveToPricing(entry.id)} disabled={actionPending}>重新测价</button>
+              <button type="button" onClick={() => onOpenPricing(entry)} disabled={actionPending}>重新测价</button>
             </>
           ) : null}
 
@@ -1231,6 +1329,176 @@ function SelectionRow({
         </div>
       </section>
     </article>
+  );
+}
+
+function PricingDialog({
+  entry,
+  form,
+  templates,
+  result,
+  actionPending,
+  onChange,
+  onApplyTemplate,
+  onSaveTemplate,
+  onConfirm,
+  onClose,
+}) {
+  const [templateName, setTemplateName] = useState('');
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const dimension = getDimensionSummary(entry.item);
+  const resultRows = result.ok
+    ? [
+        ['预估售价', formatCurrency(result.salePriceRmb, 'CNY')],
+        ['总成本', formatCurrency(result.totalCost, 'CNY')],
+        ['利润', `${formatCurrency(result.profit, 'CNY')} · ${formatPercent(result.actualProfitRate * 100)}`, result.profit < 0 ? 'is-danger' : 'is-good'],
+      ]
+    : [];
+
+  return (
+    <div className="pricing-dialog-backdrop" role="presentation" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) onClose();
+    }}>
+      <section className="pricing-dialog" role="dialog" aria-modal="true" aria-label="商品测价">
+        <div className="pricing-dialog-head">
+          <div>
+            <h3>商品测价</h3>
+            <p>{formatText(entry.item.title)}</p>
+          </div>
+          <button type="button" className="pricing-close-button" onClick={onClose} aria-label="关闭">×</button>
+        </div>
+
+        <div className="pricing-dialog-body">
+          <section className="pricing-dialog-form">
+            <div className="pricing-template-bar">
+              <label className="pricing-field">
+                <span>参数模板</span>
+                <select defaultValue="" onChange={(event) => {
+                  if (event.target.value) onApplyTemplate(event.target.value);
+                  event.target.value = '';
+                }}>
+                  <option value="">选择模板快速填充</option>
+                  {templates.map((template) => (
+                    <option key={template.id} value={template.id}>{template.name}</option>
+                  ))}
+                </select>
+            </label>
+              <div className="pricing-template-actions">
+                <button type="button" onClick={() => setSaveTemplateOpen((open) => !open)}>
+                  另存为模板
+                </button>
+              </div>
+            </div>
+
+            {saveTemplateOpen ? (
+              <div className="pricing-save-template">
+                <input value={templateName} onChange={(event) => setTemplateName(event.target.value)} placeholder="输入模板名称" />
+                <button type="button" onClick={() => {
+                  onSaveTemplate(templateName);
+                  setTemplateName('');
+                  setSaveTemplateOpen(false);
+                }}>保存模板</button>
+              </div>
+            ) : null}
+
+            <div className="pricing-field-sections">
+              <div className="pricing-field-section is-primary">
+                <PricingNumberField className="is-emphasis" testId="pricing-purchase-cost" label="采购价" unit="¥" value={form.purchaseCost} onChange={(value) => onChange('purchaseCost', value)} />
+                <PricingNumberField label="目标毛利" unit={form.profitType === 'amount' ? '¥' : '%'} value={form.profitVal} onChange={(value) => onChange('profitVal', value)} />
+                <label className="pricing-field">
+                  <span>模式</span>
+                  <select value={form.profitType} onChange={(event) => onChange('profitType', event.target.value)}>
+                    <option value="rate">毛利率</option>
+                    <option value="amount">毛利额</option>
+                  </select>
+                </label>
+                <PricingNumberField label="折扣" unit="%" value={form.discount} onChange={(value) => onChange('discount', value)} />
+                <PricingNumberField label="境内运费" unit="¥" value={form.chinaFee} onChange={(value) => onChange('chinaFee', value)} />
+                <PricingNumberField label="跨境物流" unit="¥" value={form.manualLogisticsFee} onChange={(value) => onChange('manualLogisticsFee', value)} />
+              </div>
+
+              <button className="pricing-advanced-toggle" type="button" onClick={() => setAdvancedOpen((open) => !open)}>
+                {advancedOpen ? '收起高级参数' : '展开高级参数'}
+              </button>
+
+              {advancedOpen ? (
+                <div className="pricing-advanced-panel">
+                  <div className="pricing-field-section">
+                    <PricingNumberField label="广告" unit="%" value={form.adsRate} onChange={(value) => onChange('adsRate', value)} />
+                    <PricingNumberField label="提现" unit="%" value={form.cashRate} onChange={(value) => onChange('cashRate', value)} />
+                    <PricingNumberField label="退货损耗" unit="%" value={form.refundRate} onChange={(value) => onChange('refundRate', value)} />
+                    <PricingNumberField label="其他费用" unit="¥" value={form.otherFee} onChange={(value) => onChange('otherFee', value)} />
+                  </div>
+
+                  <div className="pricing-field-section">
+                    <PricingNumberField label="重量" unit="g" step="1" value={form.weight} onChange={(value) => onChange('weight', value)} />
+                    <PricingNumberField label="长" unit="cm" value={form.volumeL} onChange={(value) => onChange('volumeL', value)} />
+                    <PricingNumberField label="宽" unit="cm" value={form.volumeW} onChange={(value) => onChange('volumeW', value)} />
+                    <PricingNumberField label="高" unit="cm" value={form.volumeH} onChange={(value) => onChange('volumeH', value)} />
+                  </div>
+
+                  <label className="pricing-field">
+                    <span>类目佣金</span>
+                    <select value={form.categoryId} onChange={(event) => onChange('categoryId', event.target.value)}>
+                      {categoryRates.map((item) => (
+                        <option key={item.cId} value={item.cId}>{item.name} · {formatPercent(Number(item.rate) * 100)}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              ) : null}
+            </div>
+          </section>
+
+          <aside className="pricing-dialog-result">
+            <div className="pricing-result-head">
+              <span>商品参考</span>
+              <strong>{formatCurrency(entry.item.avg_price_cny, 'CNY')}</strong>
+              <small>{dimension.weightText} · {dimension.sizeText}</small>
+            </div>
+            {result.ok ? (
+              <div className="pricing-result-lines">
+                {resultRows.map(([label, value, tone]) => (
+                  <div className="pricing-result-line" key={label}>
+                    <span>{label}</span>
+                    <strong className={tone || ''}>{value}</strong>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="wb-feedback is-error">{result.error || '当前参数无法生成测价结果'}</div>
+            )}
+            <div className="pricing-result-actions">
+              <button type="button" className="wb-button wb-button-primary" onClick={() => void onConfirm('continue')} disabled={actionPending || !result.ok}>
+                通过，进入找货
+              </button>
+              <button type="button" className="wb-button danger" onClick={() => void onConfirm('reject')} disabled={actionPending || !result.ok}>
+                利润不成立
+              </button>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function PricingNumberField({ label, unit, value, step = '0.01', testId, className = '', onChange }) {
+  return (
+    <label className={`pricing-field ${className}`}>
+      <span>{label}</span>
+      <div className="pricing-unit-input">
+        <input
+          data-testid={testId ? `selection-${testId}` : undefined}
+          type="number"
+          step={step}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <b>{unit}</b>
+      </div>
+    </label>
   );
 }
 
