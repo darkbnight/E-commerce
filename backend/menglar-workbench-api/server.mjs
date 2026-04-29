@@ -613,6 +613,12 @@ function buildProductsQuery(searchParams, resolvedJobId) {
     values.push(Number(minSales));
   }
 
+  const minGrowth = searchParams.get('minGrowth');
+  if (minGrowth) {
+    conditions.push('product_business_snapshots.sales_growth >= ?');
+    values.push(Number(minGrowth));
+  }
+
   const minRevenue = searchParams.get('minRevenue');
   if (minRevenue) {
     conditions.push('product_business_snapshots.sales_amount >= ?');
@@ -902,6 +908,7 @@ function handleApiProducts(req, res) {
         productType: url.searchParams.get('productType') || '',
         categoryLevel1: url.searchParams.get('categoryLevel1') || '',
         minSales: url.searchParams.get('minSales') || '',
+        minGrowth: url.searchParams.get('minGrowth') || '',
         minRevenue: url.searchParams.get('minRevenue') || '',
         minAvgPrice: url.searchParams.get('minAvgPrice') || '',
         maxAvgPrice: url.searchParams.get('maxAvgPrice') || '',
