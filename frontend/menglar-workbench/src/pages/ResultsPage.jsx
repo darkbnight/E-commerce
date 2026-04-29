@@ -341,6 +341,7 @@ export function ResultsPage() {
   const [selectionActionPending, setSelectionActionPending] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [competitorDetailEntry, setCompetitorDetailEntry] = useState(null);
+  const [selectionDialogPage, setSelectionDialogPage] = useState('detail');
   const [pricingDialogEntry, setPricingDialogEntry] = useState(null);
   const [pricingDialogForm, setPricingDialogForm] = useState(null);
   const [customPricingTemplates, setCustomPricingTemplates] = useState(() => loadStoredPricingTemplates());
@@ -394,6 +395,8 @@ export function ResultsPage() {
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
         setCompetitorDetailEntry(null);
+        setPricingDialogEntry(null);
+        setPricingDialogForm(null);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -404,7 +407,9 @@ export function ResultsPage() {
     if (!pricingDialogEntry) return undefined;
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
+        setCompetitorDetailEntry(null);
         setPricingDialogEntry(null);
+        setPricingDialogForm(null);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -559,8 +564,33 @@ export function ResultsPage() {
       ...(entry.initialCostPrice != null ? { purchaseCost: String(entry.initialCostPrice) } : {}),
       ...(entry.initialDeliveryCost != null ? { manualLogisticsFee: String(entry.initialDeliveryCost) } : {}),
     };
+    setCompetitorDetailEntry(entry);
+    setSelectionDialogPage('pricing');
     setPricingDialogEntry(entry);
     setPricingDialogForm(buildPricingFormForEntry(entry, existingValues));
+  };
+
+  const openCompetitorDetail = (entry) => {
+    setCompetitorDetailEntry(entry);
+    setSelectionDialogPage('detail');
+  };
+
+  const closeSelectionDialog = () => {
+    setCompetitorDetailEntry(null);
+    setPricingDialogEntry(null);
+    setPricingDialogForm(null);
+  };
+
+  const switchSelectionDialogPage = (page) => {
+    setSelectionDialogPage(page);
+    if (page === 'pricing' && competitorDetailEntry) {
+      const existingValues = {
+        ...(competitorDetailEntry.initialCostPrice != null ? { purchaseCost: String(competitorDetailEntry.initialCostPrice) } : {}),
+        ...(competitorDetailEntry.initialDeliveryCost != null ? { manualLogisticsFee: String(competitorDetailEntry.initialDeliveryCost) } : {}),
+      };
+      setPricingDialogEntry(competitorDetailEntry);
+      setPricingDialogForm((current) => current || buildPricingFormForEntry(competitorDetailEntry, existingValues));
+    }
   };
 
   const updatePricingDialogForm = (key, value) => {
@@ -598,6 +628,7 @@ export function ResultsPage() {
       stage,
       ...computePricingSnapshotFromResult(result, decision),
     }, decision === 'continue' ? '测价通过，已进入找供应链阶段' : '利润不成立，已停止推进');
+    setCompetitorDetailEntry(null);
     setPricingDialogEntry(null);
     setPricingDialogForm(null);
   };
@@ -881,7 +912,7 @@ export function ResultsPage() {
                 stage: 'prep_ready',
                 competitorPacketStatus: 'ready',
               }, '竞品数据已整理，可流转商品数据整理')}
-              onOpenCompetitorDetail={setCompetitorDetailEntry}
+              onOpenCompetitorDetail={openCompetitorDetail}
               onTransferToPrep={(entryId) => runSelectionAction(
                 () => transferProductSelectionItemToPrep(entryId),
                 () => '已流转到商品数据整理',
@@ -901,24 +932,19 @@ export function ResultsPage() {
       ) : null}
 
       {competitorDetailEntry ? (
-        <CompetitorDetailDialog
+        <SelectionWorkflowDialog
           entry={competitorDetailEntry}
-          onClose={() => setCompetitorDetailEntry(null)}
-        />
-      ) : null}
-
-      {pricingDialogEntry && pricingDialogForm ? (
-        <PricingDialog
-          entry={pricingDialogEntry}
+          activePage={selectionDialogPage}
           form={pricingDialogForm}
           templates={[...builtInPricingTemplates, ...customPricingTemplates]}
-          result={computeQuickPricingFromForm(pricingDialogForm)}
+          result={pricingDialogForm ? computeQuickPricingFromForm(pricingDialogForm) : null}
           actionPending={selectionActionPending}
+          onPageChange={switchSelectionDialogPage}
           onChange={updatePricingDialogForm}
           onApplyTemplate={applyPricingTemplate}
           onSaveTemplate={savePricingTemplate}
           onConfirm={confirmPricing}
-          onClose={() => setPricingDialogEntry(null)}
+          onClose={closeSelectionDialog}
         />
       ) : null}
     </div>
@@ -1332,7 +1358,86 @@ function SelectionRow({
   );
 }
 
-function PricingDialog({
+function SelectionWorkflowDialog({
+  entry,
+  activePage,
+  form,
+  templates,
+  result,
+  actionPending,
+  onPageChange,
+  onChange,
+  onApplyTemplate,
+  onSaveTemplate,
+  onConfirm,
+  onClose,
+}) {
+  const pages = [
+    { key: 'detail', label: '商品详情', description: '经营快照与竞品画像' },
+    { key: 'pricing', label: '测价参数', description: '成本、毛利与利润判断' },
+  ];
+  const pricingReady = form && result;
+
+  return (
+    <div className="selection-dialog-backdrop" role="presentation" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) onClose();
+    }}>
+      <section className="selection-dialog" role="dialog" aria-modal="true" aria-label="商品筛选详情">
+        <aside className="selection-dialog-sidebar">
+          <div className="selection-dialog-product">
+            {entry.item.product_image_url ? (
+              <img src={entry.item.product_image_url} alt="" loading="lazy" />
+            ) : (
+              <span className="product-image-placeholder" />
+            )}
+            <strong>{formatText(entry.item.title)}</strong>
+            <span>{formatText(entry.item.brand)} / {formatText(entry.item.shop_name)}</span>
+          </div>
+
+          <nav className="selection-dialog-nav" aria-label="商品弹窗分页">
+            {pages.map((page) => (
+              <button
+                key={page.key}
+                type="button"
+                className={activePage === page.key ? 'is-active' : ''}
+                onClick={() => onPageChange(page.key)}
+              >
+                <strong>{page.label}</strong>
+                <span>{page.description}</span>
+              </button>
+            ))}
+          </nav>
+
+          <button type="button" className="selection-dialog-close" onClick={onClose}>关闭</button>
+        </aside>
+
+        <main className="selection-dialog-main">
+          {activePage === 'pricing' ? (
+            pricingReady ? (
+              <PricingDialogPage
+                entry={entry}
+                form={form}
+                templates={templates}
+                result={result}
+                actionPending={actionPending}
+                onChange={onChange}
+                onApplyTemplate={onApplyTemplate}
+                onSaveTemplate={onSaveTemplate}
+                onConfirm={onConfirm}
+              />
+            ) : (
+              <div className="wb-feedback is-busy">正在准备测价参数</div>
+            )
+          ) : (
+            <CompetitorDetailPage entry={entry} />
+          )}
+        </main>
+      </section>
+    </div>
+  );
+}
+
+function PricingDialogPage({
   entry,
   form,
   templates,
@@ -1342,7 +1447,6 @@ function PricingDialog({
   onApplyTemplate,
   onSaveTemplate,
   onConfirm,
-  onClose,
 }) {
   const [templateName, setTemplateName] = useState('');
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
@@ -1357,19 +1461,15 @@ function PricingDialog({
     : [];
 
   return (
-    <div className="pricing-dialog-backdrop" role="presentation" onMouseDown={(event) => {
-      if (event.target === event.currentTarget) onClose();
-    }}>
-      <section className="pricing-dialog" role="dialog" aria-modal="true" aria-label="商品测价">
-        <div className="pricing-dialog-head">
-          <div>
-            <h3>商品测价</h3>
-            <p>{formatText(entry.item.title)}</p>
-          </div>
-          <button type="button" className="pricing-close-button" onClick={onClose} aria-label="关闭">×</button>
+    <div className="selection-dialog-page">
+      <header className="selection-dialog-head">
+        <div>
+          <h3>商品测价</h3>
+          <p>{formatText(entry.item.title)}</p>
         </div>
+      </header>
 
-        <div className="pricing-dialog-body">
+      <div className="pricing-dialog-body">
           <section className="pricing-dialog-form">
             <div className="pricing-template-bar">
               <label className="pricing-field">
@@ -1478,8 +1578,7 @@ function PricingDialog({
               </button>
             </div>
           </aside>
-        </div>
-      </section>
+      </div>
     </div>
   );
 }
@@ -1502,7 +1601,7 @@ function PricingNumberField({ label, unit, value, step = '0.01', testId, classNa
   );
 }
 
-function CompetitorDetailDialog({ entry, onClose }) {
+function CompetitorDetailPage({ entry }) {
   const { item } = entry;
   const dimension = getDimensionSummary(item);
   const metricGroups = [
@@ -1545,9 +1644,8 @@ function CompetitorDetailDialog({ entry, onClose }) {
   ];
 
   return (
-    <div className="competitor-detail-backdrop" role="presentation" onClick={onClose}>
-      <section className="competitor-detail-dialog" role="dialog" aria-modal="true" aria-label="竞品详情" onClick={(event) => event.stopPropagation()}>
-        <div className="competitor-detail-media">
+    <div className="competitor-detail-page">
+      <div className="competitor-detail-media">
           <div className="competitor-detail-image-frame">
             {item.product_image_url ? (
               <img src={item.product_image_url} alt="" loading="lazy" />
@@ -1555,10 +1653,10 @@ function CompetitorDetailDialog({ entry, onClose }) {
               <span className="product-image-placeholder" />
             )}
           </div>
-        </div>
+      </div>
 
-        <div className="competitor-detail-content">
-          <header className="competitor-detail-head">
+      <div className="competitor-detail-content">
+          <header className="selection-dialog-head competitor-detail-head">
             <div className="competitor-detail-identity">
               <p className="wb-kicker">Competitor Snapshot</p>
               <h3>{formatText(item.title)}</h3>
@@ -1568,7 +1666,6 @@ function CompetitorDetailDialog({ entry, onClose }) {
                 <span className="mono">{formatText(item.platform_product_id)}</span>
               </div>
             </div>
-            <button type="button" className="competitor-detail-close" onClick={onClose}>关闭</button>
           </header>
 
           <div className="competitor-detail-meta">
@@ -1593,8 +1690,7 @@ function CompetitorDetailDialog({ entry, onClose }) {
               </article>
             ))}
           </div>
-        </div>
-      </section>
+      </div>
     </div>
   );
 }
