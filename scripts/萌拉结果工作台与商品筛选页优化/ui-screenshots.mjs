@@ -91,19 +91,26 @@ try {
   });
 
   await selectionRow.getByRole('button', { name: '进入测价' }).click();
+  await page.locator('.selection-dialog').waitFor({ timeout: 10000 });
   await page.waitForTimeout(300);
   await page.screenshot({
     path: path.join(screenshotDir, 'selection-processing.png'),
     fullPage: true,
   });
-  await selectionRow.getByRole('button', { name: '测价通过' }).waitFor({ timeout: 10000 });
+  await page.getByRole('button', { name: /收入 \/ 成本明细/ }).click();
+  await page.waitForTimeout(200);
+  await page.screenshot({
+    path: path.join(screenshotDir, 'selection-pricing-expanded.png'),
+    fullPage: true,
+  });
 
-  await selectionRow.getByRole('button', { name: '测价通过' }).click();
-  await selectionRow.getByRole('button', { name: '已找到货源' }).waitFor({ timeout: 10000 });
-  await selectionRow.getByRole('button', { name: '已找到货源' }).click();
-  await selectionRow.getByRole('button', { name: '竞品已整理' }).waitFor({ timeout: 10000 });
-  await selectionRow.getByRole('button', { name: '竞品已整理' }).click();
-  await selectionRow.getByRole('button', { name: '进入商品数据整理' }).waitFor({ timeout: 10000 });
+  await page.getByRole('button', { name: '通过，进入找货' }).click();
+  await page.locator('.selection-dialog').waitFor({ state: 'detached', timeout: 10000 });
+  await selectionRow.getByRole('button', { name: '标记已找到货源' }).waitFor({ timeout: 10000 });
+  await selectionRow.getByRole('button', { name: '标记已找到货源' }).click();
+  await selectionRow.getByRole('button', { name: '整理竞品完成' }).waitFor({ timeout: 10000 });
+  await selectionRow.getByRole('button', { name: '整理竞品完成' }).click();
+  await selectionRow.getByRole('button', { name: '进入商品整理' }).waitFor({ timeout: 10000 });
 
   await page.screenshot({
     path: path.join(screenshotDir, 'selection-ready.png'),
@@ -117,6 +124,7 @@ try {
       'results-default.png',
       'results-single-add.png',
       'selection-processing.png',
+      'selection-pricing-expanded.png',
       'selection-ready.png',
     ],
   }, null, 2));
