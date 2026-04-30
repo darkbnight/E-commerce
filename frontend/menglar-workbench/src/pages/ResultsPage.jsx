@@ -17,6 +17,7 @@ import logisticsData from '../modules/ozon-pricing/data/logistics.json';
 import {
   calculatePricing,
   defaultPricingForm,
+  getRate,
   normalizeInitialForm,
 } from '../modules/ozon-pricing/pricingCalculator';
 
@@ -79,6 +80,14 @@ const selectionOverviewTabs = [
   { key: 'rejected', label: '已淘汰' },
 ];
 
+const selectionProgressSteps = [
+  { key: 'pool_pending', label: '初筛' },
+  { key: 'pricing_pending', label: '测价' },
+  { key: 'source_pending', label: '找货' },
+  { key: 'competitor_pending', label: '竞品' },
+  { key: 'prep_ready', label: '流转' },
+];
+
 const pageSize = 20;
 const categoryRates = categoryRatesData.items || [];
 const exchangeRates = exchangeRatesData.items || [];
@@ -94,21 +103,29 @@ const quickPricingFixedParams = {
   refundRate: '2',
   otherFee: '0',
 };
+const defaultPricingTemplateValues = {
+  profitType: quickPricingFixedParams.profitType,
+  profitVal: quickPricingFixedParams.profitVal,
+  adsRate: quickPricingFixedParams.adsRate,
+  cashRate: quickPricingFixedParams.cashRate,
+  refundRate: quickPricingFixedParams.refundRate,
+  otherFee: quickPricingFixedParams.otherFee,
+};
 const builtInPricingTemplates = [
   {
     id: 'standard',
     name: '标准利润 20%',
-    values: quickPricingFixedParams,
+    values: defaultPricingTemplateValues,
   },
   {
     id: 'conservative',
     name: '保守测算 25%',
-    values: { ...quickPricingFixedParams, profitVal: '25', adsRate: '5', refundRate: '3' },
+    values: { ...defaultPricingTemplateValues, profitVal: '25', adsRate: '5', refundRate: '3' },
   },
   {
     id: 'traffic',
     name: '投流测试 18%',
-    values: { ...quickPricingFixedParams, profitVal: '18', adsRate: '8', refundRate: '3' },
+    values: { ...defaultPricingTemplateValues, profitVal: '18', adsRate: '8', refundRate: '3' },
   },
 ];
 const pricingTemplateStorageKey = 'menglar-selection-pricing-templates';
@@ -231,6 +248,27 @@ function isRejectedStage(stage) {
   return stage === 'screening_rejected' || stage === 'pricing_rejected';
 }
 
+function getSelectionProgressIndex(stage) {
+  const index = selectionProgressSteps.findIndex((step) => step.key === stage);
+  return index < 0 ? 0 : index;
+}
+
+function formatDualTargetPrice(cnyPrice) {
+  if (cnyPrice == null) return '未测价';
+  const rubRate = getRate(exchangeRates, 'RUB');
+  const rubPrice = rubRate > 0 ? Number(cnyPrice) * rubRate : null;
+  return rubPrice == null
+    ? formatCurrency(cnyPrice, 'CNY')
+    : `${formatCurrency(rubPrice, 'RUB')} / ${formatCurrency(cnyPrice, 'CNY')}`;
+}
+
+function formatSelectionProfit(entry) {
+  if (entry.initialTargetPrice == null || entry.initialProfitRate == null) return '待确认';
+  const profitAmount = Number(entry.initialTargetPrice) * (Number(entry.initialProfitRate) / 100);
+  if (!Number.isFinite(profitAmount)) return '待确认';
+  return `${formatCurrency(profitAmount, 'CNY')} · ${formatPercent(entry.initialProfitRate)}`;
+}
+
 function buildPricingFormForEntry(entry, overrides = {}) {
   const { item } = entry;
   const avgPrice = Number(item.avg_price_cny || 0);
@@ -293,17 +331,12 @@ function saveStoredPricingTemplates(templates) {
 
 function pickPricingTemplateValues(form) {
   return {
-    categoryId: form.categoryId,
-    logisticId: form.logisticId,
     profitType: form.profitType,
     profitVal: form.profitVal,
-    discount: form.discount,
-    chinaFee: form.chinaFee,
     adsRate: form.adsRate,
     cashRate: form.cashRate,
     refundRate: form.refundRate,
     otherFee: form.otherFee,
-    manualCategoryRate: form.manualCategoryRate,
   };
 }
 
@@ -1223,139 +1256,113 @@ function SelectionRow({
   const { item } = entry;
   const isRejected = entry.stage === 'screening_rejected' || entry.stage === 'pricing_rejected';
   const isPriced = entry.pricingDecision !== 'pending' && entry.initialTargetPrice != null;
-  const persistedCost = Number(entry.initialCostPrice || 0) + Number(entry.initialDeliveryCost || 0);
+  const dimensionSummary = getDimensionSummary(item);
+  const primaryAction = getPrimaryAction();
   const pricingRows = [
-    ['预估售价', entry.initialTargetPrice != null ? formatCurrency(entry.initialTargetPrice, 'CNY') : '未测价'],
-    ['已记录成本', isPriced ? formatCurrency(persistedCost, 'CNY') : '-'],
+    ['预估售价', formatDualTargetPrice(entry.initialTargetPrice)],
     [
-      '利润判断',
-      isPriced
-        ? `${entry.pricingDecision === 'continue' ? '通过' : '不成立'} · ${formatPercent(entry.initialProfitRate || 0)}`
-        : '待确认',
+      '利润',
+      isPriced ? formatSelectionProfit(entry) : '待确认',
       entry.pricingDecision === 'continue' ? 'is-good' : entry.pricingDecision === 'reject' ? 'is-danger' : '',
     ],
   ];
   return (
     <article className={`selection-decision-card ${isRejected ? 'is-rejected' : ''}`}>
       <section className="selection-product-block">
-        <span className={`screening-state-pill is-${stageToneMap[entry.stage] || 'neutral'}`}>{stageLabels[entry.stage]}</span>
-        <div className="product-info-cell">
+        <div className="selection-product-media">
           {item.product_image_url ? (
             <img src={item.product_image_url} alt="" loading="lazy" />
           ) : (
             <span className="product-image-placeholder" />
           )}
-          <div>
-            <div className="cell-main product-title">{formatText(item.title)}</div>
-            <div className="cell-sub mono">{item.platform_product_id}</div>
-            <div className="cell-sub">{formatText(item.brand)} / {formatText(item.shop_name)}</div>
-          </div>
         </div>
-        <div className="selection-source-meta">
-          <span>批次 #{formatText(entry.sourceJobId)}</span>
-          <span>{formatJobType(entry.sourcePageType)}</span>
-          <span>{formatDate(entry.sourceFinishedAt)}</span>
+        <div className="selection-product-info">
+          <div className="selection-product-head">
+            <span className={`screening-state-pill is-${stageToneMap[entry.stage] || 'neutral'}`}>{stageLabels[entry.stage]}</span>
+            <span className="selection-product-id mono">{item.platform_product_id}</span>
+          </div>
+          <div className="cell-main product-title">{formatText(item.title)}</div>
+          <div className="selection-source-meta">
+            <span>批次 #{formatText(entry.sourceJobId)}</span>
+            <span>{formatJobType(entry.sourcePageType)}</span>
+            <span>{formatDate(entry.sourceFinishedAt)}</span>
+          </div>
         </div>
       </section>
 
       <section className="selection-logistics-block">
-        <div className="selection-decision-group">
-          <div className="selection-logistics-grid">
-            <div className="selection-data-card">
-              <span>重量</span>
-              <strong>{getDimensionSummary(item).weightText}</strong>
-            </div>
-            <div className="selection-data-card">
-              <span>跨境物流成本</span>
-              <strong>{entry.initialDeliveryCost != null ? formatCurrency(entry.initialDeliveryCost, 'CNY') : '-'}</strong>
-            </div>
+        <div className="selection-info-panel">
+          <div className="selection-info-line">
+            <span>重量</span>
+            <strong>{dimensionSummary.weightText}</strong>
+          </div>
+          <div className="selection-info-line">
+            <span>跨境物流</span>
+            <strong>{entry.initialDeliveryCost != null ? formatCurrency(entry.initialDeliveryCost, 'CNY') : '-'}</strong>
           </div>
         </div>
       </section>
 
       <section className="selection-pricing-block">
-        <div className="selection-decision-group">
-          <div className="selection-pricing-lines">
-            {pricingRows.map(([label, value, tone]) => (
-              <div className="selection-pricing-line" key={label}>
-                <span>{label}</span>
-                <strong className={tone || ''}>{value}</strong>
-              </div>
-            ))}
-          </div>
+        <div className={`selection-info-panel selection-pricing-summary ${entry.pricingDecision === 'continue' ? 'is-good' : entry.pricingDecision === 'reject' ? 'is-danger' : ''}`}>
+          {pricingRows.map(([label, value, tone]) => (
+            <div className="selection-info-line" key={label}>
+              <span>{label}</span>
+              <strong className={tone || ''}>{value}</strong>
+            </div>
+          ))}
         </div>
       </section>
 
       <section className="selection-supply-block">
-        <div className="selection-decision-group">
-          <div className="selection-supply-grid">
-            <div className="selection-data-card">
-              <span>状态</span>
-              <strong>{entry.supplyMatchStatus === 'matched' ? '已找到货源' : '待找货源'}</strong>
-            </div>
-            <div className="selection-data-card">
-              <span>供应商</span>
-              <strong>{entry.supplyVendorName || '未记录'}</strong>
-            </div>
-            <div className="selection-data-card">
-              <span>竞品</span>
-              <strong>{entry.competitorPacketStatus === 'ready' ? '已整理' : '待整理'}</strong>
-            </div>
+        <div className="selection-info-panel">
+          <div className="selection-info-line">
+            <span>货源</span>
+            <strong>{entry.supplyMatchStatus === 'matched' ? entry.supplyVendorName || '已找到' : '未记录'}</strong>
           </div>
-          {entry.supplyReferenceUrl ? (
-            <div className="cell-sub mono selection-link">{entry.supplyReferenceUrl}</div>
-          ) : null}
+          <div className="selection-info-line">
+            <span>竞品</span>
+            <strong>{entry.competitorPacketStatus === 'ready' ? '已整理' : '待整理'}</strong>
+          </div>
         </div>
       </section>
 
       <section className="selection-action-block">
-        <button className="selection-primary-action" type="button" onClick={() => onOpenCompetitorDetail(entry)} disabled={actionPending}>查看竞品详情</button>
+        <button className="selection-primary-action" type="button" onClick={primaryAction.onClick} disabled={actionPending || primaryAction.disabled}>
+          {primaryAction.label}
+        </button>
         <div className="screening-row-actions selection-actions">
-
-          {entry.stage === 'pool_pending' ? (
-            <>
-              <button type="button" onClick={() => onOpenPricing(entry)} disabled={actionPending}>进入测价</button>
-              <button type="button" onClick={() => void onReject(entry.id)} disabled={actionPending}>淘汰</button>
-            </>
-          ) : null}
-
-          {entry.stage === 'pricing_pending' ? (
-            <>
-              <button type="button" onClick={() => onOpenPricing(entry)} disabled={actionPending}>填写测价参数</button>
-              <button type="button" onClick={() => void onResetToPool(entry.id)} disabled={actionPending}>退回初筛</button>
-            </>
-          ) : null}
-
-          {entry.stage === 'source_pending' ? (
-            <>
-              <button type="button" onClick={() => void onSupplyMatched(entry)} disabled={actionPending}>已找到货源</button>
-              <button type="button" onClick={() => onOpenPricing(entry)} disabled={actionPending}>重新测价</button>
-            </>
-          ) : null}
-
-          {entry.stage === 'competitor_pending' ? (
-            <>
-              <button type="button" onClick={() => void onCompetitorReady(entry.id)} disabled={actionPending}>竞品已整理</button>
-              <button type="button" onClick={() => void onSupplyMatched(entry)} disabled={actionPending}>更新货源</button>
-            </>
-          ) : null}
-
-          {entry.stage === 'prep_ready' ? (
-            <>
-              <button type="button" onClick={() => void onTransferToPrep(entry.id)} disabled={actionPending || Boolean(entry.transferToPrepAt)}>
-                {entry.transferToPrepAt ? '已流转商品数据整理' : '进入商品数据整理'}
-              </button>
-              <button type="button" onClick={() => void onCompetitorReady(entry.id)} disabled={actionPending}>保持可流转</button>
-            </>
-          ) : null}
-
-          {isRejected ? (
-            <button type="button" onClick={() => void onResetToPool(entry.id)} disabled={actionPending}>恢复到待初筛</button>
+          <button type="button" onClick={() => onOpenCompetitorDetail(entry)} disabled={actionPending}>详情</button>
+          {!isRejected ? (
+            <button type="button" className="is-reject" onClick={() => void onReject(entry.id)} disabled={actionPending}>淘汰</button>
           ) : null}
         </div>
       </section>
     </article>
   );
+
+  function getPrimaryAction() {
+    if (entry.stage === 'pool_pending') {
+      return { label: '进入测价', onClick: () => onOpenPricing(entry) };
+    }
+    if (entry.stage === 'pricing_pending') {
+      return { label: '填写测价参数', onClick: () => onOpenPricing(entry) };
+    }
+    if (entry.stage === 'source_pending') {
+      return { label: '标记已找到货源', onClick: () => void onSupplyMatched(entry) };
+    }
+    if (entry.stage === 'competitor_pending') {
+      return { label: '整理竞品完成', onClick: () => void onCompetitorReady(entry.id) };
+    }
+    if (entry.stage === 'prep_ready') {
+      return {
+        label: entry.transferToPrepAt ? '已流转商品整理' : '进入商品整理',
+        onClick: () => void onTransferToPrep(entry.id),
+        disabled: Boolean(entry.transferToPrepAt),
+      };
+    }
+    return { label: '恢复到待初筛', onClick: () => void onResetToPool(entry.id) };
+  }
 }
 
 function SelectionWorkflowDialog({
@@ -1384,16 +1391,6 @@ function SelectionWorkflowDialog({
     }}>
       <section className="selection-dialog" role="dialog" aria-modal="true" aria-label="商品筛选详情">
         <aside className="selection-dialog-sidebar">
-          <div className="selection-dialog-product">
-            {entry.item.product_image_url ? (
-              <img src={entry.item.product_image_url} alt="" loading="lazy" />
-            ) : (
-              <span className="product-image-placeholder" />
-            )}
-            <strong>{formatText(entry.item.title)}</strong>
-            <span>{formatText(entry.item.brand)} / {formatText(entry.item.shop_name)}</span>
-          </div>
-
           <nav className="selection-dialog-nav" aria-label="商品弹窗分页">
             {pages.map((page) => (
               <button
@@ -1403,15 +1400,13 @@ function SelectionWorkflowDialog({
                 onClick={() => onPageChange(page.key)}
               >
                 <strong>{page.label}</strong>
-                <span>{page.description}</span>
               </button>
             ))}
           </nav>
-
-          <button type="button" className="selection-dialog-close" onClick={onClose}>关闭</button>
         </aside>
 
         <main className="selection-dialog-main">
+          <button type="button" className="selection-dialog-close" onClick={onClose}>关闭</button>
           {activePage === 'pricing' ? (
             pricingReady ? (
               <PricingDialogPage
@@ -1451,6 +1446,7 @@ function PricingDialogPage({
   const [templateName, setTemplateName] = useState('');
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const dimension = getDimensionSummary(entry.item);
   const resultRows = result.ok
     ? [
@@ -1459,16 +1455,29 @@ function PricingDialogPage({
         ['利润', `${formatCurrency(result.profit, 'CNY')} · ${formatPercent(result.actualProfitRate * 100)}`, result.profit < 0 ? 'is-danger' : 'is-good'],
       ]
     : [];
+  const incomeRows = result.ok
+    ? [
+        ['商品原价（折前）', `${formatCurrency(result.originalPriceRub, 'RUB')} / ${formatCurrency(result.originalPriceRmb, 'CNY')}`],
+        ['商品售价（折后）', `${formatCurrency(result.salePriceRub, 'RUB')} / ${formatCurrency(result.salePriceRmb, 'CNY')}`],
+        ['利润', formatCurrency(result.profit, 'CNY')],
+        ['利润率', formatPercent(result.actualProfitRate * 100)],
+      ]
+    : [];
+  const costRows = result.ok
+    ? [
+        ['采购成本', formatCurrency(result.input.purchaseCost, 'CNY')],
+        ['境内运费', formatCurrency(result.input.chinaFee, 'CNY')],
+        ['跨境物流费', formatCurrency(result.logisticsFee, 'CNY')],
+        ['平台佣金', `${formatCurrency(result.commission, 'CNY')} · ${formatPercent(result.categoryRate * 100)}`],
+        ['广告费用', `${formatCurrency(result.adsFee, 'CNY')} · ${formatPercent(result.input.adsRate * 100)}`],
+        ['提现手续费', `${formatCurrency(result.cashFee, 'CNY')} · ${formatPercent(result.input.cashRate * 100)}`],
+        ['退货损耗', `${formatCurrency(result.refundFee, 'CNY')} · ${formatPercent(result.input.refundRate * 100)}`],
+        ['其他费用', formatCurrency(result.input.otherFee, 'CNY')],
+      ]
+    : [];
 
   return (
-    <div className="selection-dialog-page">
-      <header className="selection-dialog-head">
-        <div>
-          <h3>商品测价</h3>
-          <p>{formatText(entry.item.title)}</p>
-        </div>
-      </header>
-
+    <div className="selection-dialog-page pricing-dialog-page">
       <div className="pricing-dialog-body">
           <section className="pricing-dialog-form">
             <div className="pricing-template-bar">
@@ -1552,34 +1561,69 @@ function PricingDialogPage({
           </section>
 
           <aside className="pricing-dialog-result">
-            <div className="pricing-result-head">
-              <span>商品参考</span>
-              <strong>{formatCurrency(entry.item.avg_price_cny, 'CNY')}</strong>
-              <small>{dimension.weightText} · {dimension.sizeText}</small>
-            </div>
             {result.ok ? (
-              <div className="pricing-result-lines">
-                {resultRows.map(([label, value, tone]) => (
-                  <div className="pricing-result-line" key={label}>
-                    <span>{label}</span>
-                    <strong className={tone || ''}>{value}</strong>
-                  </div>
-                ))}
+              <div className="pricing-result-stack">
+                <div className="pricing-result-head">
+                  <span>商品参考</span>
+                  <strong>{formatCurrency(entry.item.avg_price_cny, 'CNY')}</strong>
+                  <small>{dimension.weightText} · {dimension.sizeText}</small>
+                </div>
+
+                <div className="pricing-result-lines">
+                  {resultRows.map(([label, value, tone]) => (
+                    <div className="pricing-result-line" key={label}>
+                      <span>{label}</span>
+                      <strong className={tone || ''}>{value}</strong>
+                    </div>
+                  ))}
+                </div>
+
+                <section className="pricing-breakdown">
+                  <button type="button" className="pricing-breakdown-toggle" onClick={() => setDetailsOpen((open) => !open)}>
+                    <span>收入 / 成本明细</span>
+                    <strong>{formatCurrency(result.salePriceRmb, 'CNY')} / {formatCurrency(result.totalCost, 'CNY')}</strong>
+                    <em>{detailsOpen ? '收起' : '展开'}</em>
+                  </button>
+
+                  {detailsOpen ? (
+                    <div className="pricing-breakdown-grid">
+                      <PricingBreakdownGroup title="收入" rows={incomeRows} />
+                      <PricingBreakdownGroup title="成本" rows={costRows} />
+                    </div>
+                  ) : null}
+                </section>
               </div>
             ) : (
               <div className="wb-feedback is-error">{result.error || '当前参数无法生成测价结果'}</div>
             )}
-            <div className="pricing-result-actions">
-              <button type="button" className="wb-button wb-button-primary" onClick={() => void onConfirm('continue')} disabled={actionPending || !result.ok}>
-                通过，进入找货
-              </button>
-              <button type="button" className="wb-button danger" onClick={() => void onConfirm('reject')} disabled={actionPending || !result.ok}>
-                利润不成立
-              </button>
-            </div>
           </aside>
       </div>
+
+      <footer className="pricing-result-actions">
+        <button type="button" className="wb-button wb-button-primary" onClick={() => void onConfirm('continue')} disabled={actionPending || !result.ok}>
+          通过，进入找货
+        </button>
+        <button type="button" className="wb-button danger" onClick={() => void onConfirm('reject')} disabled={actionPending || !result.ok}>
+          利润不成立
+        </button>
+      </footer>
     </div>
+  );
+}
+
+function PricingBreakdownGroup({ title, rows }) {
+  return (
+    <article className="pricing-breakdown-group">
+      <h4>{title}</h4>
+      <dl>
+        {rows.map(([label, value]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </article>
   );
 }
 
