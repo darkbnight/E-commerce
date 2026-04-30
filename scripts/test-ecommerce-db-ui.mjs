@@ -113,14 +113,15 @@ try {
   assert.equal(await row.locator('.selection-logistics-block').count(), 1, 'logistics column should be visible');
   assert.equal(await row.locator('.selection-pricing-block').count(), 1, 'pricing column should be visible');
   assert.equal(await row.locator('.selection-supply-block').count(), 1, 'supply column should be visible');
-  assert.equal(await row.locator('.selection-pricing-line').count(), 3, 'quick pricing should render sale price, total cost and profit rows');
+  assert.equal(await row.locator('.selection-pricing-block .selection-info-line').count(), 2, 'quick pricing should render sale price and profit rows');
   const quickPricingText = await row.locator('.selection-pricing-block').innerText();
   assert.match(quickPricingText, /未测价/, 'pricing summary should wait for manual confirmation');
 
-  const autoDeliveryText = (await row.locator('.selection-logistics-block .selection-data-card strong').nth(1).textContent())?.trim() || '';
+  const autoDeliveryText = (await row.locator('.selection-logistics-block .selection-info-line strong').nth(1).textContent())?.trim() || '';
   assert.notEqual(autoDeliveryText, '-', 'delivery cost should be auto calculated after adding to selection pool');
 
-  await row.locator('.selection-primary-action').click();
+  const rowActions = row.locator('.selection-action-block .screening-row-actions button');
+  await rowActions.first().click();
   await page.locator('.selection-dialog').waitFor({ timeout: 10000 });
   await page.getByRole('button', { name: /商品详情/ }).waitFor({ timeout: 10000 });
   const competitorDialogText = await page.locator('.selection-dialog').innerText();
@@ -128,8 +129,7 @@ try {
   assert.doesNotMatch(competitorDialogText, /\d{1,3}(?:\.\d{3}){2,}/, 'large numbers should not use dot thousands separators');
   await page.getByRole('button', { name: '关闭' }).click();
 
-  const rowActions = row.locator('.selection-action-block .screening-row-actions button');
-  await rowActions.first().click();
+  await row.locator('.selection-primary-action').click();
   await page.locator('.selection-dialog').waitFor({ timeout: 10000 });
   await page.getByRole('button', { name: /测价参数/ }).waitFor({ timeout: 10000 });
   await page.getByTestId('selection-pricing-purchase-cost').fill('2');
@@ -140,13 +140,13 @@ try {
   assert.match(pricingDialogText, /利润/, 'pricing dialog should show profit');
   await page.getByRole('button', { name: '通过，进入找货' }).click();
   await page.locator('.selection-dialog').waitFor({ state: 'detached', timeout: 10000 });
-  const deliveryAfterPricing = (await row.locator('.selection-logistics-block .selection-data-card strong').nth(1).textContent())?.trim() || '';
+  const deliveryAfterPricing = (await row.locator('.selection-logistics-block .selection-info-line strong').nth(1).textContent())?.trim() || '';
   assert.equal(deliveryAfterPricing, autoDeliveryText, 'pricing pass should keep the auto calculated delivery cost');
 
-  await rowActions.first().click();
-  await rowActions.first().click();
-  await rowActions.first().click();
-  await rowActions.first().waitFor({ timeout: 10000 });
+  await row.locator('.selection-primary-action').click();
+  await row.locator('.selection-primary-action').click();
+  await row.locator('.selection-primary-action').click();
+  await row.locator('.selection-primary-action').waitFor({ timeout: 10000 });
 
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.locator('.result-mode-tabs button').nth(1).click();

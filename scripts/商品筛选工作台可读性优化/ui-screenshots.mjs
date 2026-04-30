@@ -62,12 +62,12 @@ try {
   await page.locator('.selection-decision-card').first().waitFor({ timeout: 10000 });
   await page.screenshot({ path: path.join(screenshotDir, 'selection-card-list.png'), fullPage: true });
 
-  await page.getByRole('button', { name: '查看竞品详情' }).first().click();
-  await page.getByRole('dialog', { name: '竞品详情' }).waitFor({ timeout: 10000 });
+  await page.locator('.selection-decision-card').first().locator('.selection-actions button', { hasText: '详情' }).click();
+  await page.getByRole('dialog', { name: '商品筛选详情' }).waitFor({ timeout: 10000 });
   await page.screenshot({ path: path.join(screenshotDir, 'competitor-detail-open.png'), fullPage: true });
 
-  await page.getByRole('dialog', { name: '竞品详情' }).getByRole('button', { name: '关闭' }).click();
-  await page.getByRole('dialog', { name: '竞品详情' }).waitFor({ state: 'detached', timeout: 10000 });
+  await page.getByRole('dialog', { name: '商品筛选详情' }).getByRole('button', { name: '关闭' }).click();
+  await page.getByRole('dialog', { name: '商品筛选详情' }).waitFor({ state: 'detached', timeout: 10000 });
   await page.screenshot({ path: path.join(screenshotDir, 'selection-after-close.png'), fullPage: true });
 
   console.log(JSON.stringify({
