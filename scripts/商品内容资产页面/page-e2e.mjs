@@ -265,7 +265,7 @@ try {
   await page.screenshot({ path: path.join(screenshotDir, 'product-content-input.png'), fullPage: true });
 
   await page.getByRole('button', { name: /复古金属挂饰套装 100 枚 升级版/ }).click();
-  await page.waitForSelector('.product-content-drawer');
+  await page.waitForSelector('.product-content-detail-dialog');
   await page.getByRole('button', { name: 'SKU' }).click();
   await page.waitForSelector('text=150 枚装');
   const skuText = await page.locator('.product-content-sku-list').textContent();
@@ -273,16 +273,16 @@ try {
 
   await page.getByRole('button', { name: '版本' }).click();
   await page.locator('.product-content-version-card').nth(1).click();
-  await page.getByRole('button', { name: '内容' }).click();
+  await page.getByRole('button', { name: '描述详情' }).click();
   await page.waitForSelector('text=复古金属挂饰套装 100 枚');
-  const drawerText = await page.locator('.product-content-drawer').textContent();
-  assert.match(drawerText || '', /旧版内容描述/);
+  const dialogText = await page.locator('.product-content-detail-dialog').textContent();
+  assert.match(dialogText || '', /旧版内容描述/);
 
   await page.getByRole('button', { name: '经营' }).click();
   await page.waitForSelector('text=Craft Home');
   await page.screenshot({ path: path.join(screenshotDir, 'product-content-result.png'), fullPage: true });
 
-  await page.getByRole('button', { name: '关闭' }).click();
+  await page.getByRole('button', { name: '关闭详情' }).click();
   await page.getByPlaceholder('输入关键词筛选').fill('not-exists-001');
   await page.waitForSelector('text=没有符合筛选条件的内容资产');
   const emptyText = await page.textContent('.wb-empty-cell');

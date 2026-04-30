@@ -210,7 +210,7 @@ export function ProductContentPage() {
         <div>
           <p className="wb-kicker">Content Assets</p>
           <h2>商品内容资产浏览器</h2>
-          <p>按商品浏览已采集的标题、描述、标签、图片、SKU 图片和历史版本，列表负责定位，详情抽屉负责核查。</p>
+          <p>按商品浏览已采集的标题、描述、标签、图片、SKU 图片和历史版本，列表负责定位，详情弹窗负责核查。</p>
         </div>
       </section>
 
@@ -338,38 +338,66 @@ export function ProductContentPage() {
       </Panel>
 
       {selectedItem ? (
-        <div className="product-content-drawer-backdrop" onClick={() => setSelectedProductId('')}>
-          <aside className="product-content-drawer" onClick={(event) => event.stopPropagation()}>
-            <div className="product-content-drawer-head">
-              <h3>{formatText(selectedItem.title)}</h3>
-              <button type="button" className="product-content-drawer-close" onClick={() => setSelectedProductId('')}>关闭</button>
+        <div className="product-content-detail-backdrop" onClick={() => setSelectedProductId('')}>
+          <section
+            className="product-content-detail-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label="商品内容资产详情"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="product-content-detail-head">
+              <div className="product-content-detail-title">
+                <span>内容资产详情</span>
+                <h3>{formatText(selectedItem.title)}</h3>
+                <p>
+                  {formatText(selectedItem.platform)} · {formatText(selectedItem.platform_product_id)}
+                  {' · '}
+                  最近采集 {formatDate(selectedItem.captured_at)}
+                </p>
+              </div>
+              <div className="product-content-detail-head-actions">
+                {detailStatus ? <StatusPill status={detailStatus} /> : null}
+                <button
+                  type="button"
+                  className="product-content-detail-close"
+                  aria-label="关闭详情"
+                  onClick={() => setSelectedProductId('')}
+                >
+                  ×
+                </button>
+              </div>
             </div>
 
-            <div className="product-content-info-card">
-              <div className="product-content-info-card-image">
-                {selectedItem.main_image_url ? (
-                  <img src={selectedItem.main_image_url} alt="" loading="lazy" />
-                ) : (
-                  <div className="product-content-image-empty">暂无主图</div>
-                )}
-              </div>
-              <div className="product-content-info-card-details">
-                <div className="product-content-info-card-row">
-                  <span className="product-content-info-card-label">商品ID</span>
-                  <span>{formatText(selectedItem.platform_product_id)}</span>
+            <div className="product-content-detail-layout">
+              <aside className="product-content-detail-aside">
+                <div className="product-content-info-card-image">
+                  {selectedItem.main_image_url ? (
+                    <img src={selectedItem.main_image_url} alt="" loading="lazy" />
+                  ) : (
+                    <div className="product-content-image-empty">暂无主图</div>
+                  )}
                 </div>
-                <div className="product-content-info-card-row">
-                  <span className="product-content-info-card-label">状态</span>
-                  <StatusPill status={detailStatus} />
-                </div>
-                <div className="product-content-info-card-row">
-                  <span className="product-content-info-card-label">标签</span>
-                  <div className="product-content-tag-list">
-                    {(selectedItem.tags || []).length
-                      ? selectedItem.tags.map((tag) => <span key={String(tag)}>{String(tag)}</span>)
-                      : <em>暂无标签</em>}
+
+                <div className="product-content-detail-summary">
+                  <div>
+                    <small>商品ID</small>
+                    <strong>{formatText(selectedItem.platform_product_id)}</strong>
+                  </div>
+                  <div>
+                    <small>版本ID</small>
+                    <strong>{selectedItem.id}</strong>
+                  </div>
+                  <div>
+                    <small>图片</small>
+                    <strong>{selectedItem.main_image_url ? 1 : 0} / {(selectedItem.image_urls || []).length}</strong>
+                  </div>
+                  <div>
+                    <small>SKU</small>
+                    <strong>{selectedSkus.length || selectedItem.sku_count || 0}</strong>
                   </div>
                 </div>
+
                 <div className="product-content-info-card-checks">
                   {detailChecks
                     .filter((c) => ['mainImage', 'gallery', 'sku', 'skuImages'].includes(c.key))
@@ -382,10 +410,16 @@ export function ProductContentPage() {
                       </span>
                     ))}
                 </div>
-              </div>
-            </div>
 
-            <div className="product-content-drawer-tabs">
+                <div className="product-content-tag-list">
+                  {(selectedItem.tags || []).length
+                    ? selectedItem.tags.map((tag) => <span key={String(tag)}>{String(tag)}</span>)
+                    : <em>暂无标签</em>}
+                </div>
+              </aside>
+
+              <main className="product-content-detail-main">
+                <div className="product-content-detail-tabs">
               {detailTabs.map((tab) => (
                 <button
                   key={tab.key}
@@ -396,116 +430,121 @@ export function ProductContentPage() {
                   {tab.label}
                 </button>
               ))}
-            </div>
-
-            {historyQuery.isLoading || skusQuery.isLoading ? (
-              <div className="wb-feedback is-busy">正在读取详情...</div>
-            ) : null}
-
-            {activeTab === 'description' ? (
-              <div className="product-content-drawer-body">
-                <FieldBlock label="描述">
-                  {selectedItem.description
-                    ? <p>{formatText(selectedItem.description)}</p>
-                    : <em>暂无描述</em>}
-                </FieldBlock>
-                <FieldBlock label="基础信息">
-                  <div className="product-content-meta-grid">
-                    <span>平台：{formatText(selectedItem.platform)}</span>
-                    <span>版本ID：{selectedItem.id}</span>
-                    <span>采集时间：{formatDate(selectedItem.captured_at)}</span>
-                    <span>内容哈希：{formatHash(selectedItem.content_hash)}</span>
-                  </div>
-                </FieldBlock>
-              </div>
-            ) : null}
-
-            {activeTab === 'gallery' ? (
-              <div className="product-content-drawer-body">
-                <div className="product-content-drawer-gallery">
-                  {(selectedItem.image_urls || []).length
-                    ? selectedItem.image_urls.map((url, index) => <img key={`${url}-${index}`} src={url} alt="" loading="lazy" />)
-                    : <div className="product-content-image-empty">暂无图库</div>}
                 </div>
-              </div>
-            ) : null}
 
-            {activeTab === 'sku' ? (
-              <div className="product-content-drawer-body product-content-sku-list">
-                {selectedSkus.length ? selectedSkus.map((sku) => (
-                  <article key={sku.id} className="product-content-sku-card">
-                    <div className="product-content-sku-head">
-                      <div>
-                        <small>SKU</small>
-                        <strong>{formatText(sku.sku_name || sku.platform_sku_id)}</strong>
-                      </div>
-                      <div className="product-content-sku-price">
-                        <small>价格</small>
-                        <strong>{formatCurrency(sku.price, sku.currency_code || 'CNY')}</strong>
-                      </div>
-                    </div>
-                    <div className="product-content-meta-grid">
-                      <span>平台SKU：{formatText(sku.platform_sku_id)}</span>
-                      <span>图片数：{sku.images?.length || 0}</span>
-                    </div>
-                    <div className="product-content-drawer-gallery">
-                      {sku.images?.length
-                        ? sku.images.map((url, index) => <img key={`${sku.id}-${index}`} src={url} alt="" loading="lazy" />)
-                        : <div className="product-content-image-empty">暂无 SKU 图片</div>}
-                    </div>
-                  </article>
-                )) : (
-                  <div className="product-content-empty">当前版本没有 SKU 数据</div>
-                )}
-              </div>
-            ) : null}
+                {historyQuery.isLoading || skusQuery.isLoading ? (
+                  <div className="wb-feedback is-busy">正在读取详情...</div>
+                ) : null}
 
-            {activeTab === 'versions' ? (
-              <div className="product-content-drawer-body product-content-version-list">
-                {historyItems.map((item, index) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className={`product-content-version-card ${item.id === selectedItem.id ? 'is-active' : ''}`}
-                    onClick={() => setSelectedContentId(item.id)}
-                  >
-                    <div className="product-content-version-head">
-                      <span>版本 {historyItems.length - index}</span>
-                      {index === 0 ? <em>最新</em> : null}
-                    </div>
-                    <strong>{formatDate(item.captured_at)}</strong>
-                    <small>hash: {formatHash(item.content_hash)}</small>
-                    <small>SKU: {item.sku_count ?? '-'}</small>
-                  </button>
-                ))}
-              </div>
-            ) : null}
+                <div className="product-content-detail-scroll">
+                  {activeTab === 'description' ? (
+                    <>
+                      <FieldBlock label="描述">
+                        {selectedItem.description
+                          ? <p>{formatText(selectedItem.description)}</p>
+                          : <em>暂无描述</em>}
+                      </FieldBlock>
+                      <FieldBlock label="基础信息">
+                        <div className="product-content-meta-grid">
+                          <span>平台：{formatText(selectedItem.platform)}</span>
+                          <span>版本ID：{selectedItem.id}</span>
+                          <span>采集时间：{formatDate(selectedItem.captured_at)}</span>
+                          <span>内容哈希：{formatHash(selectedItem.content_hash)}</span>
+                        </div>
+                      </FieldBlock>
+                    </>
+                  ) : null}
 
-            {activeTab === 'business' ? (
-              <div className="product-content-drawer-body">
-                {businessItem ? (
-                  <>
-                    <div className="product-content-detail-metrics">
-                      <SummaryCard label="销量" value={formatNumber(businessItem.sales_volume)} />
-                      <SummaryCard label="销售额" value={formatCurrency(businessItem.sales_amount_cny, 'CNY')} />
-                      <SummaryCard label="均价" value={formatCurrency(businessItem.avg_price_cny, 'CNY')} />
-                      <SummaryCard label="毛利率" value={formatPercent(businessItem.estimated_gross_margin)} />
+                  {activeTab === 'gallery' ? (
+                    <div className="product-content-detail-gallery">
+                      {(selectedItem.image_urls || []).length
+                        ? selectedItem.image_urls.map((url, index) => <img key={`${url}-${index}`} src={url} alt="" loading="lazy" />)
+                        : <div className="product-content-image-empty">暂无图库</div>}
                     </div>
-                    <div className="product-content-meta-grid">
-                      <span>店铺：{formatText(businessItem.shop_name)}</span>
-                      <span>品牌：{formatText(businessItem.brand)}</span>
-                      <span>曝光：{formatNumber(businessItem.impressions)}</span>
-                      <span>点击：{formatNumber(businessItem.clicks)}</span>
-                      <span>转化率：{formatPercent(businessItem.order_conversion_rate)}</span>
-                      <span>物流：{formatText(businessItem.shipping_mode)} / {formatText(businessItem.delivery_time)}</span>
+                  ) : null}
+
+                  {activeTab === 'sku' ? (
+                    <div className="product-content-sku-list">
+                      {selectedSkus.length ? selectedSkus.map((sku) => (
+                        <article key={sku.id} className="product-content-sku-card">
+                          <div className="product-content-sku-head">
+                            <div>
+                              <small>SKU</small>
+                              <strong>{formatText(sku.sku_name || sku.platform_sku_id)}</strong>
+                            </div>
+                            <div className="product-content-sku-price">
+                              <small>价格</small>
+                              <strong>{formatCurrency(sku.price, sku.currency_code || 'CNY')}</strong>
+                            </div>
+                          </div>
+                          <div className="product-content-meta-grid">
+                            <span>平台SKU：{formatText(sku.platform_sku_id)}</span>
+                            <span>图片数：{sku.images?.length || 0}</span>
+                          </div>
+                          <div className="product-content-detail-gallery">
+                            {sku.images?.length
+                              ? sku.images.map((url, index) => <img key={`${sku.id}-${index}`} src={url} alt="" loading="lazy" />)
+                              : <div className="product-content-image-empty">暂无 SKU 图片</div>}
+                          </div>
+                        </article>
+                      )) : (
+                        <div className="product-content-empty">当前版本没有 SKU 数据</div>
+                      )}
                     </div>
-                  </>
-                ) : (
-                  <div className="product-content-empty">当前商品没有经营快照</div>
-                )}
-              </div>
-            ) : null}
-          </aside>
+                  ) : null}
+
+                  {activeTab === 'versions' ? (
+                    <div className="product-content-version-list">
+                      {historyItems.map((item, index) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className={`product-content-version-card ${item.id === selectedItem.id ? 'is-active' : ''}`}
+                          onClick={() => setSelectedContentId(item.id)}
+                        >
+                          <div className="product-content-version-head">
+                            <span>版本 {historyItems.length - index}</span>
+                            {index === 0 ? <em>最新</em> : null}
+                          </div>
+                          <strong>{formatDate(item.captured_at)}</strong>
+                          <small>hash: {formatHash(item.content_hash)}</small>
+                          <small>SKU: {item.sku_count ?? '-'}</small>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {activeTab === 'business' ? (
+                    <>
+                      {businessItem ? (
+                        <>
+                          <div className="product-content-detail-metrics">
+                            <SummaryCard label="销量" value={formatNumber(businessItem.sales_volume)} />
+                            <SummaryCard label="销售额" value={formatCurrency(businessItem.sales_amount_cny, 'CNY')} />
+                            <SummaryCard label="均价" value={formatCurrency(businessItem.avg_price_cny, 'CNY')} />
+                            <SummaryCard label="毛利率" value={formatPercent(businessItem.estimated_gross_margin)} />
+                          </div>
+                          <div className="product-content-meta-strip">
+                            <span>来源：历史经营快照，不是本次 Ozon 页面插件采集</span>
+                          </div>
+                          <div className="product-content-meta-grid">
+                            <span>店铺：{formatText(businessItem.shop_name)}</span>
+                            <span>品牌：{formatText(businessItem.brand)}</span>
+                            <span>曝光：{formatNumber(businessItem.impressions)}</span>
+                            <span>点击：{formatNumber(businessItem.clicks)}</span>
+                            <span>转化率：{formatPercent(businessItem.order_conversion_rate)}</span>
+                            <span>物流：{formatText(businessItem.shipping_mode)} / {formatText(businessItem.delivery_time)}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="product-content-empty">当前商品没有经营快照</div>
+                      )}
+                    </>
+                  ) : null}
+                </div>
+              </main>
+            </div>
+          </section>
         </div>
       ) : null}
     </div>
