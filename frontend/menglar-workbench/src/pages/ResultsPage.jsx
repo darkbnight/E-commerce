@@ -1714,7 +1714,7 @@ function CompetitorDetailPage({ entry }) {
             <span>{formatText(item.product_type)}</span>
             <span>{formatText(item.category_level_1)} / {formatText(item.category_level_2)} / {formatText(item.category_level_3)}</span>
             <span>创建 {formatText(item.product_created_date)}</span>
-            {item.product_url ? <a href={item.product_url} target="_blank" rel="noreferrer">打开原商品</a> : null}
+            {item.product_url ? <a className="competitor-detail-origin-link" href={item.product_url} target="_blank" rel="noreferrer">打开原商品</a> : null}
           </div>
 
           <div className="competitor-detail-grid">

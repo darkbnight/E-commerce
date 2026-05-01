@@ -2259,13 +2259,32 @@ select {
 }
 
 .competitor-detail-sub span,
-.competitor-detail-meta span,
-.competitor-detail-meta a {
+.competitor-detail-meta span {
   padding: 6px 9px;
   border-radius: 999px;
   background: rgba(22, 33, 39, 0.06);
   color: inherit;
+}
+
+.competitor-detail-origin-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
   text-decoration: none;
+}
+
+.competitor-detail-origin-link:hover {
+  filter: brightness(1.1);
+}
+
+.competitor-detail-origin-link::after {
+  content: ' ↗';
+  font-size: 11px;
 }
 
 .competitor-detail-close {
