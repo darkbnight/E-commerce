@@ -1066,21 +1066,15 @@ select {
 
 .product-info-cell {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
+  grid-template-columns: 80px minmax(0, 1fr);
   align-items: start;
   gap: 10px;
 }
 
-.product-media-stack {
-  display: grid;
-  justify-items: center;
-  gap: 5px;
-}
-
 .product-info-cell img,
 .product-image-placeholder {
-  width: 48px;
-  height: 48px;
+  width: 80px;
+  height: 80px;
   border-radius: 6px;
   object-fit: cover;
   background: #eef2f0;
@@ -2363,6 +2357,12 @@ select {
 .wb-filter-hint,
 .cell-sub {
   color: var(--muted);
+}
+
+.shop-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .wb-filter-grid {

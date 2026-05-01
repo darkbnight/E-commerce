@@ -1040,10 +1040,10 @@ function RawResultsTable({ items, onAddSingle, onRejectSingle, actionPending, se
             <th>品牌 / 店铺</th>
             <th>类目</th>
             <th className="num">销售量 / 增长</th>
+            <th className="num">销售金额</th>
             <th className="num">均价</th>
             <th>尺寸 / 重量</th>
             <th className="num">潜力指数</th>
-            <th className="num">销售金额</th>
             <th className="num">曝光 / 点击率</th>
             <th className="num">转化 / 毛利</th>
             <th className="num">广告</th>
@@ -1061,23 +1061,20 @@ function RawResultsTable({ items, onAddSingle, onRejectSingle, actionPending, se
             <tr key={item.id} className={isRejected ? 'is-rejected' : isSelected ? 'is-in-selection-pool' : ''}>
               <td>
                 <div className="product-info-cell">
-                  <div className="product-media-stack">
-                    {item.product_image_url ? (
-                      <button
-                        type="button"
-                        className="product-image-trigger"
-                        onClick={() => onPreviewImage({
-                          src: item.product_image_url,
-                          alt: formatText(item.title),
-                        })}
-                      >
-                        <img src={item.product_image_url} alt="" loading="lazy" />
-                      </button>
-                    ) : (
-                      <span className="product-image-placeholder" />
-                    )}
-                    <span className="product-batch-pill">#{formatText(item.job_id)}</span>
-                  </div>
+                  {item.product_image_url ? (
+                    <button
+                      type="button"
+                      className="product-image-trigger"
+                      onClick={() => onPreviewImage({
+                        src: item.product_image_url,
+                        alt: formatText(item.title),
+                      })}
+                    >
+                      <img src={item.product_image_url} alt="" loading="lazy" />
+                    </button>
+                  ) : (
+                    <span className="product-image-placeholder" />
+                  )}
                   <div>
                     <div className="cell-main product-title">{formatText(item.title)}</div>
                     <div className="cell-sub mono">{item.product_url ? (
@@ -1089,7 +1086,7 @@ function RawResultsTable({ items, onAddSingle, onRejectSingle, actionPending, se
               </td>
               <td>
                 <div className="cell-main">{formatText(item.brand)}</div>
-                <div className="cell-sub">{formatText(item.shop_name)}</div>
+                <div className="cell-sub shop-name">{formatText(item.shop_name)}</div>
                 <div className="cell-sub">{formatText(item.product_type)}</div>
               </td>
               <td>
@@ -1101,6 +1098,10 @@ function RawResultsTable({ items, onAddSingle, onRejectSingle, actionPending, se
                 <div className="cell-sub metric-sub">{formatSignedIntegerPercent(item.sales_growth)}</div>
               </td>
               <td className="num">
+                <div>{formatIntegerCurrency(item.sales_amount, 'RUB')}</div>
+                <div className="cell-sub">{formatIntegerCurrency(item.sales_amount_cny, 'CNY')}</div>
+              </td>
+              <td className="num">
                 <div>{formatCurrency(item.avg_price_rub, 'RUB')}</div>
                 <div className="cell-sub metric-sub">{formatCurrency(item.avg_price_cny, 'CNY')}</div>
               </td>
@@ -1109,10 +1110,6 @@ function RawResultsTable({ items, onAddSingle, onRejectSingle, actionPending, se
                 <div className="cell-sub metric-sub">{getDimensionSummary(item).weightText}</div>
               </td>
               <td className="num">{formatNumber(item.potential_index, 0)}</td>
-              <td className="num">
-                <div>{formatIntegerCurrency(item.sales_amount, 'RUB')}</div>
-                <div className="cell-sub">{formatIntegerCurrency(item.sales_amount_cny, 'CNY')}</div>
-              </td>
               <td className="num">
                 <div>{formatNumber(item.impressions)} / {formatNumber(item.clicks)}</div>
                 <div className="cell-sub">点击率 {formatPercent(item.view_rate)}</div>
@@ -1131,6 +1128,7 @@ function RawResultsTable({ items, onAddSingle, onRejectSingle, actionPending, se
                 <div className="cell-sub">配送 {formatDeliveryDays(item.delivery_time)}</div>
               </td>
               <td>
+                <span className="product-batch-pill">#{formatText(item.job_id)}</span>
                 <span className={`raw-product-status is-${status.key}`}>{status.label}</span>
               </td>
               <td>
