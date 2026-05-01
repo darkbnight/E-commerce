@@ -1267,13 +1267,13 @@ function SelectionRow({
   return (
     <article className={`selection-decision-card ${isRejected ? 'is-rejected' : ''}`}>
       <section className="selection-product-block">
-        <div className="selection-product-media">
+        <button type="button" className="selection-product-media" onClick={() => onOpenCompetitorDetail(entry)}>
           {item.product_image_url ? (
             <img src={item.product_image_url} alt="" loading="lazy" />
           ) : (
             <span className="product-image-placeholder" />
           )}
-        </div>
+        </button>
         <div className="selection-product-info">
           <div className="selection-product-head">
             <span className={`screening-state-pill is-${stageToneMap[entry.stage] || 'neutral'}`}>{stageLabels[entry.stage]}</span>
@@ -1562,8 +1562,8 @@ function PricingDialogPage({
             {result.ok ? (
               <div className="pricing-result-stack">
                 <div className="pricing-result-head">
-                  <span>商品参考</span>
-                  <strong>{formatCurrency(entry.item.avg_price_cny, 'CNY')}</strong>
+                  <span>竞品价格</span>
+                  <strong>{formatCurrency(entry.item.avg_price_rub, 'RUB')} / {formatCurrency(entry.item.avg_price_cny, 'CNY')}</strong>
                   <small>{dimension.weightText} · {dimension.sizeText}</small>
                 </div>
 
