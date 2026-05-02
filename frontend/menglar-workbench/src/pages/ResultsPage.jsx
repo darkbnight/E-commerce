@@ -1645,16 +1645,16 @@ function PricingDialogPage({
   const dimension = getDimensionSummary(entry.item);
   const resultRows = result.ok
     ? [
-        ['预估售价', formatCurrency(result.salePriceRmb, 'CNY')],
-        ['总成本', formatCurrency(result.totalCost, 'CNY')],
-        ['利润', `${formatCurrency(result.profit, 'CNY')} · ${formatPercent(result.actualProfitRate * 100)}`, result.profit < 0 ? 'is-danger' : 'is-good'],
+        ['预估售价', `${formatCurrency(result.salePriceRub, 'RUB')} / ${formatCurrency(result.salePriceRmb, 'CNY')}`],
+        ['总成本', `${formatCurrency(result.totalCost * result.rubRate, 'RUB')} / ${formatCurrency(result.totalCost, 'CNY')}`],
+        ['利润', `${formatCurrency(result.profit * result.rubRate, 'RUB')} / ${formatCurrency(result.profit, 'CNY')} · ${formatPercent(result.actualProfitRate * 100)}`, result.profit < 0 ? 'is-danger' : 'is-good'],
       ]
     : [];
   const incomeRows = result.ok
     ? [
         ['商品原价（折前）', `${formatCurrency(result.originalPriceRub, 'RUB')} / ${formatCurrency(result.originalPriceRmb, 'CNY')}`],
         ['商品售价（折后）', `${formatCurrency(result.salePriceRub, 'RUB')} / ${formatCurrency(result.salePriceRmb, 'CNY')}`],
-        ['利润', formatCurrency(result.profit, 'CNY')],
+        ['利润', `${formatCurrency(result.profit * result.rubRate, 'RUB')} / ${formatCurrency(result.profit, 'CNY')}`],
         ['利润率', formatPercent(result.actualProfitRate * 100)],
       ]
     : [];
