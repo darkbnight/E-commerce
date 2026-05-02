@@ -176,6 +176,7 @@ function ensureProductSelectionItemsTable(db) {
       supply_reference_url TEXT,
       supply_vendor_name TEXT,
       competitor_packet_status TEXT NOT NULL DEFAULT 'pending',
+      pricing_form_json TEXT,
       transfer_to_prep_at TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
@@ -1428,6 +1429,7 @@ async function handleApiProductSelectionItemPatch(req, res, selectionItemId) {
     const body = await readJsonBody(req);
     const payload = withDb((db) => {
       ensureProductSelectionItemsTable(db);
+      ensureProductSelectionItemColumns(db);
 
       const existing = db.prepare(`
         SELECT *

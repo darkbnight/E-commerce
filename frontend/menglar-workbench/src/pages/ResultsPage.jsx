@@ -1,8 +1,9 @@
 ﻿import { useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { Panel } from '../components/Panel';
 import {
+  compareShippingServices,
   createProductSelectionItems,
   fetchProducts,
   fetchProductSelectionItems,
@@ -315,12 +316,38 @@ function buildPricingFormForEntry(entry, overrides = {}) {
   };
 }
 
-function computeQuickPricingFromForm(form) {
+function toShippingQuote(item, rates) {
+  const currency = item.result.currency || 'CNY';
+  const rawFee = Number(item.result.totalLogisticsCost || 0);
+  let feeRmb = rawFee;
+  if (currency === 'USD') {
+    const usdRate = getRate(rates, 'USD');
+    feeRmb = usdRate > 0 ? rawFee / usdRate : rawFee * 7.2;
+  }
+  if (currency === 'RUB') {
+    const rubRate = getRate(rates, 'RUB');
+    feeRmb = rubRate > 0 ? rawFee / rubRate : rawFee;
+  }
+  return {
+    key: `${item.service.carrierCode}:${item.service.deliveryMethodCode}`,
+    name: item.service.displayName,
+    feeRmb,
+    feeOriginal: rawFee,
+    currency,
+    chargeableWeightG: item.result.chargeableWeightG,
+    physicalWeightG: item.result.physicalWeightG,
+    volumetricWeightG: item.result.volumetricWeightG,
+    incrementUnitG: item.result.ruleMeta?.incrementUnitG,
+  };
+}
+
+function computeQuickPricingFromForm(form, shippingQuote = null) {
   return calculatePricing({
     form,
     logistics,
     categoryRates,
     exchangeRates,
+    shippingQuote,
   });
 }
 
@@ -406,6 +433,44 @@ export function ResultsPage() {
   const [pricingDialogForm, setPricingDialogForm] = useState(null);
   const [customPricingTemplates, setCustomPricingTemplates] = useState(() => loadStoredPricingTemplates());
 
+  const shippingPayload = useMemo(() => {
+    if (!pricingDialogForm) return null;
+    return {
+      originCountry: 'CN',
+      warehouseType: 'seller_warehouse',
+      salesScheme: 'realFBS',
+      price: Math.max(Number(pricingDialogForm.purchaseCost) || 0, 1),
+      lengthCm: Math.max(Number(pricingDialogForm.volumeL) || 0, 0.01),
+      widthCm: Math.max(Number(pricingDialogForm.volumeW) || 0, 0.01),
+      heightCm: Math.max(Number(pricingDialogForm.volumeH) || 0, 0.01),
+      weightG: Math.max(Number(pricingDialogForm.weight) || 0, 1),
+      orderDate: '2026-04-21',
+      includeXlsxCandidates: false,
+    };
+  }, [
+    pricingDialogForm?.purchaseCost,
+    pricingDialogForm?.weight,
+    pricingDialogForm?.volumeL,
+    pricingDialogForm?.volumeW,
+    pricingDialogForm?.volumeH,
+  ]);
+
+  const shippingMutation = useMutation({ mutationFn: compareShippingServices });
+
+  useEffect(() => {
+    if (shippingPayload) {
+      shippingMutation.mutate(shippingPayload);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shippingPayload]);
+
+  const shippingQuote = useMemo(() => {
+    const services = shippingMutation.data?.items || [];
+    if (!services.length) return null;
+    const cheapest = [...services].sort((a, b) => a.result.totalLogisticsCost - b.result.totalLogisticsCost)[0];
+    return toShippingQuote(cheapest, exchangeRates);
+  }, [shippingMutation.data]);
+
   const resultJobsQuery = useQuery({
     queryKey: ['result-jobs', showUnavailableJobs],
     queryFn: () => fetchResultJobs({
@@ -421,6 +486,25 @@ export function ResultsPage() {
   });
 
   const jobs = resultJobsQuery.data?.jobs || [];
+
+  const lastAutoFilledLogisticsRef = useRef(null);
+
+  useEffect(() => {
+    if (!shippingQuote || !pricingDialogForm) return;
+    const computedFee = String(shippingQuote.feeRmb.toFixed(2));
+    const currentManualFee = pricingDialogForm.manualLogisticsFee;
+    if (!currentManualFee || currentManualFee === lastAutoFilledLogisticsRef.current) {
+      updatePricingDialogForm('manualLogisticsFee', computedFee);
+      lastAutoFilledLogisticsRef.current = computedFee;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shippingQuote]);
+
+  useEffect(() => {
+    if (!pricingDialogEntry) {
+      lastAutoFilledLogisticsRef.current = null;
+    }
+  }, [pricingDialogEntry]);
 
   useEffect(() => {
     if (!selectedJobId && jobs.length) {
@@ -693,7 +777,7 @@ export function ResultsPage() {
 
   const confirmPricing = async (decision) => {
     if (!pricingDialogEntry || !pricingDialogForm) return;
-    const result = computeQuickPricingFromForm(pricingDialogForm);
+    const result = computeQuickPricingFromForm(pricingDialogForm, shippingQuote);
     if (!result.ok) {
       setSelectionFeedback(result.error || '当前参数无法生成测价结果');
       return;
@@ -918,6 +1002,10 @@ export function ResultsPage() {
             <div className="wb-feedback is-error">商品筛选工作台读取失败：{selectionQuery.error.message}</div>
           ) : null}
 
+          {selectionFeedback ? (
+            <div className={`wb-feedback ${selectionFeedback.includes('失败') || selectionFeedback.includes('错误') ? 'is-error' : ''}`}>{selectionFeedback}</div>
+          ) : null}
+
           {mode === 'screening' && !activeSelectionEntries.length && selectionTab !== 'rejected' ? (
             <div className="result-empty-batch">
               <strong>筛选池还没有商品</strong>
@@ -1014,7 +1102,7 @@ export function ResultsPage() {
           activePage={selectionDialogPage}
           form={pricingDialogForm}
           templates={[...builtInPricingTemplates, ...customPricingTemplates]}
-          result={pricingDialogForm ? computeQuickPricingFromForm(pricingDialogForm) : null}
+          result={pricingDialogForm ? computeQuickPricingFromForm(pricingDialogForm, shippingQuote) : null}
           actionPending={selectionActionPending}
           onPageChange={switchSelectionDialogPage}
           onChange={updatePricingDialogForm}
