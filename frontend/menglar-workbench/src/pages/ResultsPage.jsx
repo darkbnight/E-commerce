@@ -271,19 +271,35 @@ function formatSelectionProfit(entry) {
 
 function buildPricingFormForEntry(entry, overrides = {}) {
   const { item } = entry;
+
+  let savedForm = null;
+  if (entry.pricingFormJson) {
+    try {
+      savedForm = JSON.parse(entry.pricingFormJson);
+    } catch {
+      // ignore parse error
+    }
+  }
+
   const avgPrice = Number(item.avg_price_cny || 0);
   const weight = Number(item.weight_g || 0);
   const cost = Number((avgPrice * 0.56).toFixed(2));
   const existingDelivery = Number(entry.initialDeliveryCost);
-  return {
-    ...quickPricingBaseForm,
-    ...quickPricingFixedParams,
+
+  const computedDefaults = {
     purchaseCost: String(cost || quickPricingBaseForm.purchaseCost),
     weight: String(weight || quickPricingBaseForm.weight),
     volumeL: String(Number(item.length_cm || 0) > 0 ? item.length_cm : quickPricingBaseForm.volumeL),
     volumeW: String(Number(item.width_cm || 0) > 0 ? item.width_cm : quickPricingBaseForm.volumeW),
     volumeH: String(Number(item.height_cm || 0) > 0 ? item.height_cm : quickPricingBaseForm.volumeH),
     manualLogisticsFee: Number.isFinite(existingDelivery) && existingDelivery > 0 ? String(existingDelivery) : '',
+  };
+
+  return {
+    ...quickPricingBaseForm,
+    ...quickPricingFixedParams,
+    ...computedDefaults,
+    ...savedForm,
     ...overrides,
   };
 }
@@ -660,6 +676,7 @@ export function ResultsPage() {
     await updateSelectionStage(pricingDialogEntry.id, {
       stage,
       ...computePricingSnapshotFromResult(result, decision),
+      pricingFormJson: JSON.stringify(pricingDialogForm),
     }, decision === 'continue' ? '测价通过，已进入找供应链阶段' : '利润不成立，已停止推进');
     setCompetitorDetailEntry(null);
     setPricingDialogEntry(null);
@@ -1218,6 +1235,7 @@ function SelectionWorkbenchTable({
       <div className="selection-list-head" aria-hidden="true">
         <span>商品</span>
         <span>重量与物流</span>
+        <span>售价与销量</span>
         <span>测价</span>
         <span>供应链</span>
         <span>执行</span>
@@ -1297,6 +1315,19 @@ function SelectionRow({
           <div className="selection-info-line">
             <span>跨境物流</span>
             <strong>{entry.initialDeliveryCost != null ? formatCurrency(entry.initialDeliveryCost, 'CNY') : '-'}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section className="selection-market-block">
+        <div className="selection-info-panel">
+          <div className="selection-info-line">
+            <span>售价</span>
+            <strong>{formatCurrency(entry.item.avg_price_rub, 'RUB')} / {formatCurrency(entry.item.avg_price_cny, 'CNY')}</strong>
+          </div>
+          <div className="selection-info-line">
+            <span>销量</span>
+            <strong>{formatNumber(entry.item.sales_volume)}</strong>
           </div>
         </div>
       </section>
