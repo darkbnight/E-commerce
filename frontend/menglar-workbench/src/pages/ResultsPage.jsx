@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { Panel } from '../components/Panel';
@@ -269,6 +269,19 @@ function formatSelectionProfit(entry) {
   return `${formatCurrency(profitAmount, 'CNY')} · ${formatPercent(entry.initialProfitRate)}`;
 }
 
+function formatLogisticsCost(entry) {
+  if (entry.initialDeliveryCost == null) return '-';
+  const salePrice = entry.item?.avg_price_cny;
+  if (salePrice == null || Number(salePrice) <= 0) return formatCurrency(entry.initialDeliveryCost, 'CNY');
+  const ratio = (entry.initialDeliveryCost / Number(salePrice)) * 100;
+  return (
+    <>
+      {formatCurrency(entry.initialDeliveryCost, 'CNY')}
+      <span className="logistics-ratio"> · {formatPercent(ratio)}</span>
+    </>
+  );
+}
+
 function buildPricingFormForEntry(entry, overrides = {}) {
   const { item } = entry;
 
@@ -284,15 +297,13 @@ function buildPricingFormForEntry(entry, overrides = {}) {
   const avgPrice = Number(item.avg_price_cny || 0);
   const weight = Number(item.weight_g || 0);
   const cost = Number((avgPrice * 0.56).toFixed(2));
-  const existingDelivery = Number(entry.initialDeliveryCost);
-
   const computedDefaults = {
     purchaseCost: String(cost || quickPricingBaseForm.purchaseCost),
     weight: String(weight || quickPricingBaseForm.weight),
     volumeL: String(Number(item.length_cm || 0) > 0 ? item.length_cm : quickPricingBaseForm.volumeL),
     volumeW: String(Number(item.width_cm || 0) > 0 ? item.width_cm : quickPricingBaseForm.volumeW),
     volumeH: String(Number(item.height_cm || 0) > 0 ? item.height_cm : quickPricingBaseForm.volumeH),
-    manualLogisticsFee: Number.isFinite(existingDelivery) && existingDelivery > 0 ? String(existingDelivery) : '',
+    manualLogisticsFee: '',
   };
 
   return {
@@ -608,10 +619,26 @@ export function ResultsPage() {
     );
   };
 
+  const updateSelectionNote = async (entryId, note) => {
+    try {
+      await updateProductSelectionItem(entryId, { selectionNote: note });
+      queryClient.setQueryData(['product-selection-items'], (prev) => {
+        if (!prev?.items) return prev;
+        return {
+          ...prev,
+          items: prev.items.map((item) =>
+            Number(item.id) === Number(entryId) ? { ...item, selectionNote: note } : item
+          ),
+        };
+      });
+    } catch (error) {
+      setSelectionFeedback(error.message);
+    }
+  };
+
   const openPricingDialog = (entry) => {
     const existingValues = {
       ...(entry.initialCostPrice != null ? { purchaseCost: String(entry.initialCostPrice) } : {}),
-      ...(entry.initialDeliveryCost != null ? { manualLogisticsFee: String(entry.initialDeliveryCost) } : {}),
     };
     setCompetitorDetailEntry(entry);
     setSelectionDialogPage('pricing');
@@ -635,7 +662,6 @@ export function ResultsPage() {
     if (page === 'pricing' && competitorDetailEntry) {
       const existingValues = {
         ...(competitorDetailEntry.initialCostPrice != null ? { purchaseCost: String(competitorDetailEntry.initialCostPrice) } : {}),
-        ...(competitorDetailEntry.initialDeliveryCost != null ? { manualLogisticsFee: String(competitorDetailEntry.initialDeliveryCost) } : {}),
       };
       setPricingDialogEntry(competitorDetailEntry);
       setPricingDialogForm((current) => current || buildPricingFormForEntry(competitorDetailEntry, existingValues));
@@ -935,6 +961,7 @@ export function ResultsPage() {
             <SelectionWorkbenchTable
               entries={visibleSelectionEntries}
               actionPending={selectionActionPending}
+              onUpdateNote={updateSelectionNote}
               onOpenPricing={openPricingDialog}
               onReject={(entryId) => updateSelectionStage(entryId, {
                 stage: 'screening_rejected',
@@ -1222,6 +1249,7 @@ function SelectionFilterBar({
 function SelectionWorkbenchTable({
   entries,
   actionPending,
+  onUpdateNote,
   onOpenPricing,
   onReject,
   onResetToPool,
@@ -1234,10 +1262,11 @@ function SelectionWorkbenchTable({
     <div className="selection-workbench-list" aria-label="商品筛选工作台列表">
       <div className="selection-list-head" aria-hidden="true">
         <span>商品</span>
-        <span>重量与物流</span>
+        <span>重量与物流<span className="product-prep-icon product-prep-info-icon" data-tooltip={'重量：商品包装重量(g)\n跨境物流费：后端自动测算的最优物流费用 · 占商品原始售价的比例'} aria-label="重量与物流说明" tabIndex={0}>i</span></span>
         <span>售价与销量</span>
         <span>测价</span>
         <span>供应链</span>
+        <span>备注</span>
         <span>执行</span>
       </div>
       {entries.map((entry) => (
@@ -1245,6 +1274,7 @@ function SelectionWorkbenchTable({
           key={entry.id}
           entry={entry}
           actionPending={actionPending}
+          onUpdateNote={onUpdateNote}
           onOpenPricing={onOpenPricing}
           onReject={onReject}
           onResetToPool={onResetToPool}
@@ -1261,6 +1291,7 @@ function SelectionWorkbenchTable({
 function SelectionRow({
   entry,
   actionPending,
+  onUpdateNote,
   onOpenPricing,
   onReject,
   onResetToPool,
@@ -1274,6 +1305,10 @@ function SelectionRow({
   const isPriced = entry.pricingDecision !== 'pending' && entry.initialTargetPrice != null;
   const dimensionSummary = getDimensionSummary(item);
   const primaryAction = getPrimaryAction();
+  const [noteEditing, setNoteEditing] = useState(false);
+  const [noteDraft, setNoteDraft] = useState('');
+  const noteRef = useRef(null);
+  const currentNote = entry.selectionNote || '';
   const pricingRows = [
     ['预估售价', formatDualTargetPrice(entry.initialTargetPrice)],
     [
@@ -1314,7 +1349,7 @@ function SelectionRow({
           </div>
           <div className="selection-info-line">
             <span>跨境物流</span>
-            <strong>{entry.initialDeliveryCost != null ? formatCurrency(entry.initialDeliveryCost, 'CNY') : '-'}</strong>
+            <strong>{formatLogisticsCost(entry)}</strong>
           </div>
         </div>
       </section>
@@ -1354,6 +1389,49 @@ function SelectionRow({
             <strong>{entry.competitorPacketStatus === 'ready' ? '已整理' : '待整理'}</strong>
           </div>
         </div>
+      </section>
+
+      <section className="selection-note-block">
+        {noteEditing ? (
+          <textarea
+            ref={noteRef}
+            className="selection-note-input"
+            value={noteDraft}
+            placeholder="输入备注…"
+            rows={2}
+            onChange={(event) => setNoteDraft(event.target.value)}
+            onBlur={() => {
+              const trimmed = noteDraft.trim();
+              if (trimmed !== currentNote.trim()) {
+                onUpdateNote(entry.id, trimmed);
+              }
+              setNoteEditing(false);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                event.target.blur();
+              }
+              if (event.key === 'Escape') {
+                setNoteDraft(currentNote);
+                setNoteEditing(false);
+              }
+            }}
+          />
+        ) : (
+          <button
+            type="button"
+            className={`selection-note-display ${currentNote ? 'has-note' : ''}`}
+            title={currentNote || '点击添加备注'}
+            onClick={() => {
+              setNoteDraft(currentNote);
+              setNoteEditing(true);
+              setTimeout(() => noteRef.current?.focus(), 0);
+            }}
+          >
+            {currentNote || '+ 添加备注'}
+          </button>
+        )}
       </section>
 
       <section className="selection-action-block">

@@ -1327,6 +1327,7 @@ select {
 .selection-market-block,
 .selection-pricing-block,
 .selection-supply-block,
+.selection-note-block,
 .selection-action-block,
 .selection-decision-group {
   min-width: 0;
@@ -1412,6 +1413,58 @@ select {
   background: rgba(22, 33, 39, 0.055);
   font-size: 12px;
   font-weight: 800;
+}
+
+.selection-note-display {
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px dashed rgba(22, 33, 39, 0.15);
+  border-radius: 6px;
+  background: rgba(22, 33, 39, 0.025);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.selection-note-display:hover {
+  border-color: rgba(22, 33, 39, 0.28);
+  background: rgba(22, 33, 39, 0.045);
+}
+
+.selection-note-display.has-note {
+  border-style: solid;
+  border-color: rgba(22, 33, 39, 0.12);
+  background: rgba(249, 222, 127, 0.15);
+  color: var(--ink);
+}
+
+.selection-note-display.has-note:hover {
+  border-color: rgba(22, 33, 39, 0.22);
+  background: rgba(249, 222, 127, 0.25);
+}
+
+.selection-note-input {
+  display: block;
+  width: 100%;
+  padding: 6px 9px;
+  border: 1px solid rgba(22, 33, 39, 0.22);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  resize: vertical;
+  outline: none;
+}
+
+.selection-note-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0, 128, 255, 0.12);
 }
 
 
@@ -1517,6 +1570,11 @@ select {
 
 .selection-info-line strong.is-danger {
   color: var(--danger);
+}
+
+.logistics-ratio {
+  font-weight: 400;
+  color: var(--muted);
 }
 
 .selection-supply-grid {
@@ -2150,7 +2208,7 @@ select {
 @media (min-width: 1900px) {
   .selection-list-head,
   .selection-decision-card {
-    grid-template-columns: minmax(420px, 1.15fr) minmax(260px, 0.65fr) minmax(200px, 0.45fr) minmax(300px, 0.78fr) minmax(230px, 0.52fr) minmax(180px, 0.42fr);
+    grid-template-columns: minmax(420px, 1.15fr) minmax(260px, 0.65fr) minmax(200px, 0.45fr) minmax(300px, 0.78fr) minmax(230px, 0.52fr) minmax(180px, 0.42fr) minmax(180px, 0.42fr);
   }
 
   .selection-list-head {
