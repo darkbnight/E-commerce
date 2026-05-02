@@ -156,7 +156,8 @@ function rowsToObjects(rows, headerIndex) {
 
 function normalizeRateText(rateText) {
   return String(rateText || '')
-    .replace(/\u00a5|\uffe5/g, '¥')
+    .replace(/¥|￥/g, '¥')
+    .replace(/¥\.(\d)/g, '¥$1')
     .replace(/,/g, '.')
     .replace(/г/gi, 'g')
     .replace(/\s+/g, ' ')
@@ -167,18 +168,22 @@ function parseRate(rateText) {
   const text = normalizeRateText(rateText);
   const match = text.match(/¥\s*([0-9.]+)\s*\+\s*¥\s*([0-9.]+)\s*\/\s*(?:(\d+)\s*)?g/i);
   if (match) {
+    const fixedFee = Number(match[1]);
+    const incrementFee = Number(match[2]);
+    const incrementUnitG = Number(match[3] || 1);
     return {
-      fixedFee: Number(match[1]),
-      incrementFee: Number(match[2]),
-      incrementUnitG: Number(match[3] || 1),
+      fixedFee: Number.isFinite(fixedFee) ? fixedFee : 0,
+      incrementFee: Number.isFinite(incrementFee) ? incrementFee : 0,
+      incrementUnitG: Number.isFinite(incrementUnitG) ? incrementUnitG : 1,
       raw: rateText,
     };
   }
 
   const fixedOnly = text.match(/¥\s*([0-9.]+)/);
   if (fixedOnly) {
+    const fixedFee = Number(fixedOnly[1]);
     return {
-      fixedFee: Number(fixedOnly[1]),
+      fixedFee: Number.isFinite(fixedFee) ? fixedFee : 0,
       incrementFee: 0,
       incrementUnitG: 1,
       raw: rateText,
@@ -190,7 +195,7 @@ function parseRate(rateText) {
 
 function parseDays(value) {
   const text = String(value || '');
-  const match = text.match(/(\d+)\s*[-\u2013\u2014]\s*(\d+)/);
+  const match = text.match(/(\d+)\s*[-–—]\s*(\d+)/);
   if (!match) return null;
   return {
     min: Number(match[1]),
@@ -209,12 +214,12 @@ function parseConstraints(measurements, minWeight, maxWeight, minRub, maxRub, mi
   const text = String(measurements || '');
   const constraints = {};
 
-  const sumMatch = text.match(/sum of sides\s*(?:<=|\u2264|<)\s*(\d+)/i);
+  const sumMatch = text.match(/sum of sides\s*(?:<=|≤|<)\s*(\d+)/i);
   if (sumMatch) {
     constraints.maxDimensionSumCm = Number(sumMatch[1]);
   }
 
-  const sideMatch = text.match(/length\s*(?:<=|\u2264|<)\s*(\d+)/i);
+  const sideMatch = text.match(/length\s*(?:<=|≤|<)\s*(\d+)/i);
   if (sideMatch) {
     constraints.maxSideCm = Number(sideMatch[1]);
   }
@@ -323,7 +328,7 @@ function parseCommercialChinaRules() {
         serviceLevel: record['Service Level'] || null,
         ozonRating: Number(record['Ozon rating']) || null,
         deliveryTarget: deliveryTargetFromName(deliveryMethod),
-        chargeBasis: 'physical',
+        chargeBasis: 'max',
         currency: 'CNY',
         includedWeightG: 0,
         fixedFee: rate.fixedFee,
@@ -386,7 +391,7 @@ function parseChinaPostRules() {
         destinationCountry: 'RU',
         destinationCity: 'Moscow',
         deliveryTarget: deliveryTargetFromName(deliveryMethod),
-        chargeBasis: 'physical',
+        chargeBasis: 'max',
         currency: 'CNY',
         includedWeightG: 0,
         fixedFee: rate.fixedFee,

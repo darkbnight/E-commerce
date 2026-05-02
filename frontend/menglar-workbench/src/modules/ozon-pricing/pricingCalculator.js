@@ -69,8 +69,9 @@ export function calculateChargeWeight(logistic, input) {
   const actualWeight = Math.max(input.weight, 0);
   let volumetricWeight = 0;
 
-  if (Number(logistic.cargoWeightFactor) > 0 && input.volumeL > 0 && input.volumeW > 0 && input.volumeH > 0) {
-    volumetricWeight = ((input.volumeL * input.volumeW * input.volumeH) / Number(logistic.cargoWeightFactor)) * 1000;
+  if (input.volumeL > 0 && input.volumeW > 0 && input.volumeH > 0) {
+    const divisor = Number(logistic.cargoWeightFactor) || 5000;
+    volumetricWeight = ((input.volumeL * input.volumeW * input.volumeH) / divisor) * 1000;
   }
 
   const rawWeight = Math.max(actualWeight, volumetricWeight);
