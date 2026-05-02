@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS product_selection_items (
   supply_vendor_name TEXT,
 
   competitor_packet_status TEXT NOT NULL DEFAULT 'pending',
+  pricing_form_json TEXT,
   transfer_to_prep_at TEXT,
 
   created_at TEXT NOT NULL,
@@ -94,6 +95,7 @@ ON product_selection_items(source_platform, source_platform_product_id);
 | `supply_reference_url` | text | 否 | 货源链接，例如 1688 商品链接 |
 | `supply_vendor_name` | text | 否 | 供应商名称 |
 | `competitor_packet_status` | text | 是 | 竞品整理状态，如 `pending`、`ready` |
+| `pricing_form_json` | text | 否 | 测价表单完整参数 JSON，用于恢复上次测价参数 |
 | `transfer_to_prep_at` | text | 否 | 流转到商品数据整理的时间 |
 | `created_at` | text | 是 | 记录创建时间 |
 | `updated_at` | text | 是 | 记录更新时间 |

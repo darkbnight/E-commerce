@@ -24,6 +24,10 @@ import {
   handleProductDataPrepRoute,
   isProductDataPrepRoute,
 } from './modules/product-data-prep/route.mjs';
+import {
+  handleOzonPageCaptureRoute,
+  isOzonPageCaptureRoute,
+} from './modules/ozon-page-capture/route.mjs';
 import { checkMenglarLoginHealth } from '../../scripts/menglar-capture/lib/login-health.mjs';
 import { compressImageDirectoriesToJpg, compressMultipleDirectoriesToJpg } from '../../scripts/图片压缩工具/compress-images-to-jpg.mjs';
 import { generateMultipleProductVideos } from '../../scripts/商品视频生成工具/generate-product-video.mjs';
@@ -192,6 +196,27 @@ function ensureProductSelectionItemsTable(db) {
   `);
 }
 
+function ensureProductSelectionItemColumns(db) {
+  const table = db.prepare(`
+    SELECT name
+    FROM sqlite_master
+    WHERE type = 'table' AND name = 'product_selection_items'
+  `).get();
+  if (!table) return;
+
+  const columns = db.prepare('PRAGMA table_info(product_selection_items)').all();
+  const names = new Set(columns.map((column) => column.name));
+  const additions = [
+    ['pricing_form_json', 'TEXT'],
+  ];
+
+  for (const [name, definition] of additions) {
+    if (!names.has(name)) {
+      db.exec(`ALTER TABLE product_selection_items ADD COLUMN ${name} ${definition}`);
+    }
+  }
+}
+
 function ensureProductContentTables(db) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS product_content_assets (
@@ -205,6 +230,9 @@ function ensureProductContentTables(db) {
       tags_json TEXT,
       main_image_url TEXT,
       image_urls_json TEXT,
+      rating_value REAL,
+      review_count INTEGER,
+      question_count INTEGER,
       content_hash TEXT NOT NULL,
       captured_at TEXT NOT NULL,
       created_at TEXT NOT NULL,
@@ -232,6 +260,9 @@ function ensureProductContentTables(db) {
       price REAL,
       currency_code TEXT,
       images_json TEXT,
+      variant_key TEXT,
+      variant_attributes_json TEXT,
+      images_binding_status TEXT,
       sort_order INTEGER NOT NULL DEFAULT 0,
       captured_at TEXT NOT NULL,
       created_at TEXT NOT NULL,
@@ -259,6 +290,9 @@ function ensureProductContentTables(db) {
     ['tags_json', 'TEXT'],
     ['main_image_url', 'TEXT'],
     ['image_urls_json', 'TEXT'],
+    ['rating_value', 'REAL'],
+    ['review_count', 'INTEGER'],
+    ['question_count', 'INTEGER'],
     ['content_hash', "TEXT NOT NULL DEFAULT ''"],
     ['captured_at', "TEXT NOT NULL DEFAULT ''"],
     ['created_at', "TEXT NOT NULL DEFAULT ''"],
@@ -279,6 +313,9 @@ function ensureProductContentTables(db) {
     ['price', 'REAL'],
     ['currency_code', 'TEXT'],
     ['images_json', 'TEXT'],
+    ['variant_key', 'TEXT'],
+    ['variant_attributes_json', 'TEXT'],
+    ['images_binding_status', 'TEXT'],
     ['sort_order', 'INTEGER NOT NULL DEFAULT 0'],
     ['captured_at', "TEXT NOT NULL DEFAULT ''"],
     ['created_at', "TEXT NOT NULL DEFAULT ''"],
@@ -460,6 +497,7 @@ function mapSelectionItemRow(row) {
     supplyVendorName: row.supply_vendor_name || '',
     competitorPacketStatus: row.competitor_packet_status,
     transferToPrepAt: row.transfer_to_prep_at || '',
+    pricingFormJson: row.pricing_form_json || '',
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -467,6 +505,7 @@ function mapSelectionItemRow(row) {
 
 function listProductSelectionItems(db) {
   ensureProductSelectionItemsTable(db);
+  ensureProductSelectionItemColumns(db);
   if (!db.prepare(`
     SELECT name
     FROM sqlite_master
@@ -944,6 +983,9 @@ function mapProductContentAssetRow(row) {
     tags: parseJsonText(row.tags_json, []),
     main_image_url: row.main_image_url,
     image_urls: parseJsonText(row.image_urls_json, []),
+    rating_value: row.rating_value == null ? null : Number(row.rating_value),
+    review_count: row.review_count == null ? null : Number(row.review_count),
+    question_count: row.question_count == null ? null : Number(row.question_count),
     content_hash: row.content_hash,
     captured_at: row.captured_at,
     created_at: row.created_at,
@@ -965,6 +1007,9 @@ function mapProductContentSkuRow(row) {
     price: row.price == null ? null : Number(row.price),
     currency_code: row.currency_code,
     images: parseJsonText(row.images_json, []),
+    variant_key: row.variant_key,
+    variant_attributes: parseJsonText(row.variant_attributes_json, []),
+    images_binding_status: row.images_binding_status,
     sort_order: Number(row.sort_order || 0),
     captured_at: row.captured_at,
     created_at: row.created_at,
@@ -1424,6 +1469,7 @@ async function handleApiProductSelectionItemPatch(req, res, selectionItemId) {
             initial_target_price = ?,
             initial_profit_rate = ?,
             pricing_decision = ?,
+            pricing_form_json = ?,
             supply_match_status = ?,
             supply_reference_url = ?,
             supply_vendor_name = ?,
@@ -1440,6 +1486,7 @@ async function handleApiProductSelectionItemPatch(req, res, selectionItemId) {
         body.initialTargetPrice !== undefined ? toNullableNumber(body.initialTargetPrice) : existing.initial_target_price,
         body.initialProfitRate !== undefined ? toNullableNumber(body.initialProfitRate) : existing.initial_profit_rate,
         pricingDecision,
+        body.pricingFormJson !== undefined ? toNullableText(body.pricingFormJson) : existing.pricing_form_json,
         supplyMatchStatus,
         body.supplyReferenceUrl !== undefined ? toNullableText(body.supplyReferenceUrl) : existing.supply_reference_url,
         body.supplyVendorName !== undefined ? toNullableText(body.supplyVendorName) : existing.supply_vendor_name,
@@ -1779,6 +1826,11 @@ export function createWorkbenchServer() {
 
     if (isProductDataPrepRoute(req)) {
       await handleProductDataPrepRoute(req, res);
+      return;
+    }
+
+    if (isOzonPageCaptureRoute(req)) {
+      await handleOzonPageCaptureRoute(req, res);
       return;
     }
 

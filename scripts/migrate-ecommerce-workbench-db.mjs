@@ -89,6 +89,9 @@ function createTargetTables(db) {
       tags_json TEXT,
       main_image_url TEXT,
       image_urls_json TEXT,
+      rating_value REAL,
+      review_count INTEGER,
+      question_count INTEGER,
       content_hash TEXT NOT NULL,
       captured_at TEXT NOT NULL,
       created_at TEXT NOT NULL,
@@ -116,6 +119,9 @@ function createTargetTables(db) {
       price REAL,
       currency_code TEXT,
       images_json TEXT,
+      variant_key TEXT,
+      variant_attributes_json TEXT,
+      images_binding_status TEXT,
       sort_order INTEGER NOT NULL DEFAULT 0,
       captured_at TEXT NOT NULL,
       created_at TEXT NOT NULL,
@@ -216,6 +222,8 @@ function createTargetTables(db) {
     ON product_selection_items(source_platform, source_platform_product_id);
   `);
   ensureProductBusinessSnapshotColumns(db);
+  ensureProductContentColumns(db);
+  ensureProductSelectionItemColumns(db);
 }
 
 function migrateProductContentAssets(db) {
@@ -253,6 +261,9 @@ function migrateProductContentAssets(db) {
       tags_json TEXT,
       main_image_url TEXT,
       image_urls_json TEXT,
+      rating_value REAL,
+      review_count INTEGER,
+      question_count INTEGER,
       content_hash TEXT NOT NULL,
       captured_at TEXT NOT NULL,
       created_at TEXT NOT NULL,
@@ -282,6 +293,9 @@ function migrateProductContentAssets(db) {
       tags_json,
       main_image_url,
       image_urls_json,
+      NULL,
+      NULL,
+      NULL,
       content_hash,
       captured_at,
       created_at,
@@ -298,6 +312,9 @@ function migrateProductContentAssets(db) {
       tags_json,
       main_image_url,
       image_urls_json,
+      rating_value,
+      review_count,
+      question_count,
       COALESCE(
         NULLIF(content_hash, ''),
         'legacy:' || COALESCE(NULLIF(platform, ''), 'ozon') || ':' || COALESCE(platform_product_id, '') || ':' || CAST(id AS TEXT)
@@ -312,6 +329,50 @@ function migrateProductContentAssets(db) {
   const migratedContentAssets = db.prepare('SELECT COUNT(*) AS total FROM product_content_assets').get().total;
   db.exec('DROP TABLE product_content_assets_legacy');
   return { migratedContentAssets, rebuiltContentAssets: true };
+}
+
+function ensureProductContentColumns(db) {
+  if (tableExists(db, 'product_content_assets')) {
+    const assetColumns = tableColumns(db, 'product_content_assets');
+    for (const [name, definition] of [
+      ['rating_value', 'REAL'],
+      ['review_count', 'INTEGER'],
+      ['question_count', 'INTEGER'],
+    ]) {
+      if (!assetColumns.has(name)) {
+        db.exec(`ALTER TABLE product_content_assets ADD COLUMN ${name} ${definition}`);
+      }
+    }
+  }
+
+  if (tableExists(db, 'product_content_skus')) {
+    const skuColumns = tableColumns(db, 'product_content_skus');
+    for (const [name, definition] of [
+      ['variant_key', 'TEXT'],
+      ['variant_attributes_json', 'TEXT'],
+      ['images_binding_status', 'TEXT'],
+    ]) {
+      if (!skuColumns.has(name)) {
+        db.exec(`ALTER TABLE product_content_skus ADD COLUMN ${name} ${definition}`);
+      }
+    }
+  }
+}
+
+function ensureProductSelectionItemColumns(db) {
+  if (!tableExists(db, 'product_selection_items')) return;
+
+  const columns = db.prepare('PRAGMA table_info(product_selection_items)').all();
+  const names = new Set(columns.map((column) => column.name));
+  const additions = [
+    ['pricing_form_json', 'TEXT'],
+  ];
+
+  for (const [name, definition] of additions) {
+    if (!names.has(name)) {
+      db.exec(`ALTER TABLE product_selection_items ADD COLUMN ${name} ${definition}`);
+    }
+  }
 }
 
 function ensureProductBusinessSnapshotColumns(db) {
@@ -498,6 +559,7 @@ try {
   createTargetTables(db);
   const result = migrateProductsNormalized(db);
   const contentAssetResult = migrateProductContentAssets(db);
+  ensureProductContentColumns(db);
   const backfillResult = backfillSnapshotExtendedFields(db);
   console.log(JSON.stringify({
     ok: true,
