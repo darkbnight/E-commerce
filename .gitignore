@@ -9,3 +9,5 @@ data/shipping-sources/*
 frontend/**/dist/
 todo.md
 docs/测试文档/**/UI/
+claude.md
+.claude/
